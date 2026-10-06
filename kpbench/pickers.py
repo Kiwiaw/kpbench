@@ -235,6 +235,26 @@ def pick_offplane(n_off, M, cubes, tol=0.3):
     return f
 
 
+def pick_dband(ratio, cubes, M):
+    """dband<ratio>[c][p<M>]: depth-band round robin, for position conditioning on flat views.
+    Candidates = the strongest M with depth. Depth is cut into bands growing by `ratio` (ratio 2: 0.5-1, 1-2, 2-4, 4-8 m ...),
+    so near and far points are both guaranteed a share: with few inliers all at one depth the pose can slide along the
+    viewing direction with the rotation still right (the dominant remaining failure on flat views). Within a band the order
+    is score order, or cube 0.5 m round robin (c). Bands are served in turn, best band first; the rest filled by rank."""
+    def f(u, v, s, z, K):
+        ok = np.flatnonzero(z < DEPTH_MAX)[:M]
+        if not len(ok):
+            return np.arange(min(K, len(u)))
+        band = np.floor(np.log(np.maximum(z[ok], 0.25)) / np.log(ratio)).astype(int); g = {}
+        for jj, j in enumerate(ok):
+            g.setdefault(int(band[jj]), []).append(int(j))
+        groups = list(g.values())
+        if cubes:
+            groups = [list(np.asarray(gr, int)[pick_cube(0.5)(u[gr], v[gr], s[gr], z[gr], len(gr))]) for gr in groups]
+        return fill(round_robin(groups, K), len(u), K)
+    return f
+
+
 def _rerank_pick(order, u, v, s, z, K, cubes):
     """take K from candidates in the given order (indices), or cube 0.5 m round robin over that order"""
     if not cubes:
@@ -316,6 +336,9 @@ def parse(name):
     m = re.fullmatch(r'offp([0-9]+)(c?)(?:p([0-9]+))?', name)
     if m:
         return pick_offplane(int(m.group(1)), int(m.group(3) or 2000), m.group(2) == 'c')
+    m = re.fullmatch(r'dband([0-9.]+)(c?)(?:p([0-9]+))?', name)
+    if m:
+        return pick_dband(float(m.group(1)), m.group(2) == 'c', int(m.group(3) or 400))
     m = re.fullmatch(r'hyb([0-9.]+)(?:c([0-9.]+))?', name)
     if m:
         return pick_hyb(float(m.group(1)), float(m.group(2) or 0.5))

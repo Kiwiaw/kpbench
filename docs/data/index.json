@@ -1,5 +1,5 @@
 {
- "generated": "2026-10-06T22:12:55",
+ "generated": "2026-10-06T22:41:00",
  "dataset": "TartanAir (Hard), PnP relocalisation against a local map of ground-truth 3D points",
  "flights": [
   {
@@ -318,14 +318,18 @@
    "K": 100,
    "map": "same",
    "matcher": "nn",
-   "date": "2026-10-06T20:34:24",
-   "commit": "fa3ec5c",
+   "date": "2026-10-06T22:35:41",
+   "commit": "49aa4c62",
    "flights": [
+    "oldtown/P000",
     "oldtown/P001",
+    "oldtown/P002",
+    "oldtown/P006",
+    "oldtown/P007",
     "hospital/P041"
    ],
-   "n_queries": 1324,
-   "fail25": 11.4,
+   "n_queries": 3980,
+   "fail25": 5.63,
    "has_picks": true,
    "notes": "corrected protocol (AP3P+LM, centre error)"
   },
@@ -383,16 +387,20 @@
    "K": 100,
    "map": "same",
    "matcher": "nn",
-   "date": "2026-10-06T20:22:54",
-   "commit": "08b3672",
+   "date": "2026-10-06T22:35:17",
+   "commit": "49aa4c62",
    "flights": [
+    "oldtown/P000",
     "oldtown/P001",
+    "oldtown/P002",
+    "oldtown/P006",
+    "oldtown/P007",
     "hospital/P041"
    ],
-   "n_queries": 1324,
-   "fail25": 8.01,
+   "n_queries": 3980,
+   "fail25": 3.72,
    "has_picks": true,
-   "notes": "corrected protocol"
+   "notes": "corrected protocol (AP3P+LM, centre error)"
   },
   {
    "id": "raco_cube0.5p200_K100_same_lg",
@@ -429,6 +437,134 @@
    "fail25": 8.46,
    "has_picks": true,
    "notes": "claim 1: insurance against starvation (strong part + spread part); corrected protocol (AP3P+LM, centre error)"
+  },
+  {
+   "id": "raco_dband1.5c_K100_same_lg",
+   "det": "raco",
+   "picker": "dband1.5c",
+   "K": 100,
+   "map": "same",
+   "matcher": "lg",
+   "date": "2026-10-06T22:28:04",
+   "commit": "49aa4c62",
+   "flights": [
+    "oldtown/P000",
+    "oldtown/P001"
+   ],
+   "n_queries": 1505,
+   "fail25": 5.78,
+   "has_picks": false,
+   "notes": "depth-band picker light test; corrected protocol (AP3P+LM, centre error)"
+  },
+  {
+   "id": "raco_dband1.5c_K100_same_nn",
+   "det": "raco",
+   "picker": "dband1.5c",
+   "K": 100,
+   "map": "same",
+   "matcher": "nn",
+   "date": "2026-10-06T22:19:43",
+   "commit": "49aa4c62",
+   "flights": [
+    "oldtown/P000",
+    "oldtown/P001",
+    "oldtown/P002",
+    "oldtown/P006",
+    "oldtown/P007",
+    "hospital/P041"
+   ],
+   "n_queries": 3980,
+   "fail25": 3.99,
+   "has_picks": false,
+   "notes": "depth-band picker light test; corrected protocol (AP3P+LM, centre error)"
+  },
+  {
+   "id": "raco_dband2_K100_same_lg",
+   "det": "raco",
+   "picker": "dband2",
+   "K": 100,
+   "map": "same",
+   "matcher": "lg",
+   "date": "2026-10-06T22:34:35",
+   "commit": "49aa4c62",
+   "flights": [
+    "oldtown/P000",
+    "oldtown/P001",
+    "oldtown/P002",
+    "oldtown/P006",
+    "oldtown/P007",
+    "hospital/P041"
+   ],
+   "n_queries": 3980,
+   "fail25": 5.08,
+   "has_picks": false,
+   "notes": "depth-band picker light test; corrected protocol (AP3P+LM, centre error)"
+  },
+  {
+   "id": "raco_dband2_K100_same_nn",
+   "det": "raco",
+   "picker": "dband2",
+   "K": 100,
+   "map": "same",
+   "matcher": "nn",
+   "date": "2026-10-06T22:20:25",
+   "commit": "49aa4c62",
+   "flights": [
+    "oldtown/P000",
+    "oldtown/P001",
+    "oldtown/P002",
+    "oldtown/P006",
+    "oldtown/P007",
+    "hospital/P041"
+   ],
+   "n_queries": 3980,
+   "fail25": 4.8,
+   "has_picks": false,
+   "notes": "depth-band picker light test; corrected protocol (AP3P+LM, centre error)"
+  },
+  {
+   "id": "raco_dband2c_K100_same_lg",
+   "det": "raco",
+   "picker": "dband2c",
+   "K": 100,
+   "map": "same",
+   "matcher": "lg",
+   "date": "2026-10-06T22:25:55",
+   "commit": "49aa4c62",
+   "flights": [
+    "oldtown/P000",
+    "oldtown/P001",
+    "oldtown/P002",
+    "oldtown/P006",
+    "oldtown/P007",
+    "hospital/P041"
+   ],
+   "n_queries": 3980,
+   "fail25": 5.05,
+   "has_picks": false,
+   "notes": "depth-band picker light test; corrected protocol (AP3P+LM, centre error)"
+  },
+  {
+   "id": "raco_dband2c_K100_same_nn",
+   "det": "raco",
+   "picker": "dband2c",
+   "K": 100,
+   "map": "same",
+   "matcher": "nn",
+   "date": "2026-10-06T22:19:05",
+   "commit": "49aa4c62",
+   "flights": [
+    "oldtown/P000",
+    "oldtown/P001",
+    "oldtown/P002",
+    "oldtown/P006",
+    "oldtown/P007",
+    "hospital/P041"
+   ],
+   "n_queries": 3980,
+   "fail25": 3.92,
+   "has_picks": false,
+   "notes": "depth-band picker light test; corrected protocol (AP3P+LM, centre error)"
   },
   {
    "id": "raco_dist0.95c_K100_same_lg",
@@ -1113,16 +1249,20 @@
    "K": 30,
    "map": "same",
    "matcher": "nn",
-   "date": "2026-10-06T20:25:22",
-   "commit": "08b3672",
+   "date": "2026-10-06T22:37:59",
+   "commit": "49aa4c62",
    "flights": [
+    "oldtown/P000",
     "oldtown/P001",
+    "oldtown/P002",
+    "oldtown/P006",
+    "oldtown/P007",
     "hospital/P041"
    ],
-   "n_queries": 1324,
-   "fail25": 14.8,
+   "n_queries": 3980,
+   "fail25": 8.69,
    "has_picks": true,
-   "notes": "claim 1: farthest-apart vs strongest, pool 2000; corrected protocol (AP3P+LM, centre error)"
+   "notes": "corrected protocol (AP3P+LM, centre error)"
   },
   {
    "id": "raco_far2d_K30_same_lg",
@@ -1321,6 +1461,50 @@
    "fail25": 32.55,
    "has_picks": true,
    "notes": "claim 1 ladder: pool size / score-aware between farthest and strongest; corrected protocol (AP3P+LM, centre error)"
+  },
+  {
+   "id": "raco_cube0.5_K50_same_nn",
+   "det": "raco",
+   "picker": "cube0.5",
+   "K": 50,
+   "map": "same",
+   "matcher": "nn",
+   "date": "2026-10-06T22:38:33",
+   "commit": "49aa4c62",
+   "flights": [
+    "oldtown/P000",
+    "oldtown/P001",
+    "oldtown/P002",
+    "oldtown/P006",
+    "oldtown/P007",
+    "hospital/P041"
+   ],
+   "n_queries": 3980,
+   "fail25": 5.0,
+   "has_picks": false,
+   "notes": "corrected protocol (AP3P+LM, centre error)"
+  },
+  {
+   "id": "raco_cube0.5_K200_same_nn",
+   "det": "raco",
+   "picker": "cube0.5",
+   "K": 200,
+   "map": "same",
+   "matcher": "nn",
+   "date": "2026-10-06T22:39:16",
+   "commit": "49aa4c62",
+   "flights": [
+    "oldtown/P000",
+    "oldtown/P001",
+    "oldtown/P002",
+    "oldtown/P006",
+    "oldtown/P007",
+    "hospital/P041"
+   ],
+   "n_queries": 3980,
+   "fail25": 3.12,
+   "has_picks": false,
+   "notes": "corrected protocol (AP3P+LM, centre error)"
   },
   {
    "id": "raco_sd_K100_dense_lg",
