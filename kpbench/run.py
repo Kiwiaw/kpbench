@@ -6,6 +6,7 @@ Run id = <det>_<picker>_K<K>_<map>_<matcher>[_<tag>]  (matcher nn | lg). Output 
 with {"rows": [...], "picks": {...}} and results/runs/<run_id>/meta.json (config, date, git commit).
 Flights already done are skipped unless --force. Export (kpbench.export) merges flights for the page.
 """
+import re
 import os, sys, json, gzip, time, subprocess, datetime
 from .data import parse_flights, slug
 from .cache import REPO
@@ -29,16 +30,19 @@ def main(argv=None):
     import argparse
     ap = argparse.ArgumentParser()
     ap.add_argument('--det', required=True); ap.add_argument('--picker', required=True); ap.add_argument('--K', type=int, required=True)
-    ap.add_argument('--map', default='same', choices=['same', 'dense']); ap.add_argument('--flights', default='all')
+    ap.add_argument('--map', default='same', help='same | dense | ret<k> (database = all keyframes, top-k by VLAD retrieval)'); ap.add_argument('--flights', default='all')
     ap.add_argument('--tag', default=''); ap.add_argument('--save-picks', action='store_true'); ap.add_argument('--force', action='store_true')
     ap.add_argument('--workers', type=int, default=0); ap.add_argument('--notes', default='')
     ap.add_argument('--matcher', default='nn', choices=['nn', 'lg'], help='nn = mutual nearest neighbour, lg = LightGlue')
     a = ap.parse_args(argv)
+    assert a.map in ('same', 'dense') or re.fullmatch(r'ret[0-9]+', a.map), 'map must be same, dense or ret<k>'
     rid = run_id(a.det, a.picker, a.K, a.map, a.tag, a.matcher); out = os.path.join(RESULTS, 'runs', rid); os.makedirs(out, exist_ok=True)
     meta_fn = os.path.join(out, 'meta.json')
     meta = json.load(open(meta_fn)) if os.path.isfile(meta_fn) else {}
     meta.update(id=rid, det=a.det, picker=a.picker, K=a.K, map=a.map, matcher=a.matcher, tag=a.tag, cols=COLS,
-                protocol='C23: keyframes every 10 within +-20, %s, PnP RANSAC 3 px 2000 it >= 6 inliers' % ('LightGlue per keyframe' if a.matcher == 'lg' else 'mutual NN'),
+                protocol='C23: keyframes every 10, %s, %s, PnP AP3P-RANSAC 3 px 2000 it >= 6 inliers + LM refinement, camera-centre error' % (
+                    'map = top-%s keyframes by VLAD retrieval over the whole flight' % a.map[3:] if a.map.startswith('ret') else 'map = keyframes within +-20 frames',
+                    'LightGlue per keyframe' if a.matcher == 'lg' else 'mutual NN'),
                 has_picks=bool(a.save_picks) or meta.get('has_picks', False))
     if a.notes:
         meta['notes'] = a.notes

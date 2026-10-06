@@ -82,15 +82,21 @@ function mulberry32(seed) {
  * Example: 10 queries with 2 fails -> 20 %; resamples give e.g. 0 % ... 50 %; the interval is the middle 95 %.
  */
 const N_BOOT = 1000;
-function bootstrapCI(fails, seedText) {
+const BLOCK = 20;   // consecutive frames per bootstrap block (the keyframe window): neighbouring queries fail together
+function bootstrapCI(fails, seedText, blocks) {
   const n = fails.length;
   if (n === 0) return null;
   const rand = mulberry32(hashStr(seedText));
+  // Block bootstrap: resample whole blocks of neighbouring queries, so the interval reflects the number of independent
+  // scenes rather than the number of frames. blocks[i] = block id of query i (flight + frame / BLOCK); absent = per query.
+  const groups = new Map();
+  for (let i = 0; i < n; i++) { const g = blocks ? blocks[i] : i; if (!groups.has(g)) groups.set(g, []); groups.get(g).push(i); }
+  const G = [...groups.values()].map(ix => ({ s: ix.reduce((a, i) => a + fails[i], 0), c: ix.length })), m = G.length;
   const pcts = new Float64Array(N_BOOT);
   for (let b = 0; b < N_BOOT; b++) {
-    let s = 0;
-    for (let i = 0; i < n; i++) s += fails[(rand() * n) | 0];
-    pcts[b] = 100 * s / n;
+    let s = 0, c = 0;
+    for (let j = 0; j < m; j++) { const g = G[(rand() * m) | 0]; s += g.s; c += g.c; }
+    pcts[b] = 100 * s / c;
   }
   pcts.sort();
   const lo = pcts[Math.round(0.025 * (N_BOOT - 1))];
@@ -178,12 +184,13 @@ const S = {
   showPicks: true,
 };
 
-const rotFail = () => S.index.rot_fail_deg ?? 5;
+/** Rotation threshold (deg) that goes with position threshold T (cm): 25 cm / 2 deg, 50 cm / 5 deg, 5 m / 10 deg. */
+const rotFail = T => (S.index.rot_fail && S.index.rot_fail[T ?? S.thr]) ?? S.index.rot_fail_deg ?? 2;
 const binById = id => S.index.bins.find(b => b.id === id) || S.index.bins[0];
 
 /** Does a row fail at threshold T (cm)? */
 function isFail(r, T) {
-  return r.err == null || r.err > T || (r.rot != null && r.rot > rotFail());
+  return r.err == null || r.err > T || (r.rot != null && r.rot > rotFail(T));
 }
 /** Does the query belong to the bin? Bins without bounds ("all") hold every query. */
 function inBin(bin, r) {
@@ -377,7 +384,7 @@ function flightsBadge(id) {
 const GLOSS = {
   run: 'det_picker_K_map_matcher, see the legend',
   n: 'number of queries behind the row',
-  bin: 'share of failed queries at the chosen threshold (no pose, position error above it, or rotation above 5 deg); n in brackets; +- = half width of the 95 % bootstrap confidence interval',
+  bin: 'share of failed queries at the chosen threshold (no pose, position error above it, or rotation above 5 deg); n in brackets; +- = half width of the 95 % block-bootstrap confidence interval (blocks of 20 consecutive frames)',
   auc: 'area under "share of queries with error <= x" for x in 0..25 cm, divided by 25 (1 = every pose exact)',
   med: 'median position error of the queries that passed at the threshold',
   n_match: 'mean number of mutual nearest neighbour matches per query',
@@ -464,7 +471,7 @@ function renderHeader() {
     ${rth('base', 'base', 'c', 'the run every other shown run is compared with (saves / breaks / p)')}${rth('id', 'id', 'l')}
     ${rth('det', 'det', 'l', 'detector: raco = RaCo ranker order, sp = SuperPoint score order')}
     ${rth('picker', 'picker', 'l', 'selection rule: sd = strongest with depth, cube0.5 = 0.5 m cubes, grid = image cells, fps = farthest point sampling (see legend)')}
-    ${rth('K', 'K', '', 'points kept per image')}${rth('map', 'map', 'l', 'same = keyframes use the same picker; dense = keyframes use their 300 strongest points')}
+    ${rth('K', 'K', '', 'points kept per image')}${rth('map', 'map', 'l', 'same = keyframes use the same picker, temporal window; dense = keyframes use their 300 strongest points; ret5 = same picker, top-5 keyframes of the whole flight by image retrieval')}
     ${rth('matcher', 'matcher', 'l', 'nn = mutual nearest neighbour on SuperPoint descriptors, lg = LightGlue per keyframe')}
     ${rth('date', 'date', 'l')}${rth('n_queries', 'n_queries', '', 'queries in the run')}${rth('flights', 'flights', 'l', 'number of flights covered')}
     ${rth('fail25', 'fail25 (index)', '', 'fail % at 25 cm over all queries of the run, stored at export time; runs on different flights are not comparable by this number')}
@@ -521,7 +528,7 @@ function initControls() {
   });
   $('#runhideall').addEventListener('click', () => { S.sel = S.base ? [S.base] : []; S.sumSort = { col: null, dir: 1 }; render(); });
   $('#runsel').addEventListener('click', runActionClick);
-  $('#thr').innerHTML = S.index.thresholds_cm.map(t => `<option value="${t}">${t} cm</option>`).join('');
+  $('#thr').innerHTML = S.index.thresholds_cm.map(t => `<option value="${t}">${t >= 100 ? t / 100 + ' m' : t + ' cm'} / ${rotFail(t)}°</option>`).join('');
   $('#thr').addEventListener('change', e => { S.thr = +e.target.value; render(); });
   $('#shared').addEventListener('change', e => { S.shared = e.target.checked; render(); });
   $$('#tabs button').forEach(b => b.addEventListener('click', () => { S.tab = b.dataset.tab; render(); }));
@@ -590,10 +597,11 @@ function renderSummary(el) {
     for (const b of bins) {
       const br = rows.filter(r => inBin(b, r));
       const fails = new Uint8Array(br.length);
+      const blocks = br.map(r => `${r.flight}:${Math.floor(r.q / BLOCK)}`);
       br.forEach((r, i) => { fails[i] = isFail(r, T) ? 1 : 0; });
       const f = failPct(br, T);
       c['bin:' + b.id] = f.pct;
-      c['_bin:' + b.id] = { ...f, fails, ciKey: `${id}|${b.id}|${T}|${sc.sig}` };
+      c['_bin:' + b.id] = { ...f, fails, blocks, ciKey: `${id}|${b.id}|${T}|${sc.sig}` };
     }
     c.auc = aucOf(rows, 25);
     c.med = median(rows.filter(r => !isFail(r, T)).map(r => r.err));
@@ -630,7 +638,7 @@ function renderSummary(el) {
         const d = c['_bin:' + col.bin.id];
         const elId = `ci-${ri}-${col.bin.id}`;
         const hit = S.ciCache.get(d.ciKey);
-        if (!hit && d.n) tasks.push({ key: d.ciKey, fails: d.fails, elId });
+        if (!hit && d.n) tasks.push({ key: d.ciKey, fails: d.fails, blocks: d.blocks, elId });
         return `<td class="nowrap">${fmt(d.pct)} <span class="muted">(${d.n})</span> <span class="ci" id="${elId}" ${hit ? `title="95 % CI ${fmt(hit.lo)} – ${fmt(hit.hi)}"` : ''}>${hit ? '±' + fmt(hit.half) : (d.n ? '…' : '')}</span></td>`;
       }
       const d = { auc: 3, med: 1, n_match: 1, n_inl: 1, rep1: 3, rep5: 3, rep10: 3 }[col.id] ?? 0;
@@ -667,7 +675,7 @@ function runBootstrapQueue(tasks) {
     while (i < tasks.length && performance.now() - t0 < 25) {
       const t = tasks[i++];
       let res = S.ciCache.get(t.key);
-      if (!res) { res = bootstrapCI(t.fails, t.key); S.ciCache.set(t.key, res); }
+      if (!res) { res = bootstrapCI(t.fails, t.key, t.blocks); S.ciCache.set(t.key, res); }
       const span = document.getElementById(t.elId);
       if (span && res) { span.textContent = '±' + fmt(res.half); span.title = `95 % CI ${fmt(res.lo)} – ${fmt(res.hi)}`; }
     }
@@ -958,7 +966,7 @@ function renderFailures(el) {
   const runOpts = I.runs.map(r => opt(r.id, r.id + (S.sel.includes(r.id) ? '' : ' (not shown)'), F.run)).join('');
   const binOpts = I.bins.map(b => opt(b.id, b.label, F.bin)).join('');
   const flOpts = opt('all', 'all flights', F.flight) + I.flights.map((f, i) => opt(String(i), f.id, F.flight)).join('');
-  const thrOpts = I.thresholds_cm.map(t => opt(t, t + ' cm', F.thr)).join('');
+  const thrOpts = I.thresholds_cm.map(t => opt(t, (t >= 100 ? t / 100 + ' m' : t + ' cm') + ' / ' + rotFail(t) + '°', F.thr)).join('');
   const modeOpts = [['fails', 'fails in run'], ['not_base', 'fails in run but not in baseline'], ['base_only', 'fails in baseline but not in run']]
     .map(([v, l]) => opt(v, l, F.mode)).join('');
 

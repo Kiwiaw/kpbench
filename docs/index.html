@@ -27,12 +27,16 @@
         from nearby <b>keyframes</b> (every 10th frame; a query uses the keyframes within 20 frames, usually 4), and the
         camera pose is solved from the matches. The map points are keyframe keypoints lifted to 3D with the ground-truth
         depth and pose, so the only thing that differs between runs is <em>which</em> points are kept.</p>
-        <p><b>A query fails</b> when no pose is found, the position error is above the chosen threshold (5, 25, 50 or
-        100 cm, dropdown below), or the rotation error is above 5°. The headline number of a run is its <b>fail %</b>:
-        the share of failed queries. Lower is better.</p>
-        <p class="muted">Matching: mutual nearest neighbour on SuperPoint descriptors. Pose: OpenCV solvePnPRansac,
-        3 px reprojection tolerance, 2000 iterations, at least 6 inliers. The solver is deterministic, so a run can be
-        reproduced exactly. Data: TartanAir (Hard), 640×480 frames with ground-truth depth and pose.</p>
+        <p><b>A query fails</b> when no pose is found, or the pose error is above the chosen threshold pair (dropdown below):
+        25 cm / 2°, 50 cm / 5° and 5 m / 10° are the standard pairs of the visual localisation benchmarks, 5 cm / 2° is a
+        strict extra. Position error = distance between the estimated and the true camera centre; rotation error = angle
+        between the estimated and the true rotation. The headline number of a run is its <b>fail %</b>: the share of failed
+        queries. Lower is better.</p>
+        <p class="muted">Pose: OpenCV solvePnPRansac with the AP3P minimal solver, 3 px reprojection tolerance, 2000 iterations,
+        at least 6 inliers, then Levenberg-Marquardt refinement on all inliers (the hloc recipe). The random generator is
+        seeded per query, so a run can be reproduced exactly. Data: TartanAir (Hard), 640×480 frames with ground-truth depth
+        and pose; the map points use the true depth, so the map is cleaner than any real map and failures are query-side
+        failures.</p>
       </section>
       <section>
         <h3>One run = detector + picker + K + map</h3>
@@ -52,7 +56,12 @@
             already chosen set times (1 − rank/M), so strong points are preferred. <b>fps0</b>: plain farthest point sampling.</dd>
           <dt>map</dt><dd><b>same</b>: the keyframes use the same picker and K as the query, so the map changes with the run.
             <b>dense</b>: every keyframe contributes its 300 strongest points with depth, the map is the same for all runs
-            and only the query side changes.</dd>
+            and only the query side changes. In both, a query is matched against the keyframes within 20 frames of it (2 to 5
+            keyframes), which acts as perfect image retrieval and includes future frames: the local-tracking setting.<br>
+            <b>ret5</b>: same keyframe points as <b>same</b>, but the database is every keyframe of the flight and a query is
+            matched against the 5 most similar ones by image retrieval (VLAD over the SuperPoint descriptors of the 300
+            strongest points, 64-word codebook learnt on the flight). No time information: the localisation setting, where
+            retrieval can also fail.</dd>
           <dt>matcher</dt><dd><b>nn</b>: mutual nearest neighbour on the SuperPoint descriptors, no learned matcher. <b>lg</b>: LightGlue
             (SuperPoint weights) run between the query points and each keyframe's map points in turn; every query point keeps its
             highest-scoring match. LightGlue uses the point layout, so it can partly make up for a bad spread.</dd>
@@ -63,8 +72,11 @@
         <h3>Columns</h3>
         <dl class="gloss">
           <dt>fail % (n) ±</dt><dd>share of failed queries at the chosen threshold; n = number of queries; ± = half width of a
-            95 % confidence interval from 1000 bootstrap resamples over queries. Two runs whose intervals overlap heavily are not
-            distinguishable on this data.</dd>
+            95 % confidence interval from 1000 bootstrap resamples. Queries close in time see the same scene and fail together, so
+            the bootstrap resamples <em>blocks</em> of 20 consecutive frames per flight, not single queries (a plain per-query
+            bootstrap would give intervals 2 to 3 times too narrow). Two runs whose intervals overlap heavily are not
+            distinguishable on this data. The sign test next to saves / breaks still counts queries as independent and is
+            therefore optimistic.</dd>
           <dt>AUC ≤25 cm</dt><dd>area under the curve "share of queries with position error ≤ x" for x from 0 to 25 cm,
             divided by 25, so 1 would mean every pose is exact. It rewards precise poses, not only passes.</dd>
           <dt>median err</dt><dd>median position error in cm over the queries that passed at the threshold.</dd>

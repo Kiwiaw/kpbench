@@ -13,6 +13,11 @@ Names:
   hyb<f>[c<s>] strongest f*K with depth first, the rest by cube round robin (s m, default 0.5) over the grid pool (hyb0.5)
   offp<n>[c][p<M>] K-n strongest with depth + n points OFF the dominant plane (RANSAC plane on the strongest 300 with depth,
                30 cm tolerance), spread over image cells (c = 0.5 m cubes instead) among the strongest M (default 2000), best per cell
+  orep[c][p<M>] ORACLE: candidates re-ranked by how many of the frames f-20, f-10, f+10, f+20 re-find them (true pose and
+               depth, 3 px, 5 % depth, among that frame's strongest 300 with depth), ties by rank; c = cube 0.5 m round robin on
+               the re-ranked list; pool M (default 2000). An upper bound for any learned "predict which points persist" model.
+  dist<t>[c][p<M>] intra-frame distinctiveness: candidates whose descriptor has a cosine similarity above t to another candidate of
+               the pool (default 400) are moved behind the distinct ones (ties by rank); c = cube 0.5 m round robin after that.
   far2d, far3d plain farthest point sampling over the strongest 2000 candidates with depth: pixel distance (2d) or
                camera-frame Euclidean distance in metres (3d); suffix w = score-aware gain, p<M> = pool size (far3dp400)
 A picker returns candidate indices (at most K; fewer only when the frame has too few candidates).
@@ -230,6 +235,67 @@ def pick_offplane(n_off, M, cubes, tol=0.3):
     return f
 
 
+def _rerank_pick(order, u, v, s, z, K, cubes):
+    """take K from candidates in the given order (indices), or cube 0.5 m round robin over that order"""
+    if not cubes:
+        return np.asarray(order[:K], int)
+    o = np.asarray(order, int)
+    return o[pick_cube(0.5)(u[o], v[o], s[o], z[o], K)]
+
+
+ORACLE_LAGS = (-20, -10, 10, 20)
+
+
+def pick_oracle_rep(cubes, M):
+    """orep: ORACLE picker (uses the true poses of the neighbouring frames). Needs ctx=(Flight, Cands, frame)."""
+    from scipy.spatial import cKDTree
+    from .data import FX, FY, CX, CY
+    cache = {}
+    def f(u, v, s, z, K, ctx=None):
+        F, C, q = ctx
+        ok = np.flatnonzero(z < DEPTH_MAX)[:M]
+        if not len(ok):
+            return np.arange(min(K, len(u)))
+        Rq, tq = F.cam_pose(q); Xw = to3d(u[ok], v[ok], z[ok]) @ Rq.T + tq
+        cnt = np.zeros(len(ok), int)
+        for L in ORACLE_LAGS:
+            g = q + L
+            if g < 0 or g >= F.N:
+                continue
+            key = (F.slug, g)
+            if key not in cache:
+                u2, v2, s2, z2, _ = C.frame(g); j = np.flatnonzero(z2 < DEPTH_MAX)[:300]
+                cache[key] = (cKDTree(np.stack([u2[j], v2[j]], 1)) if len(j) else None, z2[j])
+            tree, z2 = cache[key]
+            if tree is None:
+                continue
+            Rf, tf = F.cam_pose(g); Xc = (Xw - tf) @ Rf; zc = Xc[:, 2]; good = zc > 0.05
+            pu = FX * Xc[:, 0] / np.where(good, zc, 1) + CX; pv = FY * Xc[:, 1] / np.where(good, zc, 1) + CY
+            d, nn = tree.query(np.stack([pu, pv], 1), distance_upper_bound=3.0)
+            hit = good & np.isfinite(d)
+            hit[hit] &= np.abs(z2[nn[hit]] - zc[hit]) <= 0.05 * zc[hit]
+            cnt += hit
+        order = ok[np.lexsort((np.arange(len(ok)), -cnt))]
+        return fill(_rerank_pick(order, u, v, s, z, K, cubes), len(u), K)
+    f.needs_ctx = True
+    return f
+
+
+def pick_distinct(t, cubes, M):
+    """dist<t>: intra-frame descriptor distinctiveness. Needs de= (descriptors, L2-normalised rows)."""
+    def f(u, v, s, z, K, de=None):
+        ok = np.flatnonzero(z < DEPTH_MAX)[:M]
+        if not len(ok):
+            return np.arange(min(K, len(u)))
+        D = de[ok].astype(np.float32); D /= np.linalg.norm(D, axis=1, keepdims=True) + 1e-9
+        S = D @ D.T; np.fill_diagonal(S, -1)
+        amb = (S.max(1) > t).astype(int)
+        order = ok[np.lexsort((np.arange(len(ok)), amb))]
+        return fill(_rerank_pick(order, u, v, s, z, K, cubes), len(u), K)
+    f.needs_desc = True
+    return f
+
+
 PICKERS = {'score': pick_score, 'sd': pick_sd, 'grid': pick_grid, 'grid10x8': pick_grid10x8,
            'fps': pick_fps(True), 'fps0': pick_fps(False)}
 
@@ -241,6 +307,12 @@ def parse(name):
     m = re.fullmatch(r'cube([0-9.]+)p([0-9]+)', name)
     if m:
         return pick_cube_pool(float(m.group(1)), int(m.group(2)))
+    m = re.fullmatch(r'orep(c?)(?:p([0-9]+))?', name)
+    if m:
+        return pick_oracle_rep(m.group(1) == 'c', int(m.group(2) or 2000))
+    m = re.fullmatch(r'dist([0-9.]+)(c?)(?:p([0-9]+))?', name)
+    if m:
+        return pick_distinct(float(m.group(1)), m.group(2) == 'c', int(m.group(3) or 400))
     m = re.fullmatch(r'offp([0-9]+)(c?)(?:p([0-9]+))?', name)
     if m:
         return pick_offplane(int(m.group(1)), int(m.group(3) or 2000), m.group(2) == 'c')

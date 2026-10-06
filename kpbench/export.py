@@ -15,7 +15,8 @@ BINS = [dict(id='all', label='all frames'),
         dict(id='mid', label='mid (0.55-0.85)', lo=0.55, hi=0.85),
         dict(id='flat', label='flat (>=0.85)', lo=0.85, hi=2),
         dict(id='very_flat', label='very flat (>=0.95)', lo=0.95, hi=2)]
-THR = [5, 25, 50, 100]
+THR = [5, 25, 50, 500]                      # position thresholds in cm
+ROT_FAIL = {5: 2, 25: 2, 50: 5, 500: 10}   # rotation threshold (deg) that goes with each: the visuallocalization.net pairs
 
 
 def load_labels():
@@ -64,7 +65,7 @@ def main():
                 json.dump(parts[f]['picks'], open(os.path.join(pd, slug(f) + '.json'), 'w'), separators=(',', ':'))
         if not rows:
             continue
-        fail25 = float(np.mean([r[2] is None or r[2] > 25 or r[3] > 5 for r in rows]))
+        fail25 = float(np.mean([r[2] is None or r[2] > 25 or r[3] > ROT_FAIL[25] for r in rows]))
         cfg = {k: v for k, v in meta.items() if k not in ('cols',)}
         json.dump(dict(id=rid, config=cfg, cols=meta['cols'], rows=rows), open(os.path.join(SITE, 'runs', rid + '.json'), 'w'), separators=(',', ':'))
         runs.append(dict(id=rid, det=meta['det'], picker=meta['picker'], K=meta['K'], map=meta['map'], matcher=meta.get('matcher', 'nn'),
@@ -74,7 +75,7 @@ def main():
     runs.sort(key=lambda r: (r['det'] != 'raco', r['map'] != 'same', r['K'] != 100, r['K'], r['picker'] != 'sd', r['picker']))
     index = dict(generated=datetime.datetime.now().isoformat(timespec='seconds'),
                  dataset='TartanAir (Hard), PnP relocalisation against a local map of ground-truth 3D points',
-                 flights=finfo, bins=BINS, thresholds_cm=THR, rot_fail_deg=5, runs=runs)
+                 flights=finfo, bins=BINS, thresholds_cm=THR, rot_fail=ROT_FAIL, rot_fail_deg=2, runs=runs)
     json.dump(index, open(os.path.join(SITE, 'index.json'), 'w'), indent=1)
     json.dump({f: labels[slug(f)] for f in flights if slug(f) in labels}, open(os.path.join(SITE, 'labels.json'), 'w'), separators=(',', ':'))
     print('exported', len(runs), 'runs,', len(flights), 'flights ->', SITE)
