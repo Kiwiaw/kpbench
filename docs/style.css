@@ -168,3 +168,14 @@ dd { margin: 0; font-family: ui-monospace, SFMono-Regular, Consolas, monospace; 
   .failgrid { grid-template-columns: 1fr; }
   .detail { position: static; }
 }
+
+/* Legend */
+#legend { margin: 0 0 8px; border: 1px solid var(--line); border-radius: 4px; background: var(--bg); padding: 4px 12px; }
+#legend summary { cursor: pointer; font-weight: 600; }
+#legend[open] summary { margin-bottom: 6px; }
+.legend-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 6px 28px; font-size: 12px; max-width: 1500px; padding-bottom: 6px; }
+.legend-grid p { margin: 4px 0 8px; }
+dl.gloss { grid-template-columns: max-content minmax(0, 1fr); gap: 3px 10px; margin-bottom: 8px; }
+dl.gloss dt { font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size: 11px; color: var(--fg); padding-top: 1px; }
+dl.gloss dd { font-family: inherit; font-size: 12px; }
+th.sortable[title], th[title] { cursor: help; }

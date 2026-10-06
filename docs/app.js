@@ -369,10 +369,31 @@ function flightsBadge(id) {
   if (mine.length < all.size) return { badge: `${mine.length}/${all.size} flights`, badgeTitle: 'This run covers fewer flights than the selection: ' + mine.join(', ') };
   return {};
 }
+/** Short definitions shown as hover tips on column headers (the full text is in the legend on the page). */
+const GLOSS = {
+  run: 'det_picker_K_map_matcher, see the legend',
+  n: 'number of queries behind the row',
+  bin: 'share of failed queries at the chosen threshold (no pose, position error above it, or rotation above 5 deg); n in brackets; +- = half width of the 95 % bootstrap confidence interval',
+  auc: 'area under "share of queries with error <= x" for x in 0..25 cm, divided by 25 (1 = every pose exact)',
+  med: 'median position error of the queries that passed at the threshold',
+  n_match: 'mean number of mutual nearest neighbour matches per query',
+  n_inl: 'mean number of RANSAC inliers per query',
+  rep1: 'share of kept points found again 1 frame later (within 3 px, depth within 5 %)',
+  rep5: 'share of kept points found again 5 frames later (within 3 px, depth within 5 %)',
+  rep10: 'share of kept points found again 10 frames later (within 3 px, depth within 5 %)',
+  flight: 'environment/trajectory',
+  q: 'query frame index',
+  plane_frac: 'share of the 300 strongest SuperPoint points with depth on one plane (30 cm tolerance); 1 = perfectly flat view',
+  coverage: 'share of the query image that at least one keyframe also sees (depth within 10 %)',
+  med_depth: 'median depth of the query in metres',
+  err_cm: 'position error of the solved pose; empty = no pose found',
+  rot_deg: 'rotation error of the solved pose in degrees',
+};
 /** Clickable table header cell used by the sortable tables. */
 function th(colId, label, sort, cls = '') {
   const arrow = sort.col === colId ? (sort.dir > 0 ? ' ▲' : ' ▼') : '';
-  return `<th class="sortable ${cls}" data-col="${esc(colId)}">${label}${arrow}</th>`;
+  const tip = GLOSS[colId] || GLOSS[String(colId).split(':')[0]] || '';
+  return `<th class="sortable ${cls}" data-col="${esc(colId)}"${tip ? ` title="${esc(tip)}"` : ''}>${label}${arrow}</th>`;
 }
 /** Compare for sorting: numbers and strings, missing values always last. */
 function cmpVals(a, b, dir) {
@@ -408,9 +429,14 @@ function renderHeader() {
       <td class="l">${esc((r.flights || []).length)}</td><td>${fmt(num(r.fail25))}</td>
       <td class="l muted">${esc(r.notes || '')}</td></tr>`;
   }).join('');
-  $('#runsel').innerHTML = `<thead><tr><th class="c">show</th><th class="c">base</th><th class="l">id</th>
-    <th class="l">det</th><th class="l">picker</th><th>K</th><th class="l">map</th><th class="l">matcher</th>
-    <th class="l">date</th><th>n_queries</th><th class="l">flights</th><th>fail25 (index)</th><th class="l">notes</th></tr></thead>
+  $('#runsel').innerHTML = `<thead><tr><th class="c" title="show this run in every tab">show</th>
+    <th class="c" title="the run every other shown run is compared with (saves / breaks / p)">base</th><th class="l">id</th>
+    <th class="l" title="detector: raco = RaCo ranker order, sp = SuperPoint score order">det</th>
+    <th class="l" title="selection rule: sd = strongest with depth, cube0.5 = 0.5 m cubes, grid = image cells, fps = farthest point sampling (see legend)">picker</th>
+    <th title="points kept per image">K</th><th class="l" title="same = keyframes use the same picker; dense = keyframes use their 300 strongest points">map</th>
+    <th class="l" title="nn = mutual nearest neighbour on SuperPoint descriptors">matcher</th>
+    <th class="l">date</th><th title="queries in the run">n_queries</th><th class="l" title="number of flights covered">flights</th>
+    <th title="fail % at 25 cm over all queries of the run, stored at export time">fail25 (index)</th><th class="l">notes</th></tr></thead>
     <tbody>${rows}</tbody>`;
   $('#runcount').textContent = `(${S.sel.length} of ${I.runs.length} shown, baseline ${S.base || 'none'})`;
 
