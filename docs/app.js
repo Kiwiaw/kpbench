@@ -143,6 +143,7 @@ function fmtP(p) {
 // ---------------------------------------------------------------------------
 
 const S = {
+  removed: [],            // runs taken out with the × buttons (session only), offered for restoring
   index: null,           // index.json
   labels: [],            // per flight index: the labels object of that flight (arrays), or null
   labelPos: [],          // per flight index: Map q -> position in the label arrays
@@ -422,7 +423,7 @@ function renderHeader() {
     return `<tr class="${on ? 'on' : ''}">
       <td class="c"><input type="checkbox" data-sel="${esc(r.id)}" ${on ? 'checked' : ''}></td>
       <td class="c"><input type="radio" name="base" data-base="${esc(r.id)}" ${r.id === S.base ? 'checked' : ''}></td>
-      <td class="l">${runLabel(r.id)}</td>
+      <td class="l">${runLabel(r.id)}${on ? runActions(r.id) : ''}</td>
       <td class="l">${esc(r.det)}</td><td class="l">${esc(r.picker)}</td><td>${esc(r.K)}</td>
       <td class="l">${esc(r.map)}</td><td class="l">${esc(r.matcher)}</td>
       <td class="l nowrap">${esc((r.date || '').replace('T', ' '))}</td><td>${esc(r.n_queries)}</td>
@@ -456,6 +457,8 @@ function renderHeader() {
 }
 
 function initControls() {
+  $('#main').addEventListener('click', runActionClick);
+  $('#runsel').addEventListener('click', runActionClick);
   $('#thr').innerHTML = S.index.thresholds_cm.map(t => `<option value="${t}">${t} cm</option>`).join('');
   $('#thr').addEventListener('change', e => { S.thr = +e.target.value; render(); });
   $('#shared').addEventListener('change', e => { S.shared = e.target.checked; render(); });
@@ -559,7 +562,7 @@ function renderSummary(el) {
     const cells = cols.map(col => {
       if (col.id === 'run') {
         const badge = sc.differ ? flightsBadge(c.run) : {};
-        return `<td class="l nowrap">${runLabel(c.run, badge)}</td>`;
+        return `<td class="l nowrap">${runLabel(c.run, badge)}${runActions(c.run)}</td>`;
       }
       if (col.bin) {
         const d = c['_bin:' + col.bin.id];
@@ -654,8 +657,36 @@ function barChartSVG(groups, series, yLabel) {
   out += `<line x1="${m.l}" x2="${W - m.r}" y1="${m.t + ih}" y2="${m.t + ih}" class="axis"/></svg>`;
   return out;
 }
+/** Small action buttons after a run label: set as baseline, keep only this run, remove from the selection. */
+function runActions(id) {
+  const q = esc(id);
+  return `<span class="acts">` +
+    (id !== S.base ? `<button class="act" data-act="base" data-id="${q}" title="use this run as the baseline">base</button>` : '') +
+    `<button class="act" data-act="solo" data-id="${q}" title="show only this run and the baseline">only</button>` +
+    `<button class="act x" data-act="rm" data-id="${q}" title="remove this run from every chart and table (restore from the line below)">×</button></span>`;
+}
 function legendHTML(ids) {
-  return `<div class="legend">${ids.map(id => `<span>${runLabel(id)}</span>`).join('')}</div>`;
+  const items = ids.map(id => `<span class="lg">${runLabel(id)}${runActions(id)}</span>`).join('');
+  const rm = S.removed.filter(id => !S.sel.includes(id) && S.runInfo.has(id));
+  const restore = rm.length
+    ? `<div class="legend restore muted">removed: ${rm.map(id => `<button class="act" data-act="add" data-id="${esc(id)}" title="show this run again">+ ${esc(id)}</button>`).join(' ')}
+       <button class="act" data-act="addall" title="show all removed runs again">restore all</button></div>`
+    : '';
+  return `<div class="legend">${items}</div>${restore}`;
+}
+/** Clicks on run action buttons anywhere in the page (legends, summary table). */
+function runActionClick(e) {
+  const b = e.target.closest('[data-act]');
+  if (!b) return;
+  const id = b.dataset.id, act = b.dataset.act, order = S.index.runs.map(r => r.id);
+  const setSel = s => { S.sel = order.filter(x => s.has(x)); };
+  if (act === 'rm') { S.removed = [id, ...S.removed.filter(x => x !== id)]; setSel(new Set(S.sel.filter(x => x !== id))); }
+  else if (act === 'add') { setSel(new Set([...S.sel, id])); S.removed = S.removed.filter(x => x !== id); }
+  else if (act === 'addall') { setSel(new Set([...S.sel, ...S.removed])); S.removed = []; }
+  else if (act === 'base') { S.base = id; if (!S.sel.includes(id)) setSel(new Set([...S.sel, id])); }
+  else if (act === 'solo') { S.removed = [...S.sel.filter(x => x !== id && x !== S.base), ...S.removed]; setSel(new Set([id, S.base].filter(Boolean))); }
+  S.sumSort = { col: null, dir: 1 };
+  render();
 }
 
 function renderBins(el) {
@@ -712,7 +743,7 @@ function renderBins(el) {
         }
         const p = signTestP(saves, breaks);
         const cls = p < 0.05 ? (saves > breaks ? 'good' : 'bad') : '';
-        const first = bi === 0 ? `<td class="l nowrap" rowspan="${bins.length}">${runLabel(id)}</td>` : '';
+        const first = bi === 0 ? `<td class="l nowrap" rowspan="${bins.length}">${runLabel(id)}${runActions(id)}</td>` : '';
         return `<tr class="${bi === 0 ? 'grp' : ''}">${first}<td class="l">${esc(b.label)}</td><td>${n}</td>
           <td>${n ? fmt(100 * fb / n) : '–'}</td><td>${n ? fmt(100 * fr / n) : '–'}</td>
           <td>${saves}</td><td>${breaks}</td><td>${saves - breaks > 0 ? '+' : ''}${saves - breaks}</td>
@@ -797,7 +828,7 @@ function renderCurves(el) {
       for (const e of c.errs) if (e <= t) k++;
       return `<td>${c.n ? fmt(k / c.n, 3) : '–'}</td>`;
     }).join('');
-    return `<tr><td class="l nowrap">${runLabel(c.id)}</td><td>${c.n}</td>${shares}<td>${fmt(aucOf(c.rows, 25), 3)}</td></tr>`;
+    return `<tr><td class="l nowrap">${runLabel(c.id)}${runActions(c.id)}</td><td>${c.n}</td>${shares}<td>${fmt(aucOf(c.rows, 25), 3)}</td></tr>`;
   }).join('');
 
   el.innerHTML = `<div class="controls inline"><label>Bin <select id="cbin">${S.index.bins.map(b => `<option value="${esc(b.id)}" ${b.id === bin.id ? 'selected' : ''}>${esc(b.label)}</option>`).join('')}</select></label></div>
