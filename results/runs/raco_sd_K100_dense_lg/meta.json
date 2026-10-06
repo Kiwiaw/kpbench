@@ -1,9 +1,9 @@
 {
- "id": "raco_far2dp200_K100_same_lg",
+ "id": "raco_sd_K100_dense_lg",
  "det": "raco",
- "picker": "far2dp200",
+ "picker": "sd",
  "K": 100,
- "map": "same",
+ "map": "dense",
  "matcher": "lg",
  "tag": "",
  "cols": [
@@ -21,6 +21,6 @@
  "protocol": "C23: keyframes every 10 within +-20, LightGlue per keyframe, PnP RANSAC 3 px 2000 it >= 6 inliers",
  "has_picks": true,
  "notes": "claim 1 with LightGlue",
- "date": "2026-10-06T14:35:55",
- "commit": "961b168"
+ "date": "2026-10-06T14:53:28",
+ "commit": "c30a61e"
 }

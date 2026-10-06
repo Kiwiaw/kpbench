@@ -1,5 +1,5 @@
 {
- "generated": "2026-10-06T14:35:14",
+ "generated": "2026-10-06T15:07:56",
  "dataset": "TartanAir (Hard), PnP relocalisation against a local map of ground-truth 3D points",
  "flights": [
   {
@@ -164,6 +164,24 @@
    "notes": ""
   },
   {
+   "id": "raco_cube0.5p200_K100_same_lg",
+   "det": "raco",
+   "picker": "cube0.5p200",
+   "K": 100,
+   "map": "same",
+   "matcher": "lg",
+   "date": "2026-10-06T15:07:10",
+   "commit": "c30a61e",
+   "flights": [
+    "oldtown/P001",
+    "hospital/P041"
+   ],
+   "n_queries": 1324,
+   "fail25": 9.44,
+   "has_picks": true,
+   "notes": "claim 1 with LightGlue: insurance pickers"
+  },
+  {
    "id": "raco_cube0.5p200_K100_same_nn",
    "det": "raco",
    "picker": "cube0.5p200",
@@ -216,6 +234,24 @@
    "fail25": 68.05,
    "has_picks": true,
    "notes": "claim 1: farthest-apart vs strongest, pool 2000"
+  },
+  {
+   "id": "raco_far2dp200_K100_same_lg",
+   "det": "raco",
+   "picker": "far2dp200",
+   "K": 100,
+   "map": "same",
+   "matcher": "lg",
+   "date": "2026-10-06T14:35:55",
+   "commit": "961b168",
+   "flights": [
+    "oldtown/P001",
+    "hospital/P041"
+   ],
+   "n_queries": 1324,
+   "fail25": 14.73,
+   "has_picks": true,
+   "notes": "claim 1 with LightGlue"
   },
   {
    "id": "raco_far2dp200_K100_same_nn",
@@ -362,6 +398,24 @@
    "notes": "claim 1 ladder: pool size / score-aware between farthest and strongest"
   },
   {
+   "id": "raco_far3dp400_K100_same_lg",
+   "det": "raco",
+   "picker": "far3dp400",
+   "K": 100,
+   "map": "same",
+   "matcher": "lg",
+   "date": "2026-10-06T14:38:08",
+   "commit": "961b168",
+   "flights": [
+    "oldtown/P001",
+    "hospital/P041"
+   ],
+   "n_queries": 1324,
+   "fail25": 16.16,
+   "has_picks": true,
+   "notes": "claim 1 with LightGlue"
+  },
+  {
    "id": "raco_far3dp400_K100_same_nn",
    "det": "raco",
    "picker": "far3dp400",
@@ -495,6 +549,24 @@
    "notes": ""
   },
   {
+   "id": "raco_hyb0.3_K100_same_lg",
+   "det": "raco",
+   "picker": "hyb0.3",
+   "K": 100,
+   "map": "same",
+   "matcher": "lg",
+   "date": "2026-10-06T15:05:20",
+   "commit": "c30a61e",
+   "flights": [
+    "oldtown/P001",
+    "hospital/P041"
+   ],
+   "n_queries": 1324,
+   "fail25": 10.88,
+   "has_picks": true,
+   "notes": "claim 1 with LightGlue: insurance pickers"
+  },
+  {
    "id": "raco_hyb0.3_K100_same_nn",
    "det": "raco",
    "picker": "hyb0.3",
@@ -511,6 +583,24 @@
    "fail25": 9.89,
    "has_picks": true,
    "notes": "claim 1: insurance against starvation (strong part + spread part)"
+  },
+  {
+   "id": "raco_hyb0.5_K100_same_lg",
+   "det": "raco",
+   "picker": "hyb0.5",
+   "K": 100,
+   "map": "same",
+   "matcher": "lg",
+   "date": "2026-10-06T15:03:28",
+   "commit": "c30a61e",
+   "flights": [
+    "oldtown/P001",
+    "hospital/P041"
+   ],
+   "n_queries": 1324,
+   "fail25": 9.97,
+   "has_picks": true,
+   "notes": "claim 1 with LightGlue: insurance pickers"
   },
   {
    "id": "raco_hyb0.5_K100_same_nn",
@@ -531,6 +621,24 @@
    "notes": "claim 1: insurance against starvation (strong part + spread part)"
   },
   {
+   "id": "raco_sd_K30_same_lg",
+   "det": "raco",
+   "picker": "sd",
+   "K": 30,
+   "map": "same",
+   "matcher": "lg",
+   "date": "2026-10-06T14:40:04",
+   "commit": "961b168",
+   "flights": [
+    "oldtown/P001",
+    "hospital/P041"
+   ],
+   "n_queries": 1324,
+   "fail25": 21.53,
+   "has_picks": true,
+   "notes": "claim 1 with LightGlue"
+  },
+  {
    "id": "raco_sd_K30_same_nn",
    "det": "raco",
    "picker": "sd",
@@ -547,6 +655,24 @@
    "fail25": 15.94,
    "has_picks": true,
    "notes": "claim 1: farthest-apart vs strongest, pool 2000"
+  },
+  {
+   "id": "raco_cube0.5_K30_same_lg",
+   "det": "raco",
+   "picker": "cube0.5",
+   "K": 30,
+   "map": "same",
+   "matcher": "lg",
+   "date": "2026-10-06T14:41:51",
+   "commit": "961b168",
+   "flights": [
+    "oldtown/P001",
+    "hospital/P041"
+   ],
+   "n_queries": 1324,
+   "fail25": 22.13,
+   "has_picks": true,
+   "notes": "claim 1 with LightGlue"
   },
   {
    "id": "raco_cube0.5_K30_same_nn",
@@ -567,6 +693,24 @@
    "notes": "claim 1: farthest-apart vs strongest, pool 2000"
   },
   {
+   "id": "raco_far2d_K30_same_lg",
+   "det": "raco",
+   "picker": "far2d",
+   "K": 30,
+   "map": "same",
+   "matcher": "lg",
+   "date": "2026-10-06T14:43:48",
+   "commit": "961b168",
+   "flights": [
+    "oldtown/P001",
+    "hospital/P041"
+   ],
+   "n_queries": 1324,
+   "fail25": 97.13,
+   "has_picks": true,
+   "notes": "claim 1 with LightGlue"
+  },
+  {
    "id": "raco_far2d_K30_same_nn",
    "det": "raco",
    "picker": "far2d",
@@ -583,6 +727,24 @@
    "fail25": 96.07,
    "has_picks": true,
    "notes": "claim 1: farthest-apart vs strongest, pool 2000"
+  },
+  {
+   "id": "raco_far2dp120_K30_same_lg",
+   "det": "raco",
+   "picker": "far2dp120",
+   "K": 30,
+   "map": "same",
+   "matcher": "lg",
+   "date": "2026-10-06T14:51:39",
+   "commit": "f1540bb",
+   "flights": [
+    "oldtown/P001",
+    "hospital/P041"
+   ],
+   "n_queries": 1324,
+   "fail25": 37.84,
+   "has_picks": true,
+   "notes": "claim 1 with LightGlue"
   },
   {
    "id": "raco_far2dp120_K30_same_nn",
@@ -621,6 +783,24 @@
    "notes": "claim 1 ladder: pool size / score-aware between farthest and strongest"
   },
   {
+   "id": "raco_far3d_K30_same_lg",
+   "det": "raco",
+   "picker": "far3d",
+   "K": 30,
+   "map": "same",
+   "matcher": "lg",
+   "date": "2026-10-06T14:45:49",
+   "commit": "961b168",
+   "flights": [
+    "oldtown/P001",
+    "hospital/P041"
+   ],
+   "n_queries": 1324,
+   "fail25": 86.93,
+   "has_picks": true,
+   "notes": "claim 1 with LightGlue"
+  },
+  {
    "id": "raco_far3d_K30_same_nn",
    "det": "raco",
    "picker": "far3d",
@@ -637,6 +817,24 @@
    "fail25": 81.87,
    "has_picks": true,
    "notes": "claim 1: farthest-apart vs strongest, pool 2000"
+  },
+  {
+   "id": "raco_far3dp120_K30_same_lg",
+   "det": "raco",
+   "picker": "far3dp120",
+   "K": 30,
+   "map": "same",
+   "matcher": "lg",
+   "date": "2026-10-06T14:49:41",
+   "commit": "f1540bb",
+   "flights": [
+    "oldtown/P001",
+    "hospital/P041"
+   ],
+   "n_queries": 1324,
+   "fail25": 35.65,
+   "has_picks": true,
+   "notes": "claim 1 with LightGlue"
   },
   {
    "id": "raco_far3dp120_K30_same_nn",
@@ -657,6 +855,24 @@
    "notes": "claim 1 ladder: pool size / score-aware between farthest and strongest"
   },
   {
+   "id": "raco_far3dw_K30_same_lg",
+   "det": "raco",
+   "picker": "far3dw",
+   "K": 30,
+   "map": "same",
+   "matcher": "lg",
+   "date": "2026-10-06T14:47:46",
+   "commit": "f1540bb",
+   "flights": [
+    "oldtown/P001",
+    "hospital/P041"
+   ],
+   "n_queries": 1324,
+   "fail25": 46.0,
+   "has_picks": true,
+   "notes": "claim 1 with LightGlue"
+  },
+  {
    "id": "raco_far3dw_K30_same_nn",
    "det": "raco",
    "picker": "far3dw",
@@ -673,6 +889,24 @@
    "fail25": 37.31,
    "has_picks": true,
    "notes": "claim 1 ladder: pool size / score-aware between farthest and strongest"
+  },
+  {
+   "id": "raco_sd_K100_dense_lg",
+   "det": "raco",
+   "picker": "sd",
+   "K": 100,
+   "map": "dense",
+   "matcher": "lg",
+   "date": "2026-10-06T14:53:28",
+   "commit": "c30a61e",
+   "flights": [
+    "oldtown/P001",
+    "hospital/P041"
+   ],
+   "n_queries": 1324,
+   "fail25": 13.67,
+   "has_picks": true,
+   "notes": "claim 1 with LightGlue"
   },
   {
    "id": "raco_sd_K100_dense_nn",
@@ -697,6 +931,24 @@
    "notes": ""
   },
   {
+   "id": "raco_cube0.5_K100_dense_lg",
+   "det": "raco",
+   "picker": "cube0.5",
+   "K": 100,
+   "map": "dense",
+   "matcher": "lg",
+   "date": "2026-10-06T14:55:22",
+   "commit": "c30a61e",
+   "flights": [
+    "oldtown/P001",
+    "hospital/P041"
+   ],
+   "n_queries": 1324,
+   "fail25": 9.06,
+   "has_picks": true,
+   "notes": "claim 1 with LightGlue"
+  },
+  {
    "id": "raco_cube0.5_K100_dense_nn",
    "det": "raco",
    "picker": "cube0.5",
@@ -712,6 +964,42 @@
    "fail25": 8.19,
    "has_picks": true,
    "notes": ""
+  },
+  {
+   "id": "raco_far3dp200_K100_dense_lg",
+   "det": "raco",
+   "picker": "far3dp200",
+   "K": 100,
+   "map": "dense",
+   "matcher": "lg",
+   "date": "2026-10-06T14:59:06",
+   "commit": "c30a61e",
+   "flights": [
+    "oldtown/P001",
+    "hospital/P041"
+   ],
+   "n_queries": 1324,
+   "fail25": 11.18,
+   "has_picks": true,
+   "notes": "claim 1 with LightGlue"
+  },
+  {
+   "id": "raco_grid_K100_dense_lg",
+   "det": "raco",
+   "picker": "grid",
+   "K": 100,
+   "map": "dense",
+   "matcher": "lg",
+   "date": "2026-10-06T14:57:17",
+   "commit": "c30a61e",
+   "flights": [
+    "oldtown/P001",
+    "hospital/P041"
+   ],
+   "n_queries": 1324,
+   "fail25": 11.78,
+   "has_picks": true,
+   "notes": "claim 1 with LightGlue"
   },
   {
    "id": "raco_grid_K100_dense_nn",

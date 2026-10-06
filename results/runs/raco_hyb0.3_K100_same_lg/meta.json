@@ -1,7 +1,7 @@
 {
- "id": "raco_far2dp200_K100_same_lg",
+ "id": "raco_hyb0.3_K100_same_lg",
  "det": "raco",
- "picker": "far2dp200",
+ "picker": "hyb0.3",
  "K": 100,
  "map": "same",
  "matcher": "lg",
@@ -20,7 +20,7 @@
  ],
  "protocol": "C23: keyframes every 10 within +-20, LightGlue per keyframe, PnP RANSAC 3 px 2000 it >= 6 inliers",
  "has_picks": true,
- "notes": "claim 1 with LightGlue",
- "date": "2026-10-06T14:35:55",
- "commit": "961b168"
+ "notes": "claim 1 with LightGlue: insurance pickers",
+ "date": "2026-10-06T15:05:20",
+ "commit": "c30a61e"
 }
