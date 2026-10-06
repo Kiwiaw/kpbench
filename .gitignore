@@ -6,3 +6,5 @@ docs/dev/out/
 *.npz
 *.pkl
 .pytest_cache/
+*.pdf
+reports/

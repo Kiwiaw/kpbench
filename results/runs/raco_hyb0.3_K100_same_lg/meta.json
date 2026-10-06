@@ -18,9 +18,9 @@
   "rep5",
   "rep10"
  ],
- "protocol": "C23: keyframes every 10 within +-20, LightGlue per keyframe, PnP RANSAC 3 px 2000 it >= 6 inliers",
+ "protocol": "C23: keyframes every 10, map = keyframes within +-20 frames, LightGlue per keyframe, PnP AP3P-RANSAC 3 px 2000 it >= 6 inliers + LM refinement, camera-centre error",
  "has_picks": true,
- "notes": "claim 1 with LightGlue: insurance pickers",
- "date": "2026-10-06T15:05:20",
- "commit": "c30a61e"
+ "notes": "claim 1 with LightGlue: insurance pickers; corrected protocol (AP3P+LM, centre error)",
+ "date": "2026-10-06T21:42:09",
+ "commit": "fa3ec5c"
 }

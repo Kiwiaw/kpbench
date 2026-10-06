@@ -18,9 +18,9 @@
   "rep5",
   "rep10"
  ],
- "protocol": "C23: keyframes every 10 within +-20, mutual NN, PnP RANSAC 3 px 2000 it >= 6 inliers",
+ "protocol": "C23: keyframes every 10, map = keyframes within +-20 frames, mutual NN, PnP AP3P-RANSAC 3 px 2000 it >= 6 inliers + LM refinement, camera-centre error",
  "has_picks": true,
- "notes": "claim 1: farthest-apart vs strongest, pool 2000",
- "date": "2026-10-06T14:00:44",
- "commit": "fa54a23"
+ "notes": "claim 1: farthest-apart vs strongest, pool 2000; corrected protocol (AP3P+LM, centre error)",
+ "date": "2026-10-06T20:26:13",
+ "commit": "08b3672"
 }

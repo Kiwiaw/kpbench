@@ -18,9 +18,9 @@
   "rep5",
   "rep10"
  ],
- "protocol": "C23: keyframes every 10 within +-20, mutual NN, PnP RANSAC 3 px 2000 it >= 6 inliers",
+ "protocol": "C23: keyframes every 10, map = keyframes within +-20 frames, mutual NN, PnP AP3P-RANSAC 3 px 2000 it >= 6 inliers + LM refinement, camera-centre error",
  "has_picks": true,
- "notes": "claim 1 ladder: pool size / score-aware between farthest and strongest",
- "date": "2026-10-06T14:07:43",
- "commit": "546472a"
+ "notes": "claim 1 ladder: pool size / score-aware between farthest and strongest; corrected protocol (AP3P+LM, centre error)",
+ "date": "2026-10-06T20:27:19",
+ "commit": "50ead23"
 }

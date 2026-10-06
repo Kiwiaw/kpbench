@@ -18,9 +18,9 @@
   "rep5",
   "rep10"
  ],
- "protocol": "C23: keyframes every 10 within +-20, LightGlue per keyframe, PnP RANSAC 3 px 2000 it >= 6 inliers",
+ "protocol": "C23: keyframes every 10, map = keyframes within +-20 frames, LightGlue per keyframe, PnP AP3P-RANSAC 3 px 2000 it >= 6 inliers + LM refinement, camera-centre error",
  "has_picks": true,
- "notes": "claim 1 with LightGlue",
- "date": "2026-10-06T14:33:17",
- "commit": "2bd7f88"
+ "notes": "claim 1 with LightGlue; corrected protocol (AP3P+LM, centre error)",
+ "date": "2026-10-06T21:32:20",
+ "commit": "fa3ec5c"
 }
