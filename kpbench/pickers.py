@@ -9,6 +9,8 @@ Names:
   grid10x8     10 x 8 image cells, round robin
   fps          2D farthest point sampling over the same pool as grid, score-aware: next = argmax dist * (1 - rank/M)
   fps0         plain 2D farthest point sampling over the pool (no score term)
+  cube<s>p<M>  cube round robin over the strongest M candidates only (cube0.5p200)
+  hyb<f>[c<s>] strongest f*K with depth first, the rest by cube round robin (s m, default 0.5) over the grid pool (hyb0.5)
   far2d, far3d plain farthest point sampling over the strongest 2000 candidates with depth: pixel distance (2d) or
                camera-frame Euclidean distance in metres (3d); suffix w = score-aware gain, p<M> = pool size (far3dp400)
 A picker returns candidate indices (at most K; fewer only when the frame has too few candidates).
@@ -142,6 +144,47 @@ def pick_far(space, pool_size, score_aware):
     return f
 
 
+def cube_groups(u, v, z, idx, size):
+    """candidate indices idx (score order) -> list of per-cube index lists (camera-frame cubes of `size` metres)"""
+    key = np.floor(to3d(u[idx], v[idx], z[idx]) / size).astype(int); g = {}
+    for jj, j in enumerate(idx):
+        g.setdefault(tuple(key[jj]), []).append(int(j))
+    return list(g.values())
+
+
+def pick_hyb(frac, size):
+    """hyb<frac>: insurance against starvation. The strongest frac*K points with depth are taken unconditionally, the rest
+    are filled by cube round robin (size m) over the strongest M = clip(4K, 80, 400) candidates with depth, skipping cubes
+    the first part already occupies first. E.g. hyb0.5 at K=100: 50 strongest + 50 spread."""
+    def f(u, v, s, z, K):
+        ok = np.flatnonzero(z < DEPTH_MAX)
+        if not len(ok):
+            return np.arange(min(K, len(u)))
+        h = int(round(frac * K)); first = ok[:h]
+        pool = ok[h:int(np.clip(4 * K, 80, 400))]
+        if not len(pool):
+            return fill(first, len(u), K)
+        taken = set(tuple(k) for k in np.floor(to3d(u[first], v[first], z[first]) / size).astype(int))
+        groups = cube_groups(u, v, z, pool, size)
+        key_of = {g[0]: tuple(np.floor(to3d(u[[g[0]]], v[[g[0]]], z[[g[0]]]) / size).astype(int)[0]) for g in groups}
+        fresh = [g for g in groups if key_of[g[0]] not in taken]; old = [g for g in groups if key_of[g[0]] in taken]
+        rest = round_robin(fresh, K - h) if fresh else np.array([], int)
+        if len(rest) < K - h and old:
+            rest = np.concatenate([rest, round_robin(old, K - h - len(rest))])
+        return fill(np.concatenate([first, rest]).astype(int), len(u), K)
+    return f
+
+
+def pick_cube_pool(size, M):
+    """cube<size>p<M>: cube round robin restricted to the strongest M candidates with depth (the cube analogue of far3dp<M>)"""
+    def f(u, v, s, z, K):
+        ok = np.flatnonzero(z < DEPTH_MAX)[:M]
+        if not len(ok):
+            return np.arange(min(K, len(u)))
+        return fill(round_robin(cube_groups(u, v, z, ok, size), K), len(u), K)
+    return f
+
+
 PICKERS = {'score': pick_score, 'sd': pick_sd, 'grid': pick_grid, 'grid10x8': pick_grid10x8,
            'fps': pick_fps(True), 'fps0': pick_fps(False)}
 
@@ -150,6 +193,12 @@ def parse(name):
     """picker name -> function. cube<size>; far2d|far3d[w][p<pool>], e.g. far3d, far2dw, far3dp400"""
     if name in PICKERS:
         return PICKERS[name]
+    m = re.fullmatch(r'cube([0-9.]+)p([0-9]+)', name)
+    if m:
+        return pick_cube_pool(float(m.group(1)), int(m.group(2)))
+    m = re.fullmatch(r'hyb([0-9.]+)(?:c([0-9.]+))?', name)
+    if m:
+        return pick_hyb(float(m.group(1)), float(m.group(2) or 0.5))
     if name.startswith('cube'):
         return pick_cube(float(name[4:]))
     m = re.fullmatch(r'far(2d|3d)(w?)(?:p(\d+))?', name)

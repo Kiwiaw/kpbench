@@ -1,0 +1,26 @@
+{
+ "id": "raco_cube0.5p200_K100_same_nn",
+ "det": "raco",
+ "picker": "cube0.5p200",
+ "K": 100,
+ "map": "same",
+ "matcher": "nn",
+ "tag": "",
+ "cols": [
+  "flight",
+  "q",
+  "err_cm",
+  "rot_deg",
+  "n_sel",
+  "n_match",
+  "n_inl",
+  "rep1",
+  "rep5",
+  "rep10"
+ ],
+ "protocol": "C23: keyframes every 10 within +-20, mutual NN, PnP RANSAC 3 px 2000 it >= 6 inliers",
+ "has_picks": true,
+ "notes": "claim 1: insurance against starvation (strong part + spread part)",
+ "date": "2026-10-06T14:34:22",
+ "commit": "2bd7f88"
+}

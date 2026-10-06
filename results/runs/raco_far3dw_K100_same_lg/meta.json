@@ -1,7 +1,7 @@
 {
- "id": "raco_sd_K100_same_lg",
+ "id": "raco_far3dw_K100_same_lg",
  "det": "raco",
- "picker": "sd",
+ "picker": "far3dw",
  "K": 100,
  "map": "same",
  "matcher": "lg",
@@ -20,7 +20,7 @@
  ],
  "protocol": "C23: keyframes every 10 within +-20, LightGlue per keyframe, PnP RANSAC 3 px 2000 it >= 6 inliers",
  "has_picks": true,
- "notes": "LightGlue matcher",
- "date": "2026-10-06T14:19:03",
- "commit": "cca877d"
+ "notes": "claim 1 with LightGlue",
+ "date": "2026-10-06T14:29:13",
+ "commit": "2bd7f88"
 }
