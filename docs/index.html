@@ -109,10 +109,10 @@
   <details id="runbox" open>
     <summary>Runs <span id="runcount" class="muted"></span></summary>
     <div class="controls inline runtools">
-      <input id="runfilter" type="search" placeholder="filter runs, e.g.  raco lg K100   or  -sp   (all terms must match; -term excludes; Esc clears)" size="72">
-      <button id="runshowall" title="tick every run the filter lists">show all listed</button>
+      <button id="runshowall" title="tick every run the column filters list">show all listed</button>
       <button id="runhideall" title="untick every run except the baseline">hide all</button>
-      <span class="muted">click a column header to sort, again to reverse, a third time to reset</span>
+      <button id="runclearfilters" title="list every run again" style="display:none">clear column filters</button>
+      <span class="muted">click a column name to sort (again to reverse, a third time to reset); ▾ filters the column by value</span>
     </div>
     <div class="tablewrap runs-wrap">
       <table class="data runsel" id="runsel"></table>

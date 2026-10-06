@@ -169,7 +169,8 @@ const S = {
   // Not persisted
   sumSort: { col: null, dir: 1 },
   runSort: { col: null, dir: 1 },   // run selector sort (null = export order)
-  runFilter: '',                    // run selector text filter (space-separated terms, all must match the row)
+  runHide: {},                      // run selector column filters: column -> Set of hidden values (chosen from the header menu)
+  runMenu: null,                    // column whose value menu is open
   failSort: { col: 'flight', dir: 1 },
   failList: [],          // filtered and sorted rows of the Failures tab
   failCur: -1,           // position of the open query in failList
@@ -425,15 +426,27 @@ function renderHeader() {
     picker: r => r.picker, K: r => +r.K, map: r => r.map, matcher: r => r.matcher, date: r => r.date || '',
     n_queries: r => +r.n_queries, flights: r => (r.flights || []).length, fail25: r => num(r.fail25), notes: r => r.notes || ''
   };
-  const terms = runTerms();
-  let list = I.runs.map((r, i) => ({ r, i })).filter(({ r }) => runPasses(r, terms));
+  const nHidden = Object.values(S.runHide).reduce((n, s) => n + s.size, 0);
+  let list = I.runs.map((r, i) => ({ r, i })).filter(({ r }) => runPasses(r));
   if (S.runSort.col && RUNCOLS[S.runSort.col]) {
     const f = RUNCOLS[S.runSort.col];
     list.sort((a, b) => cmpVals(f(a.r), f(b.r), S.runSort.dir) || (a.i - b.i));
   }
+  // Header cell: the label sorts; columns with a small set of values get a ▾ menu with one checkbox per value.
   const rth = (col, label, cls = '', title = '') => {
     const arrow = S.runSort.col === col ? (S.runSort.dir > 0 ? ' ▲' : ' ▼') : '';
-    return `<th class="sortable ${cls}" data-rcol="${col}" ${title ? `title="${esc(title)}"` : ''}>${label}${arrow}</th>`;
+    const hid = S.runHide[col]; const active = hid && hid.size;
+    let menu = '';
+    if (RUNFILTERABLE.includes(col)) {
+      const vals = [...new Set(I.runs.map(r => String(RUNVAL[col](r))))].sort((a, b) => cmpVals(isNaN(+a) ? a : +a, isNaN(+b) ? b : +b, 1));
+      const open = S.runMenu === col;
+      const items = vals.map(v => `<label><input type="checkbox" data-fcol="${col}" data-fval="${esc(v)}" ${hid && hid.has(v) ? '' : 'checked'}> ${esc(v)}
+        <span class="muted">(${I.runs.filter(r => String(RUNVAL[col](r)) === v).length})</span></label>`).join('');
+      menu = `<button class="fbtn ${active ? 'on' : ''}" data-fmenu="${col}" title="filter by ${col}">▾</button>` +
+        (open ? `<div class="fmenu" data-fbox="${col}"><div class="fhead"><button class="act" data-fall="${col}">all</button>
+          <button class="act" data-fnone="${col}">none</button></div>${items}</div>` : '');
+    }
+    return `<th class="sortable ${cls} ${active ? 'filtered' : ''}" data-rcol="${col}" ${title ? `title="${esc(title)}"` : ''}><span class="sortlbl">${label}${arrow}</span>${menu}</th>`;
   };
   const rows = list.map(({ r }) => {
     const on = S.sel.includes(r.id);
@@ -457,14 +470,24 @@ function renderHeader() {
     ${rth('fail25', 'fail25 (index)', '', 'fail % at 25 cm over all queries of the run, stored at export time; runs on different flights are not comparable by this number')}
     ${rth('notes', 'notes', 'l')}</tr></thead>
     <tbody>${rows}</tbody>`;
-  $('#runcount').textContent = `(${S.sel.length} of ${I.runs.length} shown${terms.length ? `, ${list.length} listed` : ''}, baseline ${S.base || 'none'})`;
-  $$('#runsel th.sortable').forEach(h => h.addEventListener('click', () => {
+  $('#runcount').textContent = `(${S.sel.length} of ${I.runs.length} shown${nHidden ? `, ${list.length} listed by the column filters` : ''}, baseline ${S.base || 'none'})`;
+  $$('#runsel th.sortable').forEach(h => h.addEventListener('click', e => {
+    if (e.target.closest('.fmenu, .fbtn')) return;          // clicks inside the value menu do not sort
     const col = h.dataset.rcol;
     S.runSort = S.runSort.col === col ? (S.runSort.dir > 0 ? { col, dir: -1 } : { col: null, dir: 1 }) : { col, dir: 1 };
     renderHeader();
   }));
-  const rf = $('#runfilter');
-  if (rf && rf.value !== S.runFilter) rf.value = S.runFilter;
+  $$('#runsel [data-fmenu]').forEach(b => b.addEventListener('click', () => { S.runMenu = S.runMenu === b.dataset.fmenu ? null : b.dataset.fmenu; renderHeader(); }));
+  $$('#runsel [data-fcol]').forEach(cb => cb.addEventListener('change', () => {
+    const col = cb.dataset.fcol, v = cb.dataset.fval, set = S.runHide[col] || (S.runHide[col] = new Set());
+    cb.checked ? set.delete(v) : set.add(v);
+    renderHeader();
+  }));
+  $$('#runsel [data-fall]').forEach(b => b.addEventListener('click', () => { S.runHide[b.dataset.fall] = new Set(); renderHeader(); }));
+  $$('#runsel [data-fnone]').forEach(b => b.addEventListener('click', () => {
+    const col = b.dataset.fnone; S.runHide[col] = new Set(I.runs.map(r => String(RUNVAL[col](r)))); renderHeader();
+  }));
+  const clr = $('#runclearfilters'); if (clr) clr.style.display = nHidden ? '' : 'none';
 
   $$('#runsel [data-sel]').forEach(cb => cb.addEventListener('change', () => {
     const id = cb.dataset.sel;
@@ -481,20 +504,20 @@ function renderHeader() {
   $$('#tabs button').forEach(b => b.classList.toggle('active', b.dataset.tab === S.tab));
 }
 
-/** Run selector filter: space-separated terms that must all occur in the row text; a leading '-' excludes. */
-function runTerms() { return S.runFilter.toLowerCase().split(/\s+/).filter(Boolean); }
-function runPasses(r, terms) {
-  if (!terms.length) return true;
-  const hay = [r.id, r.det, r.picker, r.K, r.map, r.matcher, r.date, r.notes, (r.flights || []).join(' ')].join(' ').toLowerCase();
-  return terms.every(t => t.startsWith('-') ? !hay.includes(t.slice(1)) : hay.includes(t));
+/** Run selector column filters: a run is listed when none of its values is hidden in S.runHide. */
+const RUNVAL = { det: r => r.det, picker: r => r.picker, K: r => r.K, map: r => r.map, matcher: r => r.matcher, flights: r => (r.flights || []).length };
+const RUNFILTERABLE = ['det', 'picker', 'K', 'map', 'matcher', 'flights'];
+function runPasses(r) {
+  return RUNFILTERABLE.every(col => !(S.runHide[col] && S.runHide[col].has(String(RUNVAL[col](r)))));
 }
 function initControls() {
   $('#main').addEventListener('click', runActionClick);
-  $('#runfilter').addEventListener('input', e => { S.runFilter = e.target.value; renderHeader(); });
-  $('#runfilter').addEventListener('keydown', e => { if (e.key === 'Escape') { S.runFilter = ''; renderHeader(); } });
-  $('#runshowall').addEventListener('click', () => {   // tick every run the filter lists
-    const terms = runTerms();
-    S.sel = S.index.runs.filter(r => runPasses(r, terms)).map(r => r.id); S.sumSort = { col: null, dir: 1 }; render();
+  document.addEventListener('click', e => {   // a click outside an open value menu closes it
+    if (S.runMenu && !e.target.closest('.fmenu, .fbtn')) { S.runMenu = null; renderHeader(); }
+  });
+  $('#runclearfilters').addEventListener('click', () => { S.runHide = {}; S.runMenu = null; renderHeader(); });
+  $('#runshowall').addEventListener('click', () => {   // tick every run the column filters list
+    S.sel = S.index.runs.filter(r => runPasses(r)).map(r => r.id); S.sumSort = { col: null, dir: 1 }; render();
   });
   $('#runhideall').addEventListener('click', () => { S.sel = S.base ? [S.base] : []; S.sumSort = { col: null, dir: 1 }; render(); });
   $('#runsel').addEventListener('click', runActionClick);

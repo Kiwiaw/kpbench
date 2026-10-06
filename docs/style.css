@@ -192,5 +192,15 @@ th.sortable[title], th[title] { cursor: help; }
 
 /* Run selector tools */
 .runtools { margin: 0 0 6px; }
-.runtools input[type=search] { font: inherit; padding: 2px 6px; border: 1px solid #c9ced8; border-radius: 4px; }
 .runs-wrap { max-height: 320px; }
+
+/* Column value filters in the run list header */
+table.runsel th { position: relative; }
+table.runsel th .sortlbl { cursor: pointer; }
+table.runsel th.filtered .sortlbl { color: var(--accent); }
+.fbtn { margin-left: 3px; padding: 0 3px; font-size: 10px; line-height: 13px; border: 1px solid transparent; border-radius: 3px; background: transparent; color: #8a93a3; cursor: pointer; }
+.fbtn:hover, .fbtn.on { border-color: #c9ced8; background: #fff; color: var(--accent); }
+.fmenu { position: absolute; top: 100%; left: 0; z-index: 5; min-width: 150px; max-height: 260px; overflow: auto; background: #fff; border: 1px solid #c9ced8; border-radius: 4px;
+         box-shadow: 0 4px 14px rgba(0,0,0,0.12); padding: 4px 8px; font-weight: normal; text-align: left; white-space: nowrap; }
+.fmenu label { display: block; cursor: pointer; padding: 1px 0; }
+.fmenu .fhead { display: flex; gap: 4px; padding-bottom: 3px; margin-bottom: 3px; border-bottom: 1px solid var(--line); }
