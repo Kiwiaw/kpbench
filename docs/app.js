@@ -168,6 +168,8 @@ const S = {
 
   // Not persisted
   sumSort: { col: null, dir: 1 },
+  runSort: { col: null, dir: 1 },   // run selector sort (null = export order)
+  runFilter: '',                    // run selector text filter (space-separated terms, all must match the row)
   failSort: { col: 'flight', dir: 1 },
   failList: [],          // filtered and sorted rows of the Failures tab
   failCur: -1,           // position of the open query in failList
@@ -417,8 +419,23 @@ function renderHeader() {
   $('#dataset').textContent = I.dataset || '';
   $('#generated').textContent = I.generated ? `generated ${I.generated.replace('T', ' ')}` : '';
 
-  // Run selector: one table row per run with "show" checkbox and "baseline" radio.
-  const rows = I.runs.map(r => {
+  // Run selector: one table row per run with "show" checkbox and "baseline" radio; sortable and filterable.
+  const RUNCOLS = {
+    show: r => S.sel.includes(r.id) ? 0 : 1, base: r => r.id === S.base ? 0 : 1, id: r => r.id, det: r => r.det,
+    picker: r => r.picker, K: r => +r.K, map: r => r.map, matcher: r => r.matcher, date: r => r.date || '',
+    n_queries: r => +r.n_queries, flights: r => (r.flights || []).length, fail25: r => num(r.fail25), notes: r => r.notes || ''
+  };
+  const terms = runTerms();
+  let list = I.runs.map((r, i) => ({ r, i })).filter(({ r }) => runPasses(r, terms));
+  if (S.runSort.col && RUNCOLS[S.runSort.col]) {
+    const f = RUNCOLS[S.runSort.col];
+    list.sort((a, b) => cmpVals(f(a.r), f(b.r), S.runSort.dir) || (a.i - b.i));
+  }
+  const rth = (col, label, cls = '', title = '') => {
+    const arrow = S.runSort.col === col ? (S.runSort.dir > 0 ? ' ▲' : ' ▼') : '';
+    return `<th class="sortable ${cls}" data-rcol="${col}" ${title ? `title="${esc(title)}"` : ''}>${label}${arrow}</th>`;
+  };
+  const rows = list.map(({ r }) => {
     const on = S.sel.includes(r.id);
     return `<tr class="${on ? 'on' : ''}">
       <td class="c"><input type="checkbox" data-sel="${esc(r.id)}" ${on ? 'checked' : ''}></td>
@@ -430,16 +447,24 @@ function renderHeader() {
       <td class="l">${esc((r.flights || []).length)}</td><td>${fmt(num(r.fail25))}</td>
       <td class="l muted">${esc(r.notes || '')}</td></tr>`;
   }).join('');
-  $('#runsel').innerHTML = `<thead><tr><th class="c" title="show this run in every tab">show</th>
-    <th class="c" title="the run every other shown run is compared with (saves / breaks / p)">base</th><th class="l">id</th>
-    <th class="l" title="detector: raco = RaCo ranker order, sp = SuperPoint score order">det</th>
-    <th class="l" title="selection rule: sd = strongest with depth, cube0.5 = 0.5 m cubes, grid = image cells, fps = farthest point sampling (see legend)">picker</th>
-    <th title="points kept per image">K</th><th class="l" title="same = keyframes use the same picker; dense = keyframes use their 300 strongest points">map</th>
-    <th class="l" title="nn = mutual nearest neighbour on SuperPoint descriptors, lg = LightGlue per keyframe">matcher</th>
-    <th class="l">date</th><th title="queries in the run">n_queries</th><th class="l" title="number of flights covered">flights</th>
-    <th title="fail % at 25 cm over all queries of the run, stored at export time">fail25 (index)</th><th class="l">notes</th></tr></thead>
+  $('#runsel').innerHTML = `<thead><tr>${rth('show', 'show', 'c', 'show this run in every tab (click to sort shown runs first)')}
+    ${rth('base', 'base', 'c', 'the run every other shown run is compared with (saves / breaks / p)')}${rth('id', 'id', 'l')}
+    ${rth('det', 'det', 'l', 'detector: raco = RaCo ranker order, sp = SuperPoint score order')}
+    ${rth('picker', 'picker', 'l', 'selection rule: sd = strongest with depth, cube0.5 = 0.5 m cubes, grid = image cells, fps = farthest point sampling (see legend)')}
+    ${rth('K', 'K', '', 'points kept per image')}${rth('map', 'map', 'l', 'same = keyframes use the same picker; dense = keyframes use their 300 strongest points')}
+    ${rth('matcher', 'matcher', 'l', 'nn = mutual nearest neighbour on SuperPoint descriptors, lg = LightGlue per keyframe')}
+    ${rth('date', 'date', 'l')}${rth('n_queries', 'n_queries', '', 'queries in the run')}${rth('flights', 'flights', 'l', 'number of flights covered')}
+    ${rth('fail25', 'fail25 (index)', '', 'fail % at 25 cm over all queries of the run, stored at export time; runs on different flights are not comparable by this number')}
+    ${rth('notes', 'notes', 'l')}</tr></thead>
     <tbody>${rows}</tbody>`;
-  $('#runcount').textContent = `(${S.sel.length} of ${I.runs.length} shown, baseline ${S.base || 'none'})`;
+  $('#runcount').textContent = `(${S.sel.length} of ${I.runs.length} shown${terms.length ? `, ${list.length} listed` : ''}, baseline ${S.base || 'none'})`;
+  $$('#runsel th.sortable').forEach(h => h.addEventListener('click', () => {
+    const col = h.dataset.rcol;
+    S.runSort = S.runSort.col === col ? (S.runSort.dir > 0 ? { col, dir: -1 } : { col: null, dir: 1 }) : { col, dir: 1 };
+    renderHeader();
+  }));
+  const rf = $('#runfilter');
+  if (rf && rf.value !== S.runFilter) rf.value = S.runFilter;
 
   $$('#runsel [data-sel]').forEach(cb => cb.addEventListener('change', () => {
     const id = cb.dataset.sel;
@@ -456,8 +481,22 @@ function renderHeader() {
   $$('#tabs button').forEach(b => b.classList.toggle('active', b.dataset.tab === S.tab));
 }
 
+/** Run selector filter: space-separated terms that must all occur in the row text; a leading '-' excludes. */
+function runTerms() { return S.runFilter.toLowerCase().split(/\s+/).filter(Boolean); }
+function runPasses(r, terms) {
+  if (!terms.length) return true;
+  const hay = [r.id, r.det, r.picker, r.K, r.map, r.matcher, r.date, r.notes, (r.flights || []).join(' ')].join(' ').toLowerCase();
+  return terms.every(t => t.startsWith('-') ? !hay.includes(t.slice(1)) : hay.includes(t));
+}
 function initControls() {
   $('#main').addEventListener('click', runActionClick);
+  $('#runfilter').addEventListener('input', e => { S.runFilter = e.target.value; renderHeader(); });
+  $('#runfilter').addEventListener('keydown', e => { if (e.key === 'Escape') { S.runFilter = ''; renderHeader(); } });
+  $('#runshowall').addEventListener('click', () => {   // tick every run the filter lists
+    const terms = runTerms();
+    S.sel = S.index.runs.filter(r => runPasses(r, terms)).map(r => r.id); S.sumSort = { col: null, dir: 1 }; render();
+  });
+  $('#runhideall').addEventListener('click', () => { S.sel = S.base ? [S.base] : []; S.sumSort = { col: null, dir: 1 }; render(); });
   $('#runsel').addEventListener('click', runActionClick);
   $('#thr').innerHTML = S.index.thresholds_cm.map(t => `<option value="${t}">${t} cm</option>`).join('');
   $('#thr').addEventListener('change', e => { S.thr = +e.target.value; render(); });
