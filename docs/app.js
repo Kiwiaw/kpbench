@@ -652,7 +652,7 @@ function renderSummary(el) {
       <thead><tr>${cols.map(c => th(c.id, c.label, S.sumSort, c.cls)).join('')}</tr></thead>
       <tbody>${body}</tbody></table></div>
     <p class="note">Cells: fail % at ${T} cm (n queries in the bin) and the half-width of the 95 % bootstrap interval
-      (${N_BOOT} resamples over queries, fixed seed; hover for the interval). A query fails when it has no pose, its position error is above
+      (block bootstrap: ${N_BOOT} resamples of ${BLOCK}-frame blocks per flight, fixed seed; neighbouring queries fail together, so this is wider than a per-query interval; hover for the interval). A query fails when it has no pose, its position error is above
       ${T} cm, or its rotation error is above ${rotFail()}°. AUC: area under the share-of-queries-with-error ≤ x curve for x in 0–25 cm,
       failures counted as 25 cm, scaled to 0–1. Median error over the queries that pass at ${T} cm. Means ignore missing values.
       Click a header to sort.</p>`;
