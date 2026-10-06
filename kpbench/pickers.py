@@ -11,6 +11,8 @@ Names:
   fps0         plain 2D farthest point sampling over the pool (no score term)
   cube<s>p<M>  cube round robin over the strongest M candidates only (cube0.5p200)
   hyb<f>[c<s>] strongest f*K with depth first, the rest by cube round robin (s m, default 0.5) over the grid pool (hyb0.5)
+  offp<n>[c][p<M>] K-n strongest with depth + n points OFF the dominant plane (RANSAC plane on the strongest 300 with depth,
+               30 cm tolerance), spread over image cells (c = 0.5 m cubes instead) among the strongest M (default 2000), best per cell
   far2d, far3d plain farthest point sampling over the strongest 2000 candidates with depth: pixel distance (2d) or
                camera-frame Euclidean distance in metres (3d); suffix w = score-aware gain, p<M> = pool size (far3dp400)
 A picker returns candidate indices (at most K; fewer only when the frame has too few candidates).
@@ -185,6 +187,49 @@ def pick_cube_pool(size, M):
     return f
 
 
+def dominant_plane(P, tol=0.3, iters=300, seed=0):
+    """RANSAC plane through 3 random points (same trials as labels.plane_frac); returns (point, unit normal, inlier count)"""
+    rng = np.random.default_rng(seed); best = (None, None, 0)
+    if len(P) < 10:
+        return best
+    for _ in range(iters):
+        i = rng.choice(len(P), 3, replace=False); a, b, c = P[i]
+        n = np.cross(b - a, c - a); nn = np.linalg.norm(n)
+        if nn < 1e-9:
+            continue
+        n /= nn; cnt = int((np.abs((P - a) @ n) < tol).sum())
+        if cnt > best[2]:
+            best = (a, n, cnt)
+    return best
+
+
+def pick_offplane(n_off, M, cubes, tol=0.3):
+    """offp<n>: the K-n strongest candidates with depth, plus n candidates that lie off the dominant plane of the frame
+    (farther than tol from the RANSAC plane fitted to the strongest 300 with depth), spread uniformly: best point per image
+    cell of a ceil(sqrt n)^2 grid (cubes=True: 0.5 m cube round robin), among the strongest M candidates with depth.
+    Too few off-plane points -> fill by rank. The idea: keep RaCo's strong points, add a few that break the plane."""
+    def f(u, v, s, z, K):
+        ok = np.flatnonzero(z < DEPTH_MAX)
+        if not len(ok):
+            return np.arange(min(K, len(u)))
+        h = max(K - n_off, 0); first = ok[:h]
+        a, nrm, cnt = dominant_plane(to3d(u[ok[:300]], v[ok[:300]], z[ok[:300]]), tol)
+        if a is None:
+            return fill(first, len(u), K)
+        pool = ok[h:M]
+        d = np.abs((to3d(u[pool], v[pool], z[pool]) - a) @ nrm)
+        off = pool[d > tol]
+        if len(off):
+            if cubes:
+                sel = round_robin(cube_groups(u, v, z, off, 0.5), K - h)
+            else:
+                sel = off[grid_cells(np.stack([u[off], v[off]], 1), K - h)]
+        else:
+            sel = np.array([], int)
+        return fill(np.concatenate([first, sel]).astype(int), len(u), K)
+    return f
+
+
 PICKERS = {'score': pick_score, 'sd': pick_sd, 'grid': pick_grid, 'grid10x8': pick_grid10x8,
            'fps': pick_fps(True), 'fps0': pick_fps(False)}
 
@@ -196,6 +241,9 @@ def parse(name):
     m = re.fullmatch(r'cube([0-9.]+)p([0-9]+)', name)
     if m:
         return pick_cube_pool(float(m.group(1)), int(m.group(2)))
+    m = re.fullmatch(r'offp([0-9]+)(c?)(?:p([0-9]+))?', name)
+    if m:
+        return pick_offplane(int(m.group(1)), int(m.group(3) or 2000), m.group(2) == 'c')
     m = re.fullmatch(r'hyb([0-9.]+)(?:c([0-9.]+))?', name)
     if m:
         return pick_hyb(float(m.group(1)), float(m.group(2) or 0.5))

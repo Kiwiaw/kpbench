@@ -1,5 +1,5 @@
 {
- "generated": "2026-10-06T15:07:56",
+ "generated": "2026-10-06T19:55:49",
  "dataset": "TartanAir (Hard), PnP relocalisation against a local map of ground-truth 3D points",
  "flights": [
   {
@@ -619,6 +619,114 @@
    "fail25": 9.52,
    "has_picks": true,
    "notes": "claim 1: insurance against starvation (strong part + spread part)"
+  },
+  {
+   "id": "raco_offp30_K100_same_lg",
+   "det": "raco",
+   "picker": "offp30",
+   "K": 100,
+   "map": "same",
+   "matcher": "lg",
+   "date": "2026-10-06T19:42:14",
+   "commit": "2e032c4",
+   "flights": [
+    "oldtown/P001",
+    "hospital/P041"
+   ],
+   "n_queries": 1324,
+   "fail25": 11.86,
+   "has_picks": true,
+   "notes": "off-plane picker: 70 strongest + 30 off the dominant plane"
+  },
+  {
+   "id": "raco_offp30_K100_same_nn",
+   "det": "raco",
+   "picker": "offp30",
+   "K": 100,
+   "map": "same",
+   "matcher": "nn",
+   "date": "2026-10-06T19:53:19",
+   "commit": "2e032c4",
+   "flights": [
+    "oldtown/P001",
+    "hospital/P041"
+   ],
+   "n_queries": 1324,
+   "fail25": 11.4,
+   "has_picks": true,
+   "notes": "off-plane picker: 70 strongest + 30 off the dominant plane"
+  },
+  {
+   "id": "raco_offp30c_K100_same_lg",
+   "det": "raco",
+   "picker": "offp30c",
+   "K": 100,
+   "map": "same",
+   "matcher": "lg",
+   "date": "2026-10-06T19:52:11",
+   "commit": "2e032c4",
+   "flights": [
+    "oldtown/P001",
+    "hospital/P041"
+   ],
+   "n_queries": 1324,
+   "fail25": 11.4,
+   "has_picks": true,
+   "notes": "off-plane picker: 70 strongest + 30 off the dominant plane"
+  },
+  {
+   "id": "raco_offp30c_K100_same_nn",
+   "det": "raco",
+   "picker": "offp30c",
+   "K": 100,
+   "map": "same",
+   "matcher": "nn",
+   "date": "2026-10-06T19:54:52",
+   "commit": "2e032c4",
+   "flights": [
+    "oldtown/P001",
+    "hospital/P041"
+   ],
+   "n_queries": 1324,
+   "fail25": 11.25,
+   "has_picks": true,
+   "notes": "off-plane picker: 70 strongest + 30 off the dominant plane"
+  },
+  {
+   "id": "raco_offp30p400_K100_same_lg",
+   "det": "raco",
+   "picker": "offp30p400",
+   "K": 100,
+   "map": "same",
+   "matcher": "lg",
+   "date": "2026-10-06T19:46:52",
+   "commit": "2e032c4",
+   "flights": [
+    "oldtown/P001",
+    "hospital/P041"
+   ],
+   "n_queries": 1324,
+   "fail25": 12.01,
+   "has_picks": true,
+   "notes": "off-plane picker: 70 strongest + 30 off the dominant plane"
+  },
+  {
+   "id": "raco_offp30p400_K100_same_nn",
+   "det": "raco",
+   "picker": "offp30p400",
+   "K": 100,
+   "map": "same",
+   "matcher": "nn",
+   "date": "2026-10-06T19:54:25",
+   "commit": "2e032c4",
+   "flights": [
+    "oldtown/P001",
+    "hospital/P041"
+   ],
+   "n_queries": 1324,
+   "fail25": 11.03,
+   "has_picks": true,
+   "notes": "off-plane picker: 70 strongest + 30 off the dominant plane"
   },
   {
    "id": "raco_sd_K30_same_lg",
