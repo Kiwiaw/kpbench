@@ -1,0 +1,6 @@
+numpy
+scipy
+opencv-python
+pillow
+pytest
+# extraction only (GPU or CPU): torch, lightglue (pip install git+https://github.com/cvg/LightGlue), RaCo repo via torch.hub

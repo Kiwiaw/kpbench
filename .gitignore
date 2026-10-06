@@ -1,0 +1,8 @@
+__pycache__/
+*.pyc
+cache/
+logs/
+docs/dev/out/
+*.npz
+*.pkl
+.pytest_cache/

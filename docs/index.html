@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Keypoint selection benchmark: TartanAir</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header>
+  <div class="titlebar">
+    <h1>Keypoint selection benchmark: TartanAir</h1>
+    <span id="status" class="status"></span>
+  </div>
+  <div class="meta"><span id="dataset">loading data ...</span> <span id="generated" class="muted"></span></div>
+
+  <details id="runbox" open>
+    <summary>Runs <span id="runcount" class="muted"></span></summary>
+    <div class="tablewrap runs-wrap">
+      <table class="data runsel" id="runsel"></table>
+    </div>
+  </details>
+
+  <div class="controls">
+    <label>Threshold
+      <select id="thr"></select>
+    </label>
+    <label title="Compare runs only on the queries (flight, q) that every selected run has">
+      <input type="checkbox" id="shared"> shared queries only
+    </label>
+    <span id="scopeNote" class="muted"></span>
+  </div>
+
+  <nav class="tabs" id="tabs">
+    <button data-tab="summary">Summary</button>
+    <button data-tab="bins">Bins and flights</button>
+    <button data-tab="curves">Error curves</button>
+    <button data-tab="failures">Failures</button>
+    <button data-tab="runs">Runs</button>
+  </nav>
+</header>
+
+<main id="main"></main>
+
+<script src="app.js"></script>
+</body>
+</html>
