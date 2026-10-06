@@ -434,7 +434,7 @@ function renderHeader() {
     <th class="l" title="detector: raco = RaCo ranker order, sp = SuperPoint score order">det</th>
     <th class="l" title="selection rule: sd = strongest with depth, cube0.5 = 0.5 m cubes, grid = image cells, fps = farthest point sampling (see legend)">picker</th>
     <th title="points kept per image">K</th><th class="l" title="same = keyframes use the same picker; dense = keyframes use their 300 strongest points">map</th>
-    <th class="l" title="nn = mutual nearest neighbour on SuperPoint descriptors">matcher</th>
+    <th class="l" title="nn = mutual nearest neighbour on SuperPoint descriptors, lg = LightGlue per keyframe">matcher</th>
     <th class="l">date</th><th title="queries in the run">n_queries</th><th class="l" title="number of flights covered">flights</th>
     <th title="fail % at 25 cm over all queries of the run, stored at export time">fail25 (index)</th><th class="l">notes</th></tr></thead>
     <tbody>${rows}</tbody>`;

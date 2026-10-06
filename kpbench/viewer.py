@@ -1,7 +1,7 @@
 """Frame viewer: a standalone HTML page that shows one frame in 3D with the keypoints each picker keeps.
 
   python -m kpbench.viewer --flight oldtown/P001 --frame 334 [--det raco] [--pickers sd,cube0.5,far2d,far3d]
-                           [--kmax 300] [--step 4]
+                           [--kmax 2000] [--step 4]
 -> docs/frames/<slug>_<frame>.html (plotly.js from the CDN, all data inline as JSON).
 
 Plot axes follow the usual convention: x = right (camera x), y = forward (camera z), z = up (-camera y).
@@ -35,7 +35,7 @@ def r3(a):
     return [round(float(x), 3) for x in a]
 
 
-def build(fid, f, det='raco', pickers=('sd', 'cube0.5', 'far2d', 'far3d'), kmax=300, step=4):
+def build(fid, f, det='raco', pickers=('sd', 'cube0.5', 'far2d', 'far3d'), kmax=2000, step=4):
     F = Flight(fid)
     img = F.img(f)
     dep = F.depth(f)
@@ -59,7 +59,8 @@ def build(fid, f, det='raco', pickers=('sd', 'cube0.5', 'far2d', 'far3d'), kmax=
     cands = {'u': [round(float(x), 2) for x in u[valid]], 'v': [round(float(x), 2) for x in v[valid]],
              'x': r3(Q[:, 0]), 'y': r3(Q[:, 1]), 'z': r3(Q[:, 2]),
              'cx': r3(Pc[:, 0]), 'cy': r3(Pc[:, 1]), 'cz': r3(Pc[:, 2]),   # camera frame, for the 0.5 m cubes
-             'rank': [int(j) for j in valid], 'd': [round(float(x), 2) for x in z[valid]]}
+             'rank': [int(j) for j in valid], 'd': [round(float(x), 2) for x in z[valid]],
+             'col': ['#%02x%02x%02x' % tuple(int(c) for c in img[int(min(H - 1, max(0, round(b)))), int(min(W - 1, max(0, round(a))))]) for a, b in zip(u[valid], v[valid])]}
 
     # 3. selections. sd, cube<s>, far2d/far3d are prefix-consistent: the first K entries of the selection for
     # kmax are exactly the selection for K, so one ordered list per picker covers every K. grid is not, so its
@@ -124,7 +125,7 @@ HTML = r'''<!doctype html>
   <label><input type="checkbox" id="cubes"> show 0.5 m cubes</label>
   <label><input type="checkbox" id="cloud" checked> show point cloud</label>
   <label><input type="checkbox" id="allc"> show all candidates</label>
-  <label><input type="checkbox" id="byrank"> colour selected by rank</label>
+  <label><input type="checkbox" id="byrank"> colour selected by rank (default: pixel colour)</label>
   <span title="points farther forward than this are outside the 3D view (they stay in the statistics)">view depth <input id="dmax" type="range" min="2" step="0.5"> <span id="dmaxv"></span> m</span>
 </div>
 <div id="readout"></div>
@@ -224,9 +225,9 @@ function draw2d() {
   const S = selection(), byr = document.getElementById('byrank').checked;
   ctx.lineWidth = 2;
   S.forEach((i, n) => {
-    ctx.beginPath(); ctx.arc(C.u[i], C.v[i], 5, 0, 2 * Math.PI);
-    ctx.strokeStyle = 'rgba(0,0,0,0.7)'; ctx.lineWidth = 3.5; ctx.stroke();
-    ctx.strokeStyle = byr ? rankColour(n) : '#ffd400'; ctx.lineWidth = 2; ctx.stroke();
+    ctx.beginPath(); ctx.arc(C.u[i], C.v[i], 3.5, 0, 2 * Math.PI);
+    ctx.strokeStyle = 'rgba(0,0,0,0.8)'; ctx.lineWidth = 2.5; ctx.stroke();
+    ctx.strokeStyle = byr ? rankColour(n) : C.col[i]; ctx.lineWidth = 1.2; ctx.stroke();
   });
 }
 
@@ -236,7 +237,7 @@ function selTrace(S) {
   return {
     x: S.map(i => C.x[i]), y: S.map(i => C.y[i]), z: S.map(i => C.z[i]),
     text: S.map((i, n) => 'pick ' + (n + 1) + '<br>rank ' + C.rank[i] + '<br>depth ' + C.d[i] + ' m'),
-    color: byr ? S.map((i, n) => rankColour(n)) : '#ffd400'
+    color: byr ? S.map((i, n) => rankColour(n)) : S.map(i => C.col[i])
   };
 }
 
@@ -267,7 +268,7 @@ function init() {
     camTrace(),
     { type: 'scatter3d', mode: 'markers', x: s.x, y: s.y, z: s.z, text: s.text, name: 'selected',
       hovertemplate: '%{text}<extra></extra>',
-      marker: { size: 5, color: s.color, line: { color: '#000', width: 1 } } }
+      marker: { size: 3.5, color: s.color, line: { color: '#000', width: 0.8 } } }
   ];
   // Fixed axis ranges (points within the view depth, padded by one cube) so adding points or cubes never rescales
   // the scene; the aspect ratio is set to the range proportions, i.e. what aspectmode 'data' would give for this data.
@@ -344,7 +345,7 @@ def main():
     ap.add_argument('--frame', type=int, required=True)
     ap.add_argument('--det', default='raco')
     ap.add_argument('--pickers', default='sd,cube0.5,far2d,far3d,far3dw,far2dp400')
-    ap.add_argument('--kmax', type=int, default=300)
+    ap.add_argument('--kmax', type=int, default=2000)
     ap.add_argument('--step', type=int, default=4)
     a = ap.parse_args()
     pickers = [p.strip() for p in a.pickers.split(',') if p.strip()]

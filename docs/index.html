@@ -53,8 +53,10 @@
           <dt>map</dt><dd><b>same</b>: the keyframes use the same picker and K as the query, so the map changes with the run.
             <b>dense</b>: every keyframe contributes its 300 strongest points with depth, the map is the same for all runs
             and only the query side changes.</dd>
-          <dt>matcher</dt><dd><b>nn</b>: mutual nearest neighbour; no learned matcher.</dd>
-          <dt>id</dt><dd>det_picker_K&lt;K&gt;_map_matcher[_tag], e.g. raco_grid_K100_same_nn.</dd>
+          <dt>matcher</dt><dd><b>nn</b>: mutual nearest neighbour on the SuperPoint descriptors, no learned matcher. <b>lg</b>: LightGlue
+            (SuperPoint weights) run between the query points and each keyframe's map points in turn; every query point keeps its
+            highest-scoring match. LightGlue uses the point layout, so it can partly make up for a bad spread.</dd>
+          <dt>id</dt><dd>det_picker_K&lt;K&gt;_map_matcher[_tag], e.g. raco_grid_K100_same_nn or raco_cube0.5_K100_same_lg.</dd>
         </dl>
       </section>
       <section>

@@ -1,5 +1,5 @@
 {
- "generated": "2026-10-06T13:27:14",
+ "generated": "2026-10-06T14:14:00",
  "dataset": "TartanAir (Hard), PnP relocalisation against a local map of ground-truth 3D points",
  "flights": [
   {
@@ -84,6 +84,23 @@
  "rot_fail_deg": 5,
  "runs": [
   {
+   "id": "raco_sd_K100_same_lg",
+   "det": "raco",
+   "picker": "sd",
+   "K": 100,
+   "map": "same",
+   "matcher": "lg",
+   "date": "2026-10-06T14:13:02",
+   "commit": "546472a",
+   "flights": [
+    "hospital/P041"
+   ],
+   "n_queries": 530,
+   "fail25": 12.64,
+   "has_picks": true,
+   "notes": "LightGlue matcher"
+  },
+  {
    "id": "raco_sd_K100_same_nn",
    "det": "raco",
    "picker": "sd",
@@ -126,6 +143,150 @@
    "fail25": 5.65,
    "has_picks": true,
    "notes": ""
+  },
+  {
+   "id": "raco_far2d_K100_same_nn",
+   "det": "raco",
+   "picker": "far2d",
+   "K": 100,
+   "map": "same",
+   "matcher": "nn",
+   "date": "2026-10-06T13:57:13",
+   "commit": "fa54a23",
+   "flights": [
+    "oldtown/P001",
+    "hospital/P041"
+   ],
+   "n_queries": 1324,
+   "fail25": 68.05,
+   "has_picks": true,
+   "notes": "claim 1: farthest-apart vs strongest, pool 2000"
+  },
+  {
+   "id": "raco_far2dp200_K100_same_nn",
+   "det": "raco",
+   "picker": "far2dp200",
+   "K": 100,
+   "map": "same",
+   "matcher": "nn",
+   "date": "2026-10-06T14:07:43",
+   "commit": "546472a",
+   "flights": [
+    "oldtown/P001",
+    "hospital/P041"
+   ],
+   "n_queries": 1324,
+   "fail25": 13.97,
+   "has_picks": true,
+   "notes": "claim 1 ladder: pool size / score-aware between farthest and strongest"
+  },
+  {
+   "id": "raco_far2dp400_K100_same_nn",
+   "det": "raco",
+   "picker": "far2dp400",
+   "K": 100,
+   "map": "same",
+   "matcher": "nn",
+   "date": "2026-10-06T14:05:44",
+   "commit": "546472a",
+   "flights": [
+    "oldtown/P001",
+    "hospital/P041"
+   ],
+   "n_queries": 1324,
+   "fail25": 18.73,
+   "has_picks": true,
+   "notes": "claim 1 ladder: pool size / score-aware between farthest and strongest"
+  },
+  {
+   "id": "raco_far2dw_K100_same_nn",
+   "det": "raco",
+   "picker": "far2dw",
+   "K": 100,
+   "map": "same",
+   "matcher": "nn",
+   "date": "2026-10-06T14:04:31",
+   "commit": "fa54a23",
+   "flights": [
+    "oldtown/P001",
+    "hospital/P041"
+   ],
+   "n_queries": 1324,
+   "fail25": 16.01,
+   "has_picks": true,
+   "notes": "claim 1 ladder: pool size / score-aware between farthest and strongest"
+  },
+  {
+   "id": "raco_far3d_K100_same_nn",
+   "det": "raco",
+   "picker": "far3d",
+   "K": 100,
+   "map": "same",
+   "matcher": "nn",
+   "date": "2026-10-06T13:57:42",
+   "commit": "fa54a23",
+   "flights": [
+    "oldtown/P001",
+    "hospital/P041"
+   ],
+   "n_queries": 1324,
+   "fail25": 43.73,
+   "has_picks": true,
+   "notes": "claim 1: farthest-apart vs strongest, pool 2000"
+  },
+  {
+   "id": "raco_far3dp200_K100_same_nn",
+   "det": "raco",
+   "picker": "far3dp200",
+   "K": 100,
+   "map": "same",
+   "matcher": "nn",
+   "date": "2026-10-06T14:08:13",
+   "commit": "546472a",
+   "flights": [
+    "oldtown/P001",
+    "hospital/P041"
+   ],
+   "n_queries": 1324,
+   "fail25": 12.31,
+   "has_picks": true,
+   "notes": "claim 1 ladder: pool size / score-aware between farthest and strongest"
+  },
+  {
+   "id": "raco_far3dp400_K100_same_nn",
+   "det": "raco",
+   "picker": "far3dp400",
+   "K": 100,
+   "map": "same",
+   "matcher": "nn",
+   "date": "2026-10-06T14:06:44",
+   "commit": "546472a",
+   "flights": [
+    "oldtown/P001",
+    "hospital/P041"
+   ],
+   "n_queries": 1324,
+   "fail25": 17.07,
+   "has_picks": true,
+   "notes": "claim 1 ladder: pool size / score-aware between farthest and strongest"
+  },
+  {
+   "id": "raco_far3dw_K100_same_nn",
+   "det": "raco",
+   "picker": "far3dw",
+   "K": 100,
+   "map": "same",
+   "matcher": "nn",
+   "date": "2026-10-06T14:03:11",
+   "commit": "fa54a23",
+   "flights": [
+    "oldtown/P001",
+    "hospital/P041"
+   ],
+   "n_queries": 1324,
+   "fail25": 15.41,
+   "has_picks": true,
+   "notes": "claim 1: farthest-apart vs strongest, pool 2000"
   },
   {
    "id": "raco_fps_K100_same_nn",
@@ -187,6 +348,150 @@
    "fail25": 8.69,
    "has_picks": true,
    "notes": ""
+  },
+  {
+   "id": "raco_sd_K30_same_nn",
+   "det": "raco",
+   "picker": "sd",
+   "K": 30,
+   "map": "same",
+   "matcher": "nn",
+   "date": "2026-10-06T13:58:49",
+   "commit": "fa54a23",
+   "flights": [
+    "oldtown/P001",
+    "hospital/P041"
+   ],
+   "n_queries": 1324,
+   "fail25": 15.94,
+   "has_picks": true,
+   "notes": "claim 1: farthest-apart vs strongest, pool 2000"
+  },
+  {
+   "id": "raco_cube0.5_K30_same_nn",
+   "det": "raco",
+   "picker": "cube0.5",
+   "K": 30,
+   "map": "same",
+   "matcher": "nn",
+   "date": "2026-10-06T13:59:23",
+   "commit": "fa54a23",
+   "flights": [
+    "oldtown/P001",
+    "hospital/P041"
+   ],
+   "n_queries": 1324,
+   "fail25": 15.79,
+   "has_picks": true,
+   "notes": "claim 1: farthest-apart vs strongest, pool 2000"
+  },
+  {
+   "id": "raco_far2d_K30_same_nn",
+   "det": "raco",
+   "picker": "far2d",
+   "K": 30,
+   "map": "same",
+   "matcher": "nn",
+   "date": "2026-10-06T13:58:04",
+   "commit": "fa54a23",
+   "flights": [
+    "oldtown/P001",
+    "hospital/P041"
+   ],
+   "n_queries": 1324,
+   "fail25": 96.07,
+   "has_picks": true,
+   "notes": "claim 1: farthest-apart vs strongest, pool 2000"
+  },
+  {
+   "id": "raco_far2dp120_K30_same_nn",
+   "det": "raco",
+   "picker": "far2dp120",
+   "K": 30,
+   "map": "same",
+   "matcher": "nn",
+   "date": "2026-10-06T14:10:05",
+   "commit": "546472a",
+   "flights": [
+    "oldtown/P001",
+    "hospital/P041"
+   ],
+   "n_queries": 1324,
+   "fail25": 29.23,
+   "has_picks": true,
+   "notes": "claim 1 ladder: pool size / score-aware between farthest and strongest"
+  },
+  {
+   "id": "raco_far2dw_K30_same_nn",
+   "det": "raco",
+   "picker": "far2dw",
+   "K": 30,
+   "map": "same",
+   "matcher": "nn",
+   "date": "2026-10-06T14:09:16",
+   "commit": "546472a",
+   "flights": [
+    "oldtown/P001",
+    "hospital/P041"
+   ],
+   "n_queries": 1324,
+   "fail25": 44.03,
+   "has_picks": true,
+   "notes": "claim 1 ladder: pool size / score-aware between farthest and strongest"
+  },
+  {
+   "id": "raco_far3d_K30_same_nn",
+   "det": "raco",
+   "picker": "far3d",
+   "K": 30,
+   "map": "same",
+   "matcher": "nn",
+   "date": "2026-10-06T13:58:27",
+   "commit": "fa54a23",
+   "flights": [
+    "oldtown/P001",
+    "hospital/P041"
+   ],
+   "n_queries": 1324,
+   "fail25": 81.87,
+   "has_picks": true,
+   "notes": "claim 1: farthest-apart vs strongest, pool 2000"
+  },
+  {
+   "id": "raco_far3dp120_K30_same_nn",
+   "det": "raco",
+   "picker": "far3dp120",
+   "K": 30,
+   "map": "same",
+   "matcher": "nn",
+   "date": "2026-10-06T14:10:52",
+   "commit": "546472a",
+   "flights": [
+    "oldtown/P001",
+    "hospital/P041"
+   ],
+   "n_queries": 1324,
+   "fail25": 27.04,
+   "has_picks": true,
+   "notes": "claim 1 ladder: pool size / score-aware between farthest and strongest"
+  },
+  {
+   "id": "raco_far3dw_K30_same_nn",
+   "det": "raco",
+   "picker": "far3dw",
+   "K": 30,
+   "map": "same",
+   "matcher": "nn",
+   "date": "2026-10-06T14:11:49",
+   "commit": "546472a",
+   "flights": [
+    "oldtown/P001",
+    "hospital/P041"
+   ],
+   "n_queries": 1324,
+   "fail25": 37.31,
+   "has_picks": true,
+   "notes": "claim 1 ladder: pool size / score-aware between farthest and strongest"
   },
   {
    "id": "raco_sd_K100_dense_nn",
@@ -270,6 +575,42 @@
    "fail25": 10.85,
    "has_picks": true,
    "notes": ""
+  },
+  {
+   "id": "raco_far2d_K30_dense_nn",
+   "det": "raco",
+   "picker": "far2d",
+   "K": 30,
+   "map": "dense",
+   "matcher": "nn",
+   "date": "2026-10-06T14:00:44",
+   "commit": "fa54a23",
+   "flights": [
+    "oldtown/P001",
+    "hospital/P041"
+   ],
+   "n_queries": 1324,
+   "fail25": 87.99,
+   "has_picks": true,
+   "notes": "claim 1: farthest-apart vs strongest, pool 2000"
+  },
+  {
+   "id": "raco_far3d_K30_dense_nn",
+   "det": "raco",
+   "picker": "far3d",
+   "K": 30,
+   "map": "dense",
+   "matcher": "nn",
+   "date": "2026-10-06T14:02:09",
+   "commit": "fa54a23",
+   "flights": [
+    "oldtown/P001",
+    "hospital/P041"
+   ],
+   "n_queries": 1324,
+   "fail25": 70.24,
+   "has_picks": true,
+   "notes": "claim 1: farthest-apart vs strongest, pool 2000"
   },
   {
    "id": "raco_grid_K30_dense_nn",
