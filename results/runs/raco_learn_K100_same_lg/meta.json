@@ -1,0 +1,26 @@
+{
+ "id": "raco_learn_K100_same_lg",
+ "det": "raco",
+ "picker": "learn",
+ "K": 100,
+ "map": "same",
+ "matcher": "lg",
+ "tag": "",
+ "cols": [
+  "flight",
+  "q",
+  "err_cm",
+  "rot_deg",
+  "n_sel",
+  "n_match",
+  "n_inl",
+  "rep1",
+  "rep5",
+  "rep10"
+ ],
+ "protocol": "C23: keyframes every 10, map = keyframes within +-20 frames, LightGlue per keyframe, PnP AP3P-RANSAC 3 px 2000 it >= 6 inliers + LM refinement, camera-centre error",
+ "has_picks": false,
+ "notes": "learned re-ranker (LightGBM on pose-derived inlier labels, trained on oldtown P000/P002/P006/P007); corrected protocol",
+ "date": "2026-10-06T22:47:43",
+ "commit": "049b53e0"
+}

@@ -1,5 +1,5 @@
 {
- "generated": "2026-10-06T22:41:00",
+ "generated": "2026-10-06T22:50:44",
  "dataset": "TartanAir (Hard), PnP relocalisation against a local map of ground-truth 3D points",
  "flights": [
   {
@@ -1043,6 +1043,78 @@
    "fail25": 8.08,
    "has_picks": true,
    "notes": "claim 1: insurance against starvation (strong part + spread part); corrected protocol (AP3P+LM, centre error)"
+  },
+  {
+   "id": "raco_learn_K100_same_lg",
+   "det": "raco",
+   "picker": "learn",
+   "K": 100,
+   "map": "same",
+   "matcher": "lg",
+   "date": "2026-10-06T22:47:43",
+   "commit": "049b53e0",
+   "flights": [
+    "oldtown/P001",
+    "hospital/P041"
+   ],
+   "n_queries": 1324,
+   "fail25": 12.08,
+   "has_picks": false,
+   "notes": "learned re-ranker (LightGBM on pose-derived inlier labels, trained on oldtown P000/P002/P006/P007); corrected protocol"
+  },
+  {
+   "id": "raco_learn_K100_same_nn",
+   "det": "raco",
+   "picker": "learn",
+   "K": 100,
+   "map": "same",
+   "matcher": "nn",
+   "date": "2026-10-06T22:45:40",
+   "commit": "049b53e0",
+   "flights": [
+    "oldtown/P001",
+    "hospital/P041"
+   ],
+   "n_queries": 1324,
+   "fail25": 10.05,
+   "has_picks": false,
+   "notes": "learned re-ranker (LightGBM on pose-derived inlier labels, trained on oldtown P000/P002/P006/P007); corrected protocol"
+  },
+  {
+   "id": "raco_learnc_K100_same_lg",
+   "det": "raco",
+   "picker": "learnc",
+   "K": 100,
+   "map": "same",
+   "matcher": "lg",
+   "date": "2026-10-06T22:49:33",
+   "commit": "049b53e0",
+   "flights": [
+    "oldtown/P001",
+    "hospital/P041"
+   ],
+   "n_queries": 1324,
+   "fail25": 10.95,
+   "has_picks": false,
+   "notes": "learned re-ranker (LightGBM on pose-derived inlier labels, trained on oldtown P000/P002/P006/P007); corrected protocol"
+  },
+  {
+   "id": "raco_learnc_K100_same_nn",
+   "det": "raco",
+   "picker": "learnc",
+   "K": 100,
+   "map": "same",
+   "matcher": "nn",
+   "date": "2026-10-06T22:45:55",
+   "commit": "049b53e0",
+   "flights": [
+    "oldtown/P001",
+    "hospital/P041"
+   ],
+   "n_queries": 1324,
+   "fail25": 8.76,
+   "has_picks": false,
+   "notes": "learned re-ranker (LightGBM on pose-derived inlier labels, trained on oldtown P000/P002/P006/P007); corrected protocol"
   },
   {
    "id": "raco_offp30_K100_same_lg",

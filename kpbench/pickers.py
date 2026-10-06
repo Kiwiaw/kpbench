@@ -23,6 +23,7 @@ Names:
 A picker returns candidate indices (at most K; fewer only when the frame has too few candidates).
 To add a picker: write a function (u, v, s, z, K) -> indices and register it in PICKERS or in parse().
 """
+import os
 import re
 import numpy as np
 from .data import to3d, DEPTH_MAX, W, H
@@ -255,6 +256,40 @@ def pick_dband(ratio, cubes, M):
     return f
 
 
+_LEARN = {}
+
+
+def pick_learn(cubes, M, model='learn'):
+    """learn[c][p<M>]: a learned re-ranker on top of the detector. A LightGBM model (kpbench/models/<model>.txt, trained on
+    pose-derived labels: a candidate is positive when it became a PnP inlier for its query) scores every candidate among the
+    strongest M with depth from frame-only features (rank, score, depth, position, local density, the frame's distinct-cube
+    count, and the 256-d descriptor). The K highest scores are kept, or cube 0.5 m round robin over that order (c).
+    Needs the descriptors (needs_desc)."""
+    def load():
+        if model not in _LEARN:
+            import lightgbm as lgb
+            _LEARN[model] = lgb.Booster(model_file=os.path.join(os.path.dirname(os.path.abspath(__file__)), 'models', model + '.txt'))
+        return _LEARN[model]
+
+    def f(u, v, s, z, K, de=None):
+        from scipy.spatial import cKDTree
+        cand = np.flatnonzero(z < DEPTH_MAX)[:M]
+        if len(cand) < 20 or de is None:
+            return np.flatnonzero(z < DEPTH_MAX)[:K]
+        allc = np.flatnonzero(z < DEPTH_MAX)[:500]
+        tree = cKDTree(np.stack([u[allc], v[allc]], 1))
+        dens = np.array([len(x) - 1 for x in tree.query_ball_point(np.stack([u[cand], v[cand]], 1), 12.0)])
+        top = np.flatnonzero(z < DEPTH_MAX)[:100]
+        ncube = len(set(map(tuple, np.floor(to3d(u[top], v[top], z[top]) / 0.5).astype(int))))
+        X = np.stack([cand / 2000.0, s[cand] / max(float(s[0]), 1e-6), np.log(np.maximum(z[cand], 0.1)), u[cand] / W, v[cand] / H,
+                      dens / 20.0, np.full(len(cand), ncube / 100.0)], 1).astype(np.float32)
+        X = np.concatenate([X, de[cand].astype(np.float32)], 1)
+        order = cand[np.argsort(-load().predict(X))]
+        return _rerank_pick(order, u, v, s, z, K, cubes)
+    f.needs_desc = True
+    return f
+
+
 def _rerank_pick(order, u, v, s, z, K, cubes):
     """take K from candidates in the given order (indices), or cube 0.5 m round robin over that order"""
     if not cubes:
@@ -336,6 +371,9 @@ def parse(name):
     m = re.fullmatch(r'offp([0-9]+)(c?)(?:p([0-9]+))?', name)
     if m:
         return pick_offplane(int(m.group(1)), int(m.group(3) or 2000), m.group(2) == 'c')
+    m = re.fullmatch(r'learn(c?)(?:p([0-9]+))?', name)
+    if m:
+        return pick_learn(m.group(1) == 'c', int(m.group(2) or 400))
     m = re.fullmatch(r'dband([0-9.]+)(c?)(?:p([0-9]+))?', name)
     if m:
         return pick_dband(float(m.group(1)), m.group(2) == 'c', int(m.group(3) or 400))
