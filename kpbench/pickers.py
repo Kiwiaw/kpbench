@@ -9,9 +9,12 @@ Names:
   grid10x8     10 x 8 image cells, round robin
   fps          2D farthest point sampling over the same pool as grid, score-aware: next = argmax dist * (1 - rank/M)
   fps0         plain 2D farthest point sampling over the pool (no score term)
+  far2d, far3d plain farthest point sampling over the strongest 2000 candidates with depth: pixel distance (2d) or
+               camera-frame Euclidean distance in metres (3d); suffix w = score-aware gain, p<M> = pool size (far3dp400)
 A picker returns candidate indices (at most K; fewer only when the frame has too few candidates).
 To add a picker: write a function (u, v, s, z, K) -> indices and register it in PICKERS or in parse().
 """
+import re
 import numpy as np
 from .data import to3d, DEPTH_MAX, W, H
 
@@ -111,13 +114,45 @@ def pick_fps(score_aware):
     return f
 
 
+def fps_nd(P, K, w=None):
+    """greedy farthest point sampling in any dimension (Euclidean distance); seed = rank 0; optional per-point weight on the gain"""
+    M = len(P)
+    if M == 0:
+        return np.array([], int)
+    w = np.ones(M) if w is None else w
+    sel = [0]; d = np.linalg.norm(P - P[0], axis=1)
+    while len(sel) < min(K, M):
+        d[sel] = -1
+        i = int(np.argmax(d * w)); sel.append(i)
+        d = np.minimum(d, np.linalg.norm(P - P[i], axis=1))
+    return np.array(sel, int)
+
+
+def pick_far(space, pool_size, score_aware):
+    """far2d / far3d: plain farthest point sampling over the strongest `pool_size` candidates with depth
+    (default 2000 = the whole candidate list). 2d = pixel distance, 3d = Euclidean distance in the camera frame (metres).
+    Suffix w = score-aware gain dist * (1 - rank / pool)."""
+    def f(u, v, s, z, K):
+        pool = np.flatnonzero(z < DEPTH_MAX)[:pool_size]
+        if not len(pool):
+            return np.arange(min(K, len(u)))
+        P = to3d(u[pool], v[pool], z[pool]) if space == '3d' else np.stack([u[pool], v[pool]], 1)
+        w = (1.0 - np.arange(len(pool)) / len(pool)) if score_aware else None
+        return pool[fps_nd(P, K, w)]
+    return f
+
+
 PICKERS = {'score': pick_score, 'sd': pick_sd, 'grid': pick_grid, 'grid10x8': pick_grid10x8,
            'fps': pick_fps(True), 'fps0': pick_fps(False)}
 
 
 def parse(name):
+    """picker name -> function. cube<size>; far2d|far3d[w][p<pool>], e.g. far3d, far2dw, far3dp400"""
     if name in PICKERS:
         return PICKERS[name]
     if name.startswith('cube'):
         return pick_cube(float(name[4:]))
+    m = re.fullmatch(r'far(2d|3d)(w?)(?:p(\d+))?', name)
+    if m:
+        return pick_far(m.group(1), int(m.group(3) or 2000), m.group(2) == 'w')
     raise KeyError('unknown picker %s' % name)

@@ -38,6 +38,12 @@ their strongest 300).
 Environment variables: `KPBENCH_DATA` (data root; laptop `local_data`, Euler `/cluster/scratch/<user>`),
 `KPBENCH_CACHE`, `KPBENCH_RESULTS`, `RACO_DIR`, `DEV`.
 
+## Frame viewer
+
+`python -m kpbench.viewer --flight oldtown/P001 --frame 334 [--det raco] [--pickers sd,cube0.5,far2d,far3d] [--kmax 300]`
+writes `docs/frames/oldtown_P001_334.html`: one frame's point cloud in 3D plus the image, with each picker's kept points
+for any K (slider), optional 0.5 m cubes, and NN-distance / occupied-cube readouts. Standalone (plotly from the CDN).
+
 ## Euler (all 31 flights)
 
 ```
