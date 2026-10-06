@@ -1,5 +1,5 @@
 {
- "generated": "2026-10-06T13:22:58",
+ "generated": "2026-10-06T13:27:14",
  "dataset": "TartanAir (Hard), PnP relocalisation against a local map of ground-truth 3D points",
  "flights": [
   {
@@ -84,19 +84,24 @@
  "rot_fail_deg": 5,
  "runs": [
   {
-   "id": "raco_cube0.5_K100_dense_nn",
+   "id": "raco_sd_K100_same_nn",
    "det": "raco",
-   "picker": "cube0.5",
+   "picker": "sd",
    "K": 100,
-   "map": "dense",
+   "map": "same",
    "matcher": "nn",
-   "date": "2026-10-06T13:05:44",
+   "date": "2026-10-06T13:10:43",
    "commit": "",
    "flights": [
-    "oldtown/P001"
+    "oldtown/P000",
+    "oldtown/P001",
+    "oldtown/P002",
+    "oldtown/P006",
+    "oldtown/P007",
+    "hospital/P041"
    ],
-   "n_queries": 794,
-   "fail25": 8.19,
+   "n_queries": 3980,
+   "fail25": 6.71,
    "has_picks": true,
    "notes": ""
   },
@@ -145,45 +150,6 @@
    "notes": ""
   },
   {
-   "id": "raco_grid10x8_K100_same_nn",
-   "det": "raco",
-   "picker": "grid10x8",
-   "K": 100,
-   "map": "same",
-   "matcher": "nn",
-   "date": "2026-10-06T13:06:42",
-   "commit": "",
-   "flights": [
-    "oldtown/P001"
-   ],
-   "n_queries": 794,
-   "fail25": 8.69,
-   "has_picks": true,
-   "notes": ""
-  },
-  {
-   "id": "raco_grid_K100_dense_nn",
-   "det": "raco",
-   "picker": "grid",
-   "K": 100,
-   "map": "dense",
-   "matcher": "nn",
-   "date": "2026-10-06T13:17:52",
-   "commit": "",
-   "flights": [
-    "oldtown/P000",
-    "oldtown/P001",
-    "oldtown/P002",
-    "oldtown/P006",
-    "oldtown/P007",
-    "hospital/P041"
-   ],
-   "n_queries": 3980,
-   "fail25": 5.85,
-   "has_picks": true,
-   "notes": ""
-  },
-  {
    "id": "raco_grid_K100_same_nn",
    "det": "raco",
    "picker": "grid",
@@ -206,24 +172,19 @@
    "notes": ""
   },
   {
-   "id": "raco_grid_K30_dense_nn",
+   "id": "raco_grid10x8_K100_same_nn",
    "det": "raco",
-   "picker": "grid",
-   "K": 30,
-   "map": "dense",
+   "picker": "grid10x8",
+   "K": 100,
+   "map": "same",
    "matcher": "nn",
-   "date": "2026-10-06T13:19:00",
+   "date": "2026-10-06T13:06:42",
    "commit": "",
    "flights": [
-    "oldtown/P000",
-    "oldtown/P001",
-    "oldtown/P002",
-    "oldtown/P006",
-    "oldtown/P007",
-    "hospital/P041"
+    "oldtown/P001"
    ],
-   "n_queries": 3980,
-   "fail25": 7.99,
+   "n_queries": 794,
+   "fail25": 8.69,
    "has_picks": true,
    "notes": ""
   },
@@ -250,13 +211,30 @@
    "notes": ""
   },
   {
-   "id": "raco_sd_K100_same_nn",
+   "id": "raco_cube0.5_K100_dense_nn",
    "det": "raco",
-   "picker": "sd",
+   "picker": "cube0.5",
    "K": 100,
-   "map": "same",
+   "map": "dense",
    "matcher": "nn",
-   "date": "2026-10-06T13:10:43",
+   "date": "2026-10-06T13:05:44",
+   "commit": "",
+   "flights": [
+    "oldtown/P001"
+   ],
+   "n_queries": 794,
+   "fail25": 8.19,
+   "has_picks": true,
+   "notes": ""
+  },
+  {
+   "id": "raco_grid_K100_dense_nn",
+   "det": "raco",
+   "picker": "grid",
+   "K": 100,
+   "map": "dense",
+   "matcher": "nn",
+   "date": "2026-10-06T13:17:52",
    "commit": "",
    "flights": [
     "oldtown/P000",
@@ -267,7 +245,7 @@
     "hospital/P041"
    ],
    "n_queries": 3980,
-   "fail25": 6.71,
+   "fail25": 5.85,
    "has_picks": true,
    "notes": ""
   },
@@ -290,6 +268,50 @@
    ],
    "n_queries": 3980,
    "fail25": 10.85,
+   "has_picks": true,
+   "notes": ""
+  },
+  {
+   "id": "raco_grid_K30_dense_nn",
+   "det": "raco",
+   "picker": "grid",
+   "K": 30,
+   "map": "dense",
+   "matcher": "nn",
+   "date": "2026-10-06T13:19:00",
+   "commit": "",
+   "flights": [
+    "oldtown/P000",
+    "oldtown/P001",
+    "oldtown/P002",
+    "oldtown/P006",
+    "oldtown/P007",
+    "hospital/P041"
+   ],
+   "n_queries": 3980,
+   "fail25": 7.99,
+   "has_picks": true,
+   "notes": ""
+  },
+  {
+   "id": "sp_sd_K100_same_nn",
+   "det": "sp",
+   "picker": "sd",
+   "K": 100,
+   "map": "same",
+   "matcher": "nn",
+   "date": "2026-10-06T13:13:37",
+   "commit": "",
+   "flights": [
+    "oldtown/P000",
+    "oldtown/P001",
+    "oldtown/P002",
+    "oldtown/P006",
+    "oldtown/P007",
+    "hospital/P041"
+   ],
+   "n_queries": 3980,
+   "fail25": 15.1,
    "has_picks": true,
    "notes": ""
   },
@@ -360,28 +382,6 @@
    "notes": ""
   },
   {
-   "id": "sp_grid_K30_dense_nn",
-   "det": "sp",
-   "picker": "grid",
-   "K": 30,
-   "map": "dense",
-   "matcher": "nn",
-   "date": "2026-10-06T13:20:25",
-   "commit": "",
-   "flights": [
-    "oldtown/P000",
-    "oldtown/P001",
-    "oldtown/P002",
-    "oldtown/P006",
-    "oldtown/P007",
-    "hospital/P041"
-   ],
-   "n_queries": 3980,
-   "fail25": 12.81,
-   "has_picks": true,
-   "notes": ""
-  },
-  {
    "id": "sp_sd_K100_dense_nn",
    "det": "sp",
    "picker": "sd",
@@ -395,28 +395,6 @@
    ],
    "n_queries": 794,
    "fail25": 17.0,
-   "has_picks": true,
-   "notes": ""
-  },
-  {
-   "id": "sp_sd_K100_same_nn",
-   "det": "sp",
-   "picker": "sd",
-   "K": 100,
-   "map": "same",
-   "matcher": "nn",
-   "date": "2026-10-06T13:13:37",
-   "commit": "",
-   "flights": [
-    "oldtown/P000",
-    "oldtown/P001",
-    "oldtown/P002",
-    "oldtown/P006",
-    "oldtown/P007",
-    "hospital/P041"
-   ],
-   "n_queries": 3980,
-   "fail25": 15.1,
    "has_picks": true,
    "notes": ""
   },
@@ -439,6 +417,28 @@
    ],
    "n_queries": 3980,
    "fail25": 16.63,
+   "has_picks": true,
+   "notes": ""
+  },
+  {
+   "id": "sp_grid_K30_dense_nn",
+   "det": "sp",
+   "picker": "grid",
+   "K": 30,
+   "map": "dense",
+   "matcher": "nn",
+   "date": "2026-10-06T13:20:25",
+   "commit": "",
+   "flights": [
+    "oldtown/P000",
+    "oldtown/P001",
+    "oldtown/P002",
+    "oldtown/P006",
+    "oldtown/P007",
+    "hospital/P041"
+   ],
+   "n_queries": 3980,
+   "fail25": 12.81,
    "has_picks": true,
    "notes": ""
   }

@@ -70,6 +70,8 @@ def main():
         runs.append(dict(id=rid, det=meta['det'], picker=meta['picker'], K=meta['K'], map=meta['map'], matcher=meta.get('matcher', 'nn'),
                          date=meta.get('date', ''), commit=meta.get('commit', ''), flights=[f for f in flights if f in parts],
                          n_queries=len(rows), fail25=round(100 * fail25, 2), has_picks=has_picks, notes=meta.get('notes', '')))
+    # order: RaCo before SuperPoint, same map before dense, K=100 first, the strongest-with-depth baseline first within a group
+    runs.sort(key=lambda r: (r['det'] != 'raco', r['map'] != 'same', r['K'] != 100, r['K'], r['picker'] != 'sd', r['picker']))
     index = dict(generated=datetime.datetime.now().isoformat(timespec='seconds'),
                  dataset='TartanAir (Hard), PnP relocalisation against a local map of ground-truth 3D points',
                  flights=finfo, bins=BINS, thresholds_cm=THR, rot_fail_deg=5, runs=runs)
