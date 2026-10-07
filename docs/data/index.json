@@ -1,5 +1,5 @@
 {
- "generated": "2026-10-06T22:50:44",
+ "generated": "2026-10-07T11:58:28",
  "dataset": "TartanAir (Hard), PnP relocalisation against a local map of ground-truth 3D points",
  "flights": [
   {
@@ -891,6 +891,60 @@
    "notes": "corrected protocol (AP3P+LM, centre error)"
   },
   {
+   "id": "raco_geo_K100_same_lg",
+   "det": "raco",
+   "picker": "geo",
+   "K": 100,
+   "map": "same",
+   "matcher": "lg",
+   "date": "2026-10-07T11:50:44",
+   "commit": "8fc4e2c7",
+   "flights": [
+    "oldtown/P001",
+    "hospital/P041"
+   ],
+   "n_queries": 1324,
+   "fail25": 13.52,
+   "has_picks": true,
+   "notes": "seeded / geodesic farthest apart; corrected protocol (AP3P+LM, centre error)"
+  },
+  {
+   "id": "raco_geo_K100_same_nn",
+   "det": "raco",
+   "picker": "geo",
+   "K": 100,
+   "map": "same",
+   "matcher": "nn",
+   "date": "2026-10-07T11:41:58",
+   "commit": "511497ca",
+   "flights": [
+    "oldtown/P001",
+    "hospital/P041"
+   ],
+   "n_queries": 1324,
+   "fail25": 11.78,
+   "has_picks": true,
+   "notes": "seeded / geodesic farthest apart; corrected protocol (AP3P+LM, centre error)"
+  },
+  {
+   "id": "raco_geop2000_K100_same_nn",
+   "det": "raco",
+   "picker": "geop2000",
+   "K": 100,
+   "map": "same",
+   "matcher": "nn",
+   "date": "2026-10-07T11:53:30",
+   "commit": "8fc4e2c7",
+   "flights": [
+    "oldtown/P001",
+    "hospital/P041"
+   ],
+   "n_queries": 1324,
+   "fail25": 30.36,
+   "has_picks": true,
+   "notes": "seeded / geodesic farthest apart; corrected protocol (AP3P+LM, centre error)"
+  },
+  {
    "id": "raco_grid_K100_same_lg",
    "det": "raco",
    "picker": "grid",
@@ -1259,6 +1313,96 @@
    "fail25": 10.35,
    "has_picks": true,
    "notes": "headroom tests: oracle persistence (orep) and intra-frame descriptor distinctiveness (dist); corrected protocol (AP3P+LM, centre error)"
+  },
+  {
+   "id": "raco_sfar30_K100_same_lg",
+   "det": "raco",
+   "picker": "sfar30",
+   "K": 100,
+   "map": "same",
+   "matcher": "lg",
+   "date": "2026-10-07T11:44:00",
+   "commit": "8fc4e2c7",
+   "flights": [
+    "oldtown/P001",
+    "hospital/P041"
+   ],
+   "n_queries": 1324,
+   "fail25": 12.01,
+   "has_picks": true,
+   "notes": "seeded / geodesic farthest apart; corrected protocol (AP3P+LM, centre error)"
+  },
+  {
+   "id": "raco_sfar30_K100_same_nn",
+   "det": "raco",
+   "picker": "sfar30",
+   "K": 100,
+   "map": "same",
+   "matcher": "nn",
+   "date": "2026-10-07T11:39:05",
+   "commit": "511497ca",
+   "flights": [
+    "oldtown/P001",
+    "hospital/P041"
+   ],
+   "n_queries": 1324,
+   "fail25": 10.27,
+   "has_picks": true,
+   "notes": "seeded / geodesic farthest apart; corrected protocol (AP3P+LM, centre error)"
+  },
+  {
+   "id": "raco_sfar30p2000_K100_same_nn",
+   "det": "raco",
+   "picker": "sfar30p2000",
+   "K": 100,
+   "map": "same",
+   "matcher": "nn",
+   "date": "2026-10-07T11:53:51",
+   "commit": "8fc4e2c7",
+   "flights": [
+    "oldtown/P001",
+    "hospital/P041"
+   ],
+   "n_queries": 1324,
+   "fail25": 14.73,
+   "has_picks": true,
+   "notes": "seeded / geodesic farthest apart; corrected protocol (AP3P+LM, centre error)"
+  },
+  {
+   "id": "raco_sfar50_K100_same_lg",
+   "det": "raco",
+   "picker": "sfar50",
+   "K": 100,
+   "map": "same",
+   "matcher": "lg",
+   "date": "2026-10-07T11:45:58",
+   "commit": "8fc4e2c7",
+   "flights": [
+    "oldtown/P001",
+    "hospital/P041"
+   ],
+   "n_queries": 1324,
+   "fail25": 10.57,
+   "has_picks": true,
+   "notes": "seeded / geodesic farthest apart; corrected protocol (AP3P+LM, centre error)"
+  },
+  {
+   "id": "raco_sfar50_K100_same_nn",
+   "det": "raco",
+   "picker": "sfar50",
+   "K": 100,
+   "map": "same",
+   "matcher": "nn",
+   "date": "2026-10-07T11:39:17",
+   "commit": "511497ca",
+   "flights": [
+    "oldtown/P001",
+    "hospital/P041"
+   ],
+   "n_queries": 1324,
+   "fail25": 10.12,
+   "has_picks": true,
+   "notes": "seeded / geodesic farthest apart; corrected protocol (AP3P+LM, centre error)"
   },
   {
    "id": "raco_sd_K30_same_lg",
