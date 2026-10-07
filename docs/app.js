@@ -501,7 +501,6 @@ function renderHeader() {
     const set = new Set(S.sel);
     cb.checked ? set.add(id) : set.delete(id);
     S.sel = I.runs.map(r => r.id).filter(x => set.has(x));
-    S.sumSort = { col: null, dir: 1 };
     render();
   }));
   $$('#runsel [data-base]').forEach(rb => rb.addEventListener('change', () => { S.base = rb.dataset.base; render(); }));
@@ -524,9 +523,9 @@ function initControls() {
   });
   $('#runclearfilters').addEventListener('click', () => { S.runHide = {}; S.runMenu = null; renderHeader(); });
   $('#runshowall').addEventListener('click', () => {   // tick every run the column filters list
-    S.sel = S.index.runs.filter(r => runPasses(r)).map(r => r.id); S.sumSort = { col: null, dir: 1 }; render();
+    S.sel = S.index.runs.filter(r => runPasses(r)).map(r => r.id); render();
   });
-  $('#runhideall').addEventListener('click', () => { S.sel = S.base ? [S.base] : []; S.sumSort = { col: null, dir: 1 }; render(); });
+  $('#runhideall').addEventListener('click', () => { S.sel = S.base ? [S.base] : []; render(); });
   $('#runsel').addEventListener('click', runActionClick);
   $('#thr').innerHTML = S.index.thresholds_cm.map(t => `<option value="${t}">${t >= 100 ? t / 100 + ' m' : t + ' cm'} / ${rotFail(t)}°</option>`).join('');
   $('#thr').addEventListener('change', e => { S.thr = +e.target.value; render(); });
@@ -755,8 +754,7 @@ function runActionClick(e) {
   else if (act === 'addall') { setSel(new Set([...S.sel, ...S.removed])); S.removed = []; }
   else if (act === 'base') { S.base = id; if (!S.sel.includes(id)) setSel(new Set([...S.sel, id])); }
   else if (act === 'solo') { S.removed = [...S.sel.filter(x => x !== id && x !== S.base), ...S.removed]; setSel(new Set([id, S.base].filter(Boolean))); }
-  S.sumSort = { col: null, dir: 1 };
-  render();
+  render();   // the summary sort is kept: adding or removing runs must not reorder the table
 }
 
 function renderBins(el) {
