@@ -417,6 +417,52 @@ PICKERS = {'score': pick_score, 'sd': pick_sd, 'grid': pick_grid, 'grid10x8': pi
            'fps': pick_fps(True), 'fps0': pick_fps(False)}
 
 
+def pick_poisson_disk(r0, theta):
+    """pd<r>[a<theta>]: 3D Poisson-disk selection in score order. A candidate is accepted when its camera-frame distance to every
+    point accepted in the same pass is at least r = max(r0, theta * min(Z_i, Z_j)) (theta = 0: fixed metric radius, the clean
+    version of the cube round robin; theta > 0: radius grows with depth, so close-up views are thinned at a finer scale).
+    Passes repeat over the rejected candidates until K points are chosen (second pass = second point per disk, like the cube
+    round robin), then the rest is filled by rank."""
+    def f(u, v, s, z, K):
+        ok = np.flatnonzero(z < DEPTH_MAX)
+        if not len(ok):
+            return np.arange(min(K, len(u)))
+        P = to3d(u[ok], v[ok], z[ok]); Z = z[ok]; sel = []; rest = list(range(len(ok)))
+        while rest and len(sel) < K:
+            acc = []; A = np.zeros((0, 3)); AZ = np.zeros(0)
+            for j in rest:
+                if len(acc):
+                    rr = np.maximum(r0, theta * np.minimum(AZ, Z[j]))
+                    if (np.linalg.norm(A - P[j], axis=1) < rr).any():
+                        continue
+                acc.append(j); A = np.vstack([A, P[j]]); AZ = np.append(AZ, Z[j])
+                if len(sel) + len(acc) >= K:
+                    break
+            sel += acc; rest = [j for j in rest if j not in set(acc)]
+        return fill(ok[np.array(sel[:K], int)], len(u), K)
+    return f
+
+
+def pick_dpp(sigma, alpha):
+    """dpp<sigma>[a<alpha>]: greedy MAP of a determinantal point process over the candidates with depth, L = diag(q) K diag(q),
+    K_ij = exp(-|X_i - X_j|^2 / (2 sigma^2)) in camera-frame metres, quality q_i = exp(-alpha * rank_i / 100).
+    One objective for strength and spread: each pick maximises the gain in log det (fast greedy of Chen, Zhang, Zhou 2018)."""
+    def f(u, v, s, z, K):
+        ok = np.flatnonzero(z < DEPTH_MAX)
+        if not len(ok):
+            return np.arange(min(K, len(u)))
+        P = to3d(u[ok], v[ok], z[ok]); n = len(ok); q = np.exp(-alpha * np.arange(n) / 100.0)
+        d2 = q ** 2; c = np.zeros((0, n)); sel = []
+        for _ in range(min(K, n)):
+            j = int(np.argmax(d2))
+            if d2[j] <= 1e-12:
+                break
+            dj = np.sqrt(d2[j]); Lj = q[j] * q * np.exp(-np.sum((P - P[j]) ** 2, 1) / (2 * sigma ** 2))
+            e = (Lj - (c[:, j] @ c if len(c) else 0.0)) / dj; c = np.vstack([c, e]); d2 = d2 - e ** 2; d2[j] = -np.inf; sel.append(j)
+        return fill(ok[np.array(sel, int)], len(u), K)
+    return f
+
+
 def parse(name):
     """picker name -> function. cube<size>; far2d|far3d[w][p<pool>], e.g. far3d, far2dw, far3dp400"""
     if name in PICKERS:
@@ -424,6 +470,12 @@ def parse(name):
     m = re.fullmatch(r'cube([0-9.]+)p([0-9]+)', name)
     if m:
         return pick_cube_pool(float(m.group(1)), int(m.group(2)))
+    m = re.fullmatch(r'pd([0-9.]+)(?:a([0-9.]+))?', name)
+    if m:
+        return pick_poisson_disk(float(m.group(1)), float(m.group(2) or 0))
+    m = re.fullmatch(r'dpp([0-9.]+)(?:a([0-9.]+))?', name)
+    if m:
+        return pick_dpp(float(m.group(1)), float(m.group(2) or 1.0))
     m = re.fullmatch(r'orep(c?)(?:p([0-9]+))?', name)
     if m:
         return pick_oracle_rep(m.group(1) == 'c', int(m.group(2) or 2000))
