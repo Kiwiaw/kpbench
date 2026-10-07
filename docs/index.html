@@ -16,7 +16,7 @@
     <span class="muted">· frame viewer (one frame in 3D, K slider, pickers, 0.5 m cubes):
       <a href="frames/oldtown_P001_334.html">old town P001 frame 334</a>,
       <a href="frames/hospital_P041_200.html">hospital P041 frame 200</a></span></div>
-  <div class="meta"><span class="muted">quick view: <a href="#tab=summary&runs=raco_sd_K100_same_lg,raco_cube0.5_K100_same_lg,raco_cube0.3_K100_same_lg,raco_pd0.3_K100_same_lg,raco_dpp0.5_K100_same_lg,raco_dpp0.5a0.5_K100_same_lg,raco_dpp0.7_K100_same_lg,raco_seed1o_K100_same_lg,raco_far3dp400_K100_same_lg&base=raco_cube0.5_K100_same_lg&shared=1">DPP and Poisson-disk vs cubes (LightGlue, old town P001 + hospital P041)</a></span></div>
+  <div class="meta"><span class="muted">quick view: <a href="#tab=summary&runs=raco_sd_K100_same_lg,raco_cube0.5_K100_same_lg,raco_cube0.3_K100_same_lg,raco_pd0.3_K100_same_lg,raco_dpp0.5_K100_same_lg,raco_dpp0.5a0.5_K100_same_lg,raco_dpp0.7_K100_same_lg,raco_seed1o_K100_same_lg,raco_far3dp400_K100_same_lg&base=raco_cube0.5_K100_same_lg&shared=1&m=lg">DPP and Poisson-disk vs cubes (LightGlue, old town P001 + hospital P041)</a></span></div>
 
   <details id="legend">
     <summary>What is compared here, and what every number means <span class="muted">(legend)</span></summary>
@@ -138,6 +138,9 @@
   <div class="controls">
     <label>Threshold
       <select id="thr"></select>
+    </label>
+    <label title="Show only runs with this matcher. Switching swaps every shown run to the same run with the other matcher, when it exists">Matcher
+      <select id="matcher"><option value="all">all</option><option value="lg">LightGlue (lg)</option><option value="nn">nearest neighbour (nn)</option></select>
     </label>
     <label title="Compare runs only on the queries (flight, q) that every selected run has">
       <input type="checkbox" id="shared"> shared queries only

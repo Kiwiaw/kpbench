@@ -169,6 +169,7 @@ const S = {
   base: null,            // baseline run id
   thr: 25,               // threshold in cm for Summary / Bins and flights
   shared: true,          // compute on the shared queries only
+  matcher: 'all',        // matcher switch: 'all', 'lg' or 'nn' (shown runs and the run list keep only that matcher)
   curveBin: 'all',
   fail: { run: null, bin: 'all', flight: 'all', thr: 25, mode: 'fails' },
 
@@ -283,6 +284,7 @@ function readHash() {
   if (p.has('base') && S.runInfo.has(p.get('base'))) S.base = p.get('base');
   if (p.has('thr') && S.index.thresholds_cm.includes(+p.get('thr'))) S.thr = +p.get('thr');
   if (p.has('shared')) S.shared = p.get('shared') !== '0';
+  S.matcher = ['lg', 'nn'].includes(p.get('m')) ? p.get('m') : 'all';
   if (p.has('cbin')) S.curveBin = p.get('cbin');
   if (p.has('frun') && S.runInfo.has(p.get('frun'))) S.fail.run = p.get('frun');
   if (p.has('fbin')) S.fail.bin = p.get('fbin');
@@ -292,6 +294,26 @@ function readHash() {
   if (!['summary', 'bins', 'curves', 'failures', 'runs'].includes(S.tab)) S.tab = 'summary';
   // Keep the selection in index.json order.
   S.sel = ids.filter(id => S.sel.includes(id));
+  applyMatcher();
+}
+
+/** Same run with the other matcher: raco_cube0.5_K100_same_nn <-> ..._lg (null when that run does not exist). */
+function matcherTwin(id, m) {
+  const t = id.replace(/_(nn|lg)$/, '_' + m);
+  return S.runInfo.has(t) ? t : null;
+}
+
+/** Matcher switch: swap every shown run (and the baseline) to its twin with the chosen matcher, drop runs that have none,
+ *  and hide the other matcher in the run list. 'all' leaves the selection alone and clears that column filter. */
+function applyMatcher() {
+  const m = S.matcher;
+  if (m === 'all') { delete S.runHide.matcher; return; }
+  const ok = id => S.runInfo.get(id)?.matcher === m;
+  const pick = id => ok(id) ? id : matcherTwin(id, m);
+  const want = new Set(S.sel.map(pick).filter(Boolean));
+  S.sel = S.index.runs.map(r => r.id).filter(id => want.has(id));
+  if (S.base && !ok(S.base)) S.base = matcherTwin(S.base, m) || S.sel[0] || null;
+  S.runHide.matcher = new Set(S.index.runs.map(r => r.matcher).filter(x => x !== m));
 }
 
 function writeHash() {
@@ -301,6 +323,7 @@ function writeHash() {
   if (S.base) p.set('base', S.base);
   p.set('thr', S.thr);
   p.set('shared', S.shared ? '1' : '0');
+  if (S.matcher !== 'all') p.set('m', S.matcher);
   p.set('cbin', S.curveBin);
   if (S.fail.run) p.set('frun', S.fail.run);
   p.set('fbin', S.fail.bin);
@@ -507,6 +530,7 @@ function renderHeader() {
 
   $('#thr').value = String(S.thr);
   $('#shared').checked = S.shared;
+  $('#matcher').value = S.matcher;
   $$('#tabs button').forEach(b => b.classList.toggle('active', b.dataset.tab === S.tab));
 }
 
@@ -521,7 +545,7 @@ function initControls() {
   document.addEventListener('click', e => {   // a click outside an open value menu closes it
     if (S.runMenu && !e.target.closest('.fmenu, .fbtn')) { S.runMenu = null; renderHeader(); }
   });
-  $('#runclearfilters').addEventListener('click', () => { S.runHide = {}; S.runMenu = null; renderHeader(); });
+  $('#runclearfilters').addEventListener('click', () => { S.runHide = {}; S.runMenu = null; S.matcher = 'all'; render(); });
   $('#runshowall').addEventListener('click', () => {   // tick every run the column filters list
     S.sel = S.index.runs.filter(r => runPasses(r)).map(r => r.id); render();
   });
@@ -530,6 +554,7 @@ function initControls() {
   $('#thr').innerHTML = S.index.thresholds_cm.map(t => `<option value="${t}">${t >= 100 ? t / 100 + ' m' : t + ' cm'} / ${rotFail(t)}°</option>`).join('');
   $('#thr').addEventListener('change', e => { S.thr = +e.target.value; render(); });
   $('#shared').addEventListener('change', e => { S.shared = e.target.checked; render(); });
+  $('#matcher').addEventListener('change', e => { S.matcher = e.target.value; applyMatcher(); render(); });
   $$('#tabs button').forEach(b => b.addEventListener('click', () => { S.tab = b.dataset.tab; render(); }));
   window.addEventListener('hashchange', () => { readHash(); render(); });
   document.addEventListener('keydown', e => {
