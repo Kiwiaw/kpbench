@@ -204,3 +204,6 @@ table.runsel th.filtered .sortlbl { color: var(--accent); }
          box-shadow: 0 4px 14px rgba(0,0,0,0.12); padding: 4px 8px; font-weight: normal; text-align: left; white-space: nowrap; }
 .fmenu label { display: block; cursor: pointer; padding: 1px 0; }
 .fmenu .fhead { display: flex; gap: 4px; padding-bottom: 3px; margin-bottom: 3px; border-bottom: 1px solid var(--line); }
+.seg { padding: 2px 10px; font-size: 13px; border: 1px solid #c9ced8; border-radius: 4px; background: #fff; color: #4b5563; cursor: pointer; }
+.seg:hover { border-color: var(--accent); color: var(--accent); }
+.seg.on { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; }

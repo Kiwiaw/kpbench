@@ -617,7 +617,7 @@ function renderSummary(el) {
   // One record per run with every column value.
   const recs = ids.map(id => {
     const rows = rowsIn(id, sc.set);
-    const c = { run: id, n: rows.length };
+    const c = { run: id, matcher: S.runInfo.get(id)?.matcher || '', n: rows.length };
     for (const b of bins) {
       const br = rows.filter(r => inBin(b, r));
       const fails = new Uint8Array(br.length);
@@ -639,6 +639,7 @@ function renderSummary(el) {
 
   const cols = [
     { id: 'run', label: 'run', cls: 'l' },
+    { id: 'matcher', label: 'matcher', cls: 'l' },
     { id: 'n', label: 'n' },
     ...bins.map(b => ({ id: 'bin:' + b.id, label: `fail % ${esc(b.label)}`, bin: b })),
     { id: 'auc', label: 'AUC ≤25 cm' },
@@ -658,6 +659,7 @@ function renderSummary(el) {
         const badge = sc.differ ? flightsBadge(c.run) : {};
         return `<td class="l nowrap">${runLabel(c.run, badge)}${runActions(c.run)}</td>`;
       }
+      if (col.id === 'matcher') return `<td class="l">${esc(c.matcher)}</td>`;
       if (col.bin) {
         const d = c['_bin:' + col.bin.id];
         const elId = `ci-${ri}-${col.bin.id}`;
@@ -671,7 +673,10 @@ function renderSummary(el) {
     return `<tr>${cells}</tr>`;
   }).join('');
 
+  const mbtn = (m, label) => `<button class="seg ${S.matcher === m ? 'on' : ''}" data-sm="${m}">${label}</button>`;
   el.innerHTML = `
+    <div class="controls inline">matcher: ${mbtn('all', 'all')} ${mbtn('lg', 'LightGlue (lg)')} ${mbtn('nn', 'nearest neighbour (nn)')}
+      <span class="muted">switching swaps every shown run to the same run with that matcher</span></div>
     <div class="tablewrap"><table class="data" id="sumtab">
       <thead><tr>${cols.map(c => th(c.id, c.label, S.sumSort, c.cls)).join('')}</tr></thead>
       <tbody>${body}</tbody></table></div>
@@ -686,6 +691,7 @@ function renderSummary(el) {
     S.sumSort = { col, dir: S.sumSort.col === col ? -S.sumSort.dir : (col === 'run' ? 1 : -1) };
     renderSummary(el);
   }));
+  $$('[data-sm]', el).forEach(b => b.addEventListener('click', () => { S.matcher = b.dataset.sm; applyMatcher(); render(); }));
   runBootstrapQueue(tasks);
 }
 
