@@ -1,0 +1,26 @@
+{
+ "id": "raco_cube0.3_K100_same_lg",
+ "det": "raco",
+ "picker": "cube0.3",
+ "K": 100,
+ "map": "same",
+ "matcher": "lg",
+ "tag": "",
+ "cols": [
+  "flight",
+  "q",
+  "err_cm",
+  "rot_deg",
+  "n_sel",
+  "n_match",
+  "n_inl",
+  "rep1",
+  "rep5",
+  "rep10"
+ ],
+ "protocol": "C23: keyframes every 10, map = keyframes within +-20 frames, LightGlue per keyframe, PnP AP3P-RANSAC 3 px 2000 it >= 6 inliers + LM refinement, camera-centre error",
+ "has_picks": true,
+ "notes": "cube size / Poisson-disk radius sweep; corrected protocol (AP3P+LM, centre error)",
+ "date": "2026-10-07T13:40:10",
+ "commit": "daeeca0d"
+}

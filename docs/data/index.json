@@ -1,5 +1,5 @@
 {
- "generated": "2026-10-07T11:58:28",
+ "generated": "2026-10-07T14:01:08",
  "dataset": "TartanAir (Hard), PnP relocalisation against a local map of ground-truth 3D points",
  "flights": [
   {
@@ -334,6 +334,60 @@
    "notes": "corrected protocol (AP3P+LM, centre error)"
   },
   {
+   "id": "raco_cube0.25_K100_same_nn",
+   "det": "raco",
+   "picker": "cube0.25",
+   "K": 100,
+   "map": "same",
+   "matcher": "nn",
+   "date": "2026-10-07T13:35:04",
+   "commit": "daeeca0d",
+   "flights": [
+    "oldtown/P001",
+    "hospital/P041"
+   ],
+   "n_queries": 1324,
+   "fail25": 8.31,
+   "has_picks": true,
+   "notes": "cube size / Poisson-disk radius sweep; corrected protocol (AP3P+LM, centre error)"
+  },
+  {
+   "id": "raco_cube0.3_K100_same_lg",
+   "det": "raco",
+   "picker": "cube0.3",
+   "K": 100,
+   "map": "same",
+   "matcher": "lg",
+   "date": "2026-10-07T13:40:10",
+   "commit": "daeeca0d",
+   "flights": [
+    "oldtown/P001",
+    "hospital/P041"
+   ],
+   "n_queries": 1324,
+   "fail25": 9.21,
+   "has_picks": true,
+   "notes": "cube size / Poisson-disk radius sweep; corrected protocol (AP3P+LM, centre error)"
+  },
+  {
+   "id": "raco_cube0.3_K100_same_nn",
+   "det": "raco",
+   "picker": "cube0.3",
+   "K": 100,
+   "map": "same",
+   "matcher": "nn",
+   "date": "2026-10-07T13:34:48",
+   "commit": "daeeca0d",
+   "flights": [
+    "oldtown/P001",
+    "hospital/P041"
+   ],
+   "n_queries": 1324,
+   "fail25": 7.7,
+   "has_picks": true,
+   "notes": "cube size / Poisson-disk radius sweep; corrected protocol (AP3P+LM, centre error)"
+  },
+  {
    "id": "raco_cube0.5_K100_same_lg",
    "det": "raco",
    "picker": "cube0.5",
@@ -601,6 +655,168 @@
    "fail25": 9.06,
    "has_picks": true,
    "notes": "headroom tests: oracle persistence (orep) and intra-frame descriptor distinctiveness (dist); corrected protocol (AP3P+LM, centre error)"
+  },
+  {
+   "id": "raco_dpp0.3_K100_same_nn",
+   "det": "raco",
+   "picker": "dpp0.3",
+   "K": 100,
+   "map": "same",
+   "matcher": "nn",
+   "date": "2026-10-07T13:33:44",
+   "commit": "daeeca0d",
+   "flights": [
+    "oldtown/P001",
+    "hospital/P041"
+   ],
+   "n_queries": 1324,
+   "fail25": 7.33,
+   "has_picks": true,
+   "notes": "3D Poisson-disk / DPP selection; corrected protocol (AP3P+LM, centre error)"
+  },
+  {
+   "id": "raco_dpp0.5_K100_same_lg",
+   "det": "raco",
+   "picker": "dpp0.5",
+   "K": 100,
+   "map": "same",
+   "matcher": "lg",
+   "date": "2026-10-07T13:43:04",
+   "commit": "daeeca0d",
+   "flights": [
+    "oldtown/P001",
+    "hospital/P041"
+   ],
+   "n_queries": 1324,
+   "fail25": 8.08,
+   "has_picks": true,
+   "notes": "cube size / Poisson-disk radius sweep; corrected protocol (AP3P+LM, centre error)"
+  },
+  {
+   "id": "raco_dpp0.5_K100_same_nn",
+   "det": "raco",
+   "picker": "dpp0.5",
+   "K": 100,
+   "map": "same",
+   "matcher": "nn",
+   "date": "2026-10-07T13:31:15",
+   "commit": "daeeca0d",
+   "flights": [
+    "oldtown/P001",
+    "hospital/P041"
+   ],
+   "n_queries": 1324,
+   "fail25": 7.1,
+   "has_picks": true,
+   "notes": "3D Poisson-disk / DPP selection; corrected protocol (AP3P+LM, centre error)"
+  },
+  {
+   "id": "raco_dpp0.5a0.5_K100_same_lg",
+   "det": "raco",
+   "picker": "dpp0.5a0.5",
+   "K": 100,
+   "map": "same",
+   "matcher": "lg",
+   "date": "2026-10-07T13:45:52",
+   "commit": "daeeca0d",
+   "flights": [
+    "oldtown/P001",
+    "hospital/P041"
+   ],
+   "n_queries": 1324,
+   "fail25": 7.55,
+   "has_picks": true,
+   "notes": "cube size / Poisson-disk radius sweep; corrected protocol (AP3P+LM, centre error)"
+  },
+  {
+   "id": "raco_dpp0.5a0.5_K100_same_nn",
+   "det": "raco",
+   "picker": "dpp0.5a0.5",
+   "K": 100,
+   "map": "same",
+   "matcher": "nn",
+   "date": "2026-10-07T13:32:30",
+   "commit": "daeeca0d",
+   "flights": [
+    "oldtown/P001",
+    "hospital/P041"
+   ],
+   "n_queries": 1324,
+   "fail25": 6.87,
+   "has_picks": true,
+   "notes": "3D Poisson-disk / DPP selection; corrected protocol (AP3P+LM, centre error)"
+  },
+  {
+   "id": "raco_dpp0.5a2_K100_same_nn",
+   "det": "raco",
+   "picker": "dpp0.5a2",
+   "K": 100,
+   "map": "same",
+   "matcher": "nn",
+   "date": "2026-10-07T13:49:08",
+   "commit": "daeeca0d",
+   "flights": [
+    "oldtown/P001",
+    "hospital/P041"
+   ],
+   "n_queries": 1324,
+   "fail25": 7.48,
+   "has_picks": true,
+   "notes": "cube size / Poisson-disk radius sweep; corrected protocol (AP3P+LM, centre error)"
+  },
+  {
+   "id": "raco_dpp0.7_K100_same_lg",
+   "det": "raco",
+   "picker": "dpp0.7",
+   "K": 100,
+   "map": "same",
+   "matcher": "lg",
+   "date": "2026-10-07T13:52:50",
+   "commit": "a2d6dc14",
+   "flights": [
+    "oldtown/P001",
+    "hospital/P041"
+   ],
+   "n_queries": 1324,
+   "fail25": 7.93,
+   "has_picks": true,
+   "notes": "cube size / Poisson-disk radius sweep; corrected protocol (AP3P+LM, centre error)"
+  },
+  {
+   "id": "raco_dpp0.7_K100_same_nn",
+   "det": "raco",
+   "picker": "dpp0.7",
+   "K": 100,
+   "map": "same",
+   "matcher": "nn",
+   "date": "2026-10-07T13:47:01",
+   "commit": "daeeca0d",
+   "flights": [
+    "oldtown/P001",
+    "hospital/P041"
+   ],
+   "n_queries": 1324,
+   "fail25": 6.57,
+   "has_picks": true,
+   "notes": "cube size / Poisson-disk radius sweep; corrected protocol (AP3P+LM, centre error)"
+  },
+  {
+   "id": "raco_dpp1.0_K100_same_nn",
+   "det": "raco",
+   "picker": "dpp1.0",
+   "K": 100,
+   "map": "same",
+   "matcher": "nn",
+   "date": "2026-10-07T13:48:04",
+   "commit": "daeeca0d",
+   "flights": [
+    "oldtown/P001",
+    "hospital/P041"
+   ],
+   "n_queries": 1324,
+   "fail25": 7.1,
+   "has_picks": true,
+   "notes": "cube size / Poisson-disk radius sweep; corrected protocol (AP3P+LM, centre error)"
   },
   {
    "id": "raco_far2d_K100_same_lg",
@@ -1313,6 +1529,222 @@
    "fail25": 10.35,
    "has_picks": true,
    "notes": "headroom tests: oracle persistence (orep) and intra-frame descriptor distinctiveness (dist); corrected protocol (AP3P+LM, centre error)"
+  },
+  {
+   "id": "raco_pd0.1a0.05_K100_same_nn",
+   "det": "raco",
+   "picker": "pd0.1a0.05",
+   "K": 100,
+   "map": "same",
+   "matcher": "nn",
+   "date": "2026-10-07T13:30:10",
+   "commit": "3c67c8a0",
+   "flights": [
+    "oldtown/P001",
+    "hospital/P041"
+   ],
+   "n_queries": 1324,
+   "fail25": 9.37,
+   "has_picks": true,
+   "notes": "3D Poisson-disk / DPP selection; corrected protocol (AP3P+LM, centre error)"
+  },
+  {
+   "id": "raco_pd0.2_K100_same_nn",
+   "det": "raco",
+   "picker": "pd0.2",
+   "K": 100,
+   "map": "same",
+   "matcher": "nn",
+   "date": "2026-10-07T13:35:30",
+   "commit": "daeeca0d",
+   "flights": [
+    "oldtown/P001",
+    "hospital/P041"
+   ],
+   "n_queries": 1324,
+   "fail25": 7.1,
+   "has_picks": true,
+   "notes": "cube size / Poisson-disk radius sweep; corrected protocol (AP3P+LM, centre error)"
+  },
+  {
+   "id": "raco_pd0.3_K100_same_lg",
+   "det": "raco",
+   "picker": "pd0.3",
+   "K": 100,
+   "map": "same",
+   "matcher": "lg",
+   "date": "2026-10-07T13:38:26",
+   "commit": "daeeca0d",
+   "flights": [
+    "oldtown/P001",
+    "hospital/P041"
+   ],
+   "n_queries": 1324,
+   "fail25": 8.08,
+   "has_picks": true,
+   "notes": "cube size / Poisson-disk radius sweep; corrected protocol (AP3P+LM, centre error)"
+  },
+  {
+   "id": "raco_pd0.3_K100_same_nn",
+   "det": "raco",
+   "picker": "pd0.3",
+   "K": 100,
+   "map": "same",
+   "matcher": "nn",
+   "date": "2026-10-07T13:29:50",
+   "commit": "3c67c8a0",
+   "flights": [
+    "oldtown/P001",
+    "hospital/P041"
+   ],
+   "n_queries": 1324,
+   "fail25": 7.25,
+   "has_picks": true,
+   "notes": "3D Poisson-disk / DPP selection; corrected protocol (AP3P+LM, centre error)"
+  },
+  {
+   "id": "raco_pd0.4_K100_same_nn",
+   "det": "raco",
+   "picker": "pd0.4",
+   "K": 100,
+   "map": "same",
+   "matcher": "nn",
+   "date": "2026-10-07T13:36:10",
+   "commit": "daeeca0d",
+   "flights": [
+    "oldtown/P001",
+    "hospital/P041"
+   ],
+   "n_queries": 1324,
+   "fail25": 7.55,
+   "has_picks": true,
+   "notes": "cube size / Poisson-disk radius sweep; corrected protocol (AP3P+LM, centre error)"
+  },
+  {
+   "id": "raco_pd0.5_K100_same_nn",
+   "det": "raco",
+   "picker": "pd0.5",
+   "K": 100,
+   "map": "same",
+   "matcher": "nn",
+   "date": "2026-10-07T13:29:24",
+   "commit": "3c67c8a0",
+   "flights": [
+    "oldtown/P001",
+    "hospital/P041"
+   ],
+   "n_queries": 1324,
+   "fail25": 8.16,
+   "has_picks": true,
+   "notes": "3D Poisson-disk / DPP selection; corrected protocol (AP3P+LM, centre error)"
+  },
+  {
+   "id": "raco_seed1d_K100_same_lg",
+   "det": "raco",
+   "picker": "seed1d",
+   "K": 100,
+   "map": "same",
+   "matcher": "lg",
+   "date": "2026-10-07T13:57:43",
+   "commit": "a2d6dc14",
+   "flights": [
+    "oldtown/P001",
+    "hospital/P041"
+   ],
+   "n_queries": 1324,
+   "fail25": 14.8,
+   "has_picks": true,
+   "notes": "one stable seed + farthest apart; corrected protocol (AP3P+LM, centre error)"
+  },
+  {
+   "id": "raco_seed1d_K100_same_nn",
+   "det": "raco",
+   "picker": "seed1d",
+   "K": 100,
+   "map": "same",
+   "matcher": "nn",
+   "date": "2026-10-07T13:53:42",
+   "commit": "a2d6dc14",
+   "flights": [
+    "oldtown/P001",
+    "hospital/P041"
+   ],
+   "n_queries": 1324,
+   "fail25": 13.07,
+   "has_picks": true,
+   "notes": "one stable seed + farthest apart; corrected protocol (AP3P+LM, centre error)"
+  },
+  {
+   "id": "raco_seed1o_K100_same_lg",
+   "det": "raco",
+   "picker": "seed1o",
+   "K": 100,
+   "map": "same",
+   "matcher": "lg",
+   "date": "2026-10-07T13:59:37",
+   "commit": "a2d6dc14",
+   "flights": [
+    "oldtown/P001",
+    "hospital/P041"
+   ],
+   "n_queries": 1324,
+   "fail25": 15.18,
+   "has_picks": true,
+   "notes": "one stable seed + farthest apart; corrected protocol (AP3P+LM, centre error)"
+  },
+  {
+   "id": "raco_seed1o_K100_same_nn",
+   "det": "raco",
+   "picker": "seed1o",
+   "K": 100,
+   "map": "same",
+   "matcher": "nn",
+   "date": "2026-10-07T13:53:59",
+   "commit": "a2d6dc14",
+   "flights": [
+    "oldtown/P001",
+    "hospital/P041"
+   ],
+   "n_queries": 1324,
+   "fail25": 13.75,
+   "has_picks": true,
+   "notes": "one stable seed + farthest apart; corrected protocol (AP3P+LM, centre error)"
+  },
+  {
+   "id": "raco_sfar1_K100_same_lg",
+   "det": "raco",
+   "picker": "sfar1",
+   "K": 100,
+   "map": "same",
+   "matcher": "lg",
+   "date": "2026-10-07T13:55:50",
+   "commit": "a2d6dc14",
+   "flights": [
+    "oldtown/P001",
+    "hospital/P041"
+   ],
+   "n_queries": 1324,
+   "fail25": 15.48,
+   "has_picks": true,
+   "notes": "one stable seed + farthest apart; corrected protocol (AP3P+LM, centre error)"
+  },
+  {
+   "id": "raco_sfar1_K100_same_nn",
+   "det": "raco",
+   "picker": "sfar1",
+   "K": 100,
+   "map": "same",
+   "matcher": "nn",
+   "date": "2026-10-07T13:53:17",
+   "commit": "a2d6dc14",
+   "flights": [
+    "oldtown/P001",
+    "hospital/P041"
+   ],
+   "n_queries": 1324,
+   "fail25": 13.52,
+   "has_picks": true,
+   "notes": "one stable seed + farthest apart; corrected protocol (AP3P+LM, centre error)"
   },
   {
    "id": "raco_sfar30_K100_same_lg",

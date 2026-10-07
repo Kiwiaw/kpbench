@@ -20,6 +20,9 @@ Names:
                the pool (default 400) are moved behind the distinct ones (ties by rank); c = cube 0.5 m round robin after that.
   far2d, far3d plain farthest point sampling over the strongest 2000 candidates with depth: pixel distance (2d) or
                camera-frame Euclidean distance in metres (3d); suffix w = score-aware gain, p<M> = pool size (far3dp400)
+  sfar<n>[p<M>] n strongest with depth as seeds + farthest apart (3D metres) over the strongest M (default 400)
+  seed1<d|o>[p<M>] ONE stable seed (most re-found in f-20, f-10, f+10, f+20: d = mutual descriptor match, o = ORACLE
+               reprojection), then farthest apart over the strongest M (default 400)
 A picker returns candidate indices (at most K; fewer only when the frame has too few candidates).
 To add a picker: write a function (u, v, s, z, K) -> indices and register it in PICKERS or in parse().
 """
@@ -169,6 +172,56 @@ def pick_seeded_far(n_seed, M):
             d[sel] = -1; i = int(np.argmax(d)); sel.append(i)
             d = np.minimum(d, np.linalg.norm(P - P[i], axis=1))
         return fill(pool[np.array(sel, int)], len(u), K)
+    return f
+
+
+def pick_seed1_far(mode, M):
+    """seed1<d|o>[p<M>]: ONE stable seed, then farthest apart. The seed is the candidate (strongest 300 with depth) that the
+    frames f-20, f-10, f+10, f+20 re-find most often: 'd' = by mutual nearest-neighbour descriptor match (no pose used),
+    'o' = ORACLE, by reprojection with the true poses (within 3 px and 5 % depth). Ties go to the stronger point. The other
+    K - 1 points come from farthest-point sampling in the camera frame (3D metres) over the strongest M candidates, seeded at
+    that point. Needs ctx=(Flight, Cands, frame) and de=descriptors."""
+    from scipy.spatial import cKDTree
+    from .data import FX, FY, CX, CY
+    cache = {}
+    def f(u, v, s, z, K, ctx=None, de=None):
+        F, C, q = ctx
+        ok = np.flatnonzero(z < DEPTH_MAX)
+        if not len(ok):
+            return np.arange(min(K, len(u)))
+        pool = ok[:M]; cand = ok[:min(300, M)]; cnt = np.zeros(len(cand), int)
+        Rq, tq = F.cam_pose(q); Xw = to3d(u[cand], v[cand], z[cand]) @ Rq.T + tq
+        for L in ORACLE_LAGS:
+            g = q + L
+            if g < 0 or g >= F.N:
+                continue
+            key = (F.slug, g)
+            if key not in cache:
+                u2, v2, s2, z2, de2 = C.frame(g); j = np.flatnonzero(z2 < DEPTH_MAX)[:300]
+                D2 = de2[j].astype(np.float32); D2 /= np.linalg.norm(D2, axis=1, keepdims=True) + 1e-9
+                cache[key] = (cKDTree(np.stack([u2[j], v2[j]], 1)) if len(j) else None, z2[j], D2)
+            tree, z2, D2 = cache[key]
+            if tree is None:
+                continue
+            if mode == 'o':
+                Rf, tf = F.cam_pose(g); Xc = (Xw - tf) @ Rf; zc = Xc[:, 2]; good = zc > 0.05
+                pu = FX * Xc[:, 0] / np.where(good, zc, 1) + CX; pv = FY * Xc[:, 1] / np.where(good, zc, 1) + CY
+                d, nn = tree.query(np.stack([pu, pv], 1), distance_upper_bound=3.0)
+                hit = good & np.isfinite(d)
+                hit[hit] &= np.abs(z2[nn[hit]] - zc[hit]) <= 0.05 * zc[hit]
+            else:
+                D1 = de[cand].astype(np.float32); D1 /= np.linalg.norm(D1, axis=1, keepdims=True) + 1e-9
+                S = D1 @ D2.T; a = S.argmax(1); b = S.argmax(0)
+                hit = b[a] == np.arange(len(cand))
+            cnt += hit
+        seed = int(np.lexsort((np.arange(len(cand)), -cnt))[0])        # most re-found, then strongest
+        P = to3d(u[pool], v[pool], z[pool]); sel = [seed]
+        d = np.linalg.norm(P - P[seed], axis=1)
+        while len(sel) < min(K, len(pool)):
+            d[sel] = -1; i = int(np.argmax(d)); sel.append(i)
+            d = np.minimum(d, np.linalg.norm(P - P[i], axis=1))
+        return fill(pool[np.array(sel, int)], len(u), K)
+    f.needs_ctx = True; f.needs_desc = True
     return f
 
 
@@ -485,6 +538,9 @@ def parse(name):
     m = re.fullmatch(r'offp([0-9]+)(c?)(?:p([0-9]+))?', name)
     if m:
         return pick_offplane(int(m.group(1)), int(m.group(3) or 2000), m.group(2) == 'c')
+    m = re.fullmatch(r'seed1([do])(?:p([0-9]+))?', name)
+    if m:
+        return pick_seed1_far(m.group(1), int(m.group(2) or 400))
     m = re.fullmatch(r'sfar([0-9]+)(?:p([0-9]+))?', name)
     if m:
         return pick_seeded_far(int(m.group(1)), int(m.group(2) or 400))

@@ -1,0 +1,26 @@
+{
+ "id": "raco_pd0.1a0.05_K100_same_nn",
+ "det": "raco",
+ "picker": "pd0.1a0.05",
+ "K": 100,
+ "map": "same",
+ "matcher": "nn",
+ "tag": "",
+ "cols": [
+  "flight",
+  "q",
+  "err_cm",
+  "rot_deg",
+  "n_sel",
+  "n_match",
+  "n_inl",
+  "rep1",
+  "rep5",
+  "rep10"
+ ],
+ "protocol": "C23: keyframes every 10, map = keyframes within +-20 frames, mutual NN, PnP AP3P-RANSAC 3 px 2000 it >= 6 inliers + LM refinement, camera-centre error",
+ "has_picks": true,
+ "notes": "3D Poisson-disk / DPP selection; corrected protocol (AP3P+LM, centre error)",
+ "date": "2026-10-07T13:30:10",
+ "commit": "3c67c8a0"
+}
