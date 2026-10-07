@@ -41,9 +41,15 @@ def load_models(dets):
     sp = SuperPoint(max_num_keypoints=None, detection_threshold=0.0, nms_radius=4).eval().to(DEV)
     sp.preprocess_conf['resize'] = None
     raco = None
-    if 'raco' in dets:
+    if 'raco' in dets or 'racoc' in dets:
         raco = torch.hub.load(RACO_DIR, 'raco', source='local', pretrained=True, max_num_keypoints=2000,
                               ranker=True, covariance_estimator=True).eval().to(DEV)
+        if 'racoc' in dets:   # racoc = RaCo with a retrained ranker head (MegaDepth cube label, 7 Oct); weights from RACO_WEIGHTS
+            w = os.environ['RACO_WEIGHTS']; sd = torch.load(w, map_location=DEV)
+            sd = {k: v for k, v in sd.items() if k.startswith('ranker_head')}
+            miss = raco.load_state_dict(sd, strict=False)
+            assert not miss.unexpected_keys and len(sd) > 0, (miss.unexpected_keys, len(sd))
+            print('racoc: loaded %d ranker-head tensors from %s' % (len(sd), w), flush=True)
 
     @torch.no_grad()
     def sp_dense(img):
