@@ -16,6 +16,7 @@
     <span class="muted">· frame viewer (one frame in 3D, K slider, pickers, 0.5 m cubes):
       <a href="frames/oldtown_P001_334.html">old town P001 frame 334</a>,
       <a href="frames/hospital_P041_200.html">hospital P041 frame 200</a></span></div>
+  <div class="meta"><span class="muted">quick view: <a href="#tab=summary&runs=raco_sd_K100_same_lg,raco_cube0.5_K100_same_lg,raco_cube0.3_K100_same_lg,raco_pd0.3_K100_same_lg,raco_dpp0.5_K100_same_lg,raco_dpp0.5a0.5_K100_same_lg,raco_dpp0.7_K100_same_lg,raco_seed1o_K100_same_lg,raco_far3dp400_K100_same_lg&base=raco_cube0.5_K100_same_lg&shared=1">DPP and Poisson-disk vs cubes (LightGlue, old town P001 + hospital P041)</a></span></div>
 
   <details id="legend">
     <summary>What is compared here, and what every number means <span class="muted">(legend)</span></summary>
@@ -53,7 +54,10 @@
             (M = 4K, between 80 and 400) the best point of every cell is taken, then the list is filled by rank.<br>
             <b>grid10x8</b>: 10 × 8 image cells, round robin, strongest first.<br>
             <b>fps</b>: farthest point sampling in the image on the same pool, where the gain of a point is its distance to the
-            already chosen set times (1 − rank/M), so strong points are preferred. <b>fps0</b>: plain farthest point sampling.</dd>
+            already chosen set times (1 − rank/M), so strong points are preferred. <b>fps0</b>: plain farthest point sampling.<br>
+            <b>dpp&lt;σ&gt;[a&lt;α&gt;]</b>: determinantal point process. Picks the set S that maximises log det K(S) + 2 Σ log q(i): K = Gaussian kernel of width σ metres on the 3D points (rewards spread), q(i) = exp(−α · rank / 100) (punishes weak points; α = 1 by default). Greedy maximum, about 30 ms per frame.<br>
+            <b>pd&lt;r&gt;</b>: 3D Poisson-disk. Candidates in score order; a point is kept only if no kept point is closer than r metres; repeated passes until K.<br>
+            <b>sfar&lt;n&gt;</b>: the n strongest as seeds, the rest by 3D farthest point sampling over the 400 strongest. <b>seed1d / seed1o</b>: one seed, the point most re-found in frames f±10, f±20 (d = by descriptor match, o = oracle, by the true poses), then 3D farthest point sampling.</dd>
           <dt>map</dt><dd><b>same</b>: the keyframes use the same picker and K as the query, so the map changes with the run.
             <b>dense</b>: every keyframe contributes its 300 strongest points with depth, the map is the same for all runs
             and only the query side changes. In both, a query is matched against the keyframes within 20 frames of it (2 to 5
