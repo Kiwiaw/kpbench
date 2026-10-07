@@ -152,6 +152,68 @@ def pick_far(space, pool_size, score_aware):
     return f
 
 
+def pick_seeded_far(n_seed, M):
+    """sfar<n>[p<M>]: seed-stable farthest apart. The n strongest candidates with depth are kept as seeds (the stable, reliably
+    re-detected points), then farthest-point sampling in the camera frame (3D metres) over the strongest M candidates adds the
+    remaining K - n points, each the farthest from everything already chosen. Spread is bought only from the strong pool."""
+    def f(u, v, s, z, K):
+        ok = np.flatnonzero(z < DEPTH_MAX)
+        if not len(ok):
+            return np.arange(min(K, len(u)))
+        n = min(n_seed, K, len(ok)); pool = ok[:M]
+        if len(pool) <= n:
+            return fill(pool, len(u), K)
+        P = to3d(u[pool], v[pool], z[pool]); sel = list(range(n))
+        d = np.min(np.linalg.norm(P[:, None] - P[None, :n], axis=2), axis=1)
+        while len(sel) < min(K, len(pool)):
+            d[sel] = -1; i = int(np.argmax(d)); sel.append(i)
+            d = np.minimum(d, np.linalg.norm(P - P[i], axis=1))
+        return fill(pool[np.array(sel, int)], len(u), K)
+    return f
+
+
+GEO_STEP = 8   # depth map downsampled by this factor for the surface graph (80 x 60 nodes)
+
+
+def geodesic_graph(depth, step=GEO_STEP):
+    """surface graph of a frame: nodes = pixels of the downsampled depth map with depth, edges = 8-neighbours,
+    weight = 3D distance between the two surface points (a jump across an occlusion edge costs its full 3D length)"""
+    from scipy.sparse import coo_matrix
+    D = depth[::step, ::step]; h, w = D.shape
+    vv, uu = np.mgrid[0:h, 0:w]; X = to3d((uu * step).ravel().astype(float), (vv * step).ravel().astype(float), D.ravel())
+    valid = (D.ravel() < DEPTH_MAX); idx = np.arange(h * w).reshape(h, w); rows, cols, wts = [], [], []
+    for dy, dx in [(0, 1), (1, 0), (1, 1), (1, -1)]:
+        a = idx[max(0, -dy):h - max(0, dy), max(0, -dx):w - max(0, dx)].ravel(); b = idx[max(0, dy):h + min(0, dy) or h, max(0, dx):w + min(0, dx) or w].ravel()
+        a, b = a[:len(b)], b[:len(a)]
+        m = valid[a] & valid[b]; rows.append(a[m]); cols.append(b[m]); wts.append(np.linalg.norm(X[a[m]] - X[b[m]], axis=1))
+    r = np.concatenate(rows); c = np.concatenate(cols); wt = np.concatenate(wts) + 1e-6
+    G = coo_matrix((np.concatenate([wt, wt]), (np.concatenate([r, c]), np.concatenate([c, r]))), shape=(h * w, h * w)).tocsr()
+    return G, h, w
+
+
+def pick_geodesic(M):
+    """geo[p<M>]: farthest apart along the surface. Distances are geodesic on the frame's depth map (shortest path over the
+    surface graph of geodesic_graph), not straight-line, so two points on different walls or across a gap count as far apart
+    only if the surface between them is long. Greedy farthest-point sampling over the strongest M candidates with depth,
+    seed = the strongest. Needs the frame's depth map (needs_ctx)."""
+    def f(u, v, s, z, K, ctx=None):
+        from scipy.sparse.csgraph import dijkstra
+        pool = np.flatnonzero(z < DEPTH_MAX)[:M]
+        if ctx is None or len(pool) < 2:
+            return fill(pool, len(u), K)
+        F, C, fi = ctx; G, h, w = geodesic_graph(F.depth(fi))
+        node = (np.clip(v[pool] / GEO_STEP, 0, h - 1).astype(int)) * w + np.clip(u[pool] / GEO_STEP, 0, w - 1).astype(int)
+        sel = [0]; d = dijkstra(G, directed=False, indices=[node[0]], min_only=True)[node]
+        while len(sel) < min(K, len(pool)):
+            d[sel] = -1; d[~np.isfinite(d)] = -1; i = int(np.argmax(d))
+            if d[i] < 0:
+                break
+            sel.append(i); d = np.minimum(d, dijkstra(G, directed=False, indices=[node[i]], min_only=True)[node])
+        return fill(pool[np.array(sel, int)], len(u), K)
+    f.needs_ctx = True
+    return f
+
+
 def cube_groups(u, v, z, idx, size):
     """candidate indices idx (score order) -> list of per-cube index lists (camera-frame cubes of `size` metres)"""
     key = np.floor(to3d(u[idx], v[idx], z[idx]) / size).astype(int); g = {}
@@ -371,6 +433,12 @@ def parse(name):
     m = re.fullmatch(r'offp([0-9]+)(c?)(?:p([0-9]+))?', name)
     if m:
         return pick_offplane(int(m.group(1)), int(m.group(3) or 2000), m.group(2) == 'c')
+    m = re.fullmatch(r'sfar([0-9]+)(?:p([0-9]+))?', name)
+    if m:
+        return pick_seeded_far(int(m.group(1)), int(m.group(2) or 400))
+    m = re.fullmatch(r'geo(?:p([0-9]+))?', name)
+    if m:
+        return pick_geodesic(int(m.group(1) or 400))
     m = re.fullmatch(r'learn(c?)(?:p([0-9]+))?', name)
     if m:
         return pick_learn(m.group(1) == 'c', int(m.group(2) or 400))
