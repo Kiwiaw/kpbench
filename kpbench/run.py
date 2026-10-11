@@ -28,8 +28,12 @@ def git_commit():
 
 def device_name(matcher):
     """host + LightGlue device: LightGlue output differs slightly between devices, so runs record where they were made"""
-    import socket
+    import socket, platform
     dev = 'cpu'
+    try:
+        dev = [l.split(':', 1)[1].strip() for l in open('/proc/cpuinfo') if l.startswith('model name')][0]
+    except Exception:
+        dev = platform.processor() or 'cpu'
     if matcher == 'lg':
         try:
             import torch
