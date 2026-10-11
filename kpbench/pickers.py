@@ -520,6 +520,9 @@ def parse(name):
     """picker name -> function. cube<size>; far2d|far3d[w][p<pool>], e.g. far3d, far2dw, far3dp400"""
     if name in PICKERS:
         return PICKERS[name]
+    if re.fullmatch(r'evo_[A-Za-z0-9_]+', name):                       # code-search result: kpbench/evolved/<name>.py
+        import importlib
+        return importlib.import_module('kpbench.evolved.' + name).pick
     m = re.fullmatch(r'cube([0-9.]+)p([0-9]+)', name)
     if m:
         return pick_cube_pool(float(m.group(1)), int(m.group(2)))
