@@ -7,7 +7,8 @@ Objective = fail % on the flat queries of the 12 DEV flights (936 queries, kpben
 lag 5 and the picker name are stored per trial. Held-out flights are never touched here: the best trial goes to the gate
 (euler/gate.sh <picker> <incumbent> dev, then held_out). Trials run on different nodes, so LightGlue device noise
 (~1 point on the flat bin, audit C4) stays in the objective; the gate reruns candidate and incumbent on one node.
-Families: dpp (sigma 0.1-2 m log, alpha 0.2-5 log; picker dpp<sigma>a<alpha>).
+Families: dpp (sigma 0.1-2 m log, alpha 0.2-5 log; dpp<sigma>a<alpha>), cube (size 0.15-1.5 m; cube<size>), pd (r 0.1-1.5 m,
+theta 0-0.1; pd<r>a<theta>). Study name = <family>_<anything>.
 """
 import os, json
 import optuna
@@ -16,8 +17,11 @@ from .cache import REPO
 
 RESULTS = os.environ.get('KPBENCH_RESULTS', os.path.join(REPO, 'results'))
 TUNE = os.path.join(RESULTS, 'tune')
-SPACES = {'dpp': lambda t: 'dpp%.3ga%.3g' % (t.suggest_float('sigma', 0.1, 2.0, log=True), t.suggest_float('alpha', 0.2, 5.0, log=True))}
-SEEDS = {'dpp': ['dpp0.5', 'dpp0.5a0.5', 'dpp0.3', 'dpp1a2']}        # known points enqueued first (dpp0.5 = page DPP)
+SPACES = {'dpp': lambda t: 'dpp%.3ga%.3g' % (t.suggest_float('sigma', 0.1, 2.0, log=True), t.suggest_float('alpha', 0.2, 5.0, log=True)),
+          'cube': lambda t: 'cube%.3g' % t.suggest_float('size', 0.15, 1.5, log=True),
+          'pd': lambda t: 'pd%.3ga%.3g' % (t.suggest_float('r', 0.1, 1.5, log=True), t.suggest_float('theta', 0.0, 0.1))}
+SEEDS = {'dpp': [dict(sigma=0.5, alpha=1.0), dict(sigma=0.5, alpha=0.5), dict(sigma=0.3, alpha=1.0), dict(sigma=1.0, alpha=2.0)],
+         'cube': [dict(size=0.5), dict(size=0.3)], 'pd': [dict(r=0.5, theta=0.0)]}   # known points enqueued first
 
 
 def study(name):
@@ -42,12 +46,10 @@ def objective(trial, fam):
 
 
 def enqueue_seeds(s, fam):
-    import re
     if s.trials:
         return
-    for pk in SEEDS.get(fam, []):
-        m = re.fullmatch(r'dpp([0-9.]+)(?:a([0-9.]+))?', pk)
-        s.enqueue_trial(dict(sigma=float(m.group(1)), alpha=float(m.group(2) or 1.0)))
+    for params in SEEDS.get(fam, []):
+        s.enqueue_trial(params)
 
 
 def summary(name):
