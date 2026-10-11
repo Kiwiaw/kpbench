@@ -20,6 +20,7 @@
  ],
  "protocol": "C23: keyframes every 10, map = keyframes within +-20 frames, LightGlue per keyframe, PnP AP3P-RANSAC 3 px 2000 it >= 6 inliers + LM refinement, camera-centre error",
  "has_picks": false,
- "date": "2026-10-06T21:10:06",
- "commit": ""
+ "date": "2026-10-11T18:52:16",
+ "commit": "",
+ "device": "eu-a2p-282/AMD EPYC 7763 64-Core Processor"
 }

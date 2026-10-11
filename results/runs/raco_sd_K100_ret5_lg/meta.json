@@ -20,6 +20,7 @@
  ],
  "protocol": "C23: keyframes every 10, map = top-5 keyframes by VLAD retrieval over the whole flight, LightGlue per keyframe, PnP AP3P-RANSAC 3 px 2000 it >= 6 inliers + LM refinement, camera-centre error",
  "has_picks": false,
- "date": "2026-10-06T21:12:02",
- "commit": ""
+ "date": "2026-10-11T19:08:23",
+ "commit": "",
+ "device": "eu-a2p-282/AMD EPYC 7763 64-Core Processor"
 }

@@ -1,0 +1,46 @@
+{
+ "flat_cand": 15.598290598290598,
+ "flat_inc": 22.22222222222222,
+ "flat_diff": [
+  -6.623931623931624,
+  -10.64765328865377,
+  -2.997727272727275
+ ],
+ "all_diff": [
+  -1.2450139006406382,
+  -1.9060992693100818,
+  -0.6077107581996058
+ ],
+ "flights_better": 4,
+ "flights_worse": 3,
+ "flights_tied": 5,
+ "sign_p": 0.5,
+ "rel_drop": 0.298076923076923,
+ "route_A": true,
+ "route_B": false,
+ "guard_rel": true,
+ "guard_all": true,
+ "per_env": {
+  "factory": [
+   15.217391304347828,
+   8.695652173913043
+  ],
+  "hospital": [
+   30.601092896174865,
+   37.15846994535519
+  ],
+  "oldtown": [
+   11.497730711043873,
+   19.969742813918305
+  ]
+ },
+ "win": true,
+ "cand": "raco_cube0.5_K100_same_lg",
+ "inc": "raco_sd_K100_same_lg",
+ "split": "dev",
+ "n": 8273,
+ "n_flat": 936,
+ "device_check": "unknown on 5 flights",
+ "date": "2026-10-11T19:45:55",
+ "picker": "cube0.5"
+}

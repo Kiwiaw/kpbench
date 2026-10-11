@@ -15,7 +15,7 @@ WARN = correct but fragile or misleading. Checks:
   C8  bootstrap    python block bootstrap and the page's JavaScript bootstrap give the same interval (run in node)
   C9  paired test  the page's per-query sign test vs block-aware tests (neighbouring frames fail together)
   C10 block length paired difference cubes - strongest with 10 / 20 / 40-frame blocks
-  C11 headline     the numbers quoted for the 31-flight result (2.4 / 1.7 / 1.8, flat 16.3 / 12.2 / 13.6, -0.71 [-1.05,-0.40])
+  C11 headline     the numbers quoted for the 31-flight result (2.4 / 1.7 / 1.8, flat 16.3 / 12.5 / 13.6, -0.67 [-1.02,-0.38]; rerun 11 Oct)
   C12 planarity    plane_frac labels recomputed with a stronger independent plane fit; how many queries change bin
   C13 canaries     random picker worse than strongest; rule-breaking pickers refused
   C14 texts        README / page / data spec describe the protocol the code runs
@@ -104,13 +104,15 @@ def c4_reproduce():
             fl += sum(1 for q in qs if fail_flags([mine[(f, q)]])[0] != fail_flags([st[q]])[0])
         diffs[picker] = d; flips[picker] = fl
     ok_same = not any(twice.values())
-    status = 'FAIL' if (not ok_same or any(diffs.values())) else 'PASS'
+    from .data import FLIGHTS
+    mixed = [f for f in FLIGHTS if len({json.load(gzip.open(os.path.join(REPO, 'results', 'runs', r, slug(f) + '.json.gz'), 'rt')).get('device')
+                                        for r in ('raco_sd_K100_same_lg', 'raco_cube0.5_K100_same_lg', 'raco_grid_K100_same_lg')} - {None}) != 1]
+    status = 'PASS' if ok_same and not mixed else 'FAIL'
     report('C4', status, 'reproducibility',
-           'same machine twice: rows differing %s. Re-run vs stored run on MICRO (393 flat queries): rows differing %s, pass/fail flips %s. '
-           'Picks are identical; LightGlue match counts differ by 1-2 between devices (laptop GPU vs CPU: 340 rows differ, 12-13 outcome '
-           'flips = 1-2 points of flat fail %%). The stored 31-flight runs mix devices: cube0.5 rows of oldtown/P001 and hospital/P041 '
-           'were written by the laptop, the sd rows by Euler. Rule: compare pickers only on the same device in the same job; record '
-           'the device in meta.json.' % (twice, diffs, flips))
+           'same machine twice: rows differing %s. Stored baselines sd / cube0.5 / grid: flights whose three runs do not share one '
+           'recorded device: %s (rerun 11 Oct, job 16816317: one node per flight). Laptop re-run vs stored Euler rows on MICRO '
+           '(information, different device): rows differing %s, pass/fail flips %s. LightGlue output depends on the device, so pickers '
+           'are compared only on one device per flight (gate: same job).' % (twice, mixed or 'none', diffs, flips))
 
 
 def c5_ground_truth(n_q=60):
@@ -242,9 +244,9 @@ def c11_headline(R, lab):
     d = paired_diff(fail_flags(a), fail_flags(b), block_ids([r[0] for r in a], [r[1] for r in a]))
     bw = per_flight(fail_flags(a), fail_flags(b), np.array([r[0] for r in a]))
     s = ', '.join('%s %.2f +-%.2f flat %.1f' % (k.split('_')[1], *v) for k, v in q.items())
-    exp = dict(sd=(2.4, 16.3), cube0=(1.7, 12.2), grid=(1.8, 13.6))
+    exp = dict(sd=(2.4, 16.3), cube0=(1.7, 12.5), grid=(1.8, 13.6))   # device-consistent rerun 11 Oct (job 16816317)
     ok = all(abs(round(v[0], 1) - exp[k.split('_')[1].split('.')[0]][0]) < 0.051 and abs(round(v[2], 1) - exp[k.split('_')[1].split('.')[0]][1]) < 0.051
-             for k, v in q.items()) and abs(d[0] + 0.71) < 0.01
+             for k, v in q.items()) and abs(d[0] + 0.67) < 0.01
     report('C11', 'PASS' if ok else 'FAIL', 'headline numbers', '%s; paired cubes-strongest %.2f [%.2f, %.2f]; flights better/worse/tied %s' % (s, *d, bw))
 
 

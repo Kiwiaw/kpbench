@@ -1,5 +1,5 @@
 {
- "generated": "2026-10-07T14:01:08",
+ "generated": "2026-10-11T19:45:22",
  "dataset": "TartanAir (Hard), PnP relocalisation against a local map of ground-truth 3D points",
  "flights": [
   {
@@ -271,7 +271,7 @@
    "K": 100,
    "map": "same",
    "matcher": "lg",
-   "date": "2026-10-06T21:06:19",
+   "date": "2026-10-11T18:48:59",
    "commit": "",
    "flights": [
     "oldtown/P000",
@@ -394,8 +394,8 @@
    "K": 100,
    "map": "same",
    "matcher": "lg",
-   "date": "2026-10-06T20:41:59",
-   "commit": "fa3ec5c",
+   "date": "2026-10-11T18:50:35",
+   "commit": "",
    "flights": [
     "oldtown/P000",
     "oldtown/P001",
@@ -430,9 +430,9 @@
     "factory/P008"
    ],
    "n_queries": 18571,
-   "fail25": 1.67,
-   "has_picks": true,
-   "notes": "claim 1 with LightGlue; corrected protocol (AP3P+LM, centre error)"
+   "fail25": 1.71,
+   "has_picks": false,
+   "notes": ""
   },
   {
    "id": "raco_cube0.5_K100_same_nn",
@@ -1167,7 +1167,7 @@
    "K": 100,
    "map": "same",
    "matcher": "lg",
-   "date": "2026-10-06T21:10:06",
+   "date": "2026-10-11T18:52:16",
    "commit": "",
    "flights": [
     "oldtown/P000",
@@ -2197,7 +2197,7 @@
    "K": 100,
    "map": "ret5",
    "matcher": "lg",
-   "date": "2026-10-06T21:12:02",
+   "date": "2026-10-11T19:08:23",
    "commit": "",
    "flights": [
     "oldtown/P000",
@@ -2279,7 +2279,7 @@
    "K": 100,
    "map": "ret5",
    "matcher": "lg",
-   "date": "2026-10-06T21:13:15",
+   "date": "2026-10-11T19:25:31",
    "commit": "",
    "flights": [
     "oldtown/P000",
@@ -2398,7 +2398,7 @@
    "K": 100,
    "map": "ret5",
    "matcher": "lg",
-   "date": "2026-10-06T21:13:08",
+   "date": "2026-10-11T19:42:57",
    "commit": "",
    "flights": [
     "oldtown/P000",
