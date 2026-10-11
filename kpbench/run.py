@@ -62,6 +62,7 @@ def main(argv=None):
                     'map = top-%s keyframes by VLAD retrieval over the whole flight' % a.map[3:] if a.map.startswith('ret') else 'map = keyframes within +-20 frames',
                     'LightGlue per keyframe' if a.matcher == 'lg' else 'mutual NN'),
                 has_picks=bool(a.save_picks) or meta.get('has_picks', False), device=device_name(a.matcher))
+    dev = meta['device']
     if a.notes:
         meta['notes'] = a.notes
     for fid in parse_flights(a.flights):
@@ -72,7 +73,7 @@ def main(argv=None):
             rows, picks = run_flight(fid, a.det, a.picker, a.K, a.map, workers=a.workers or None, save_picks=a.save_picks, matcher=a.matcher)
         except FileNotFoundError as e:
             print('skip', fid, e); continue
-        json.dump(dict(flight=fid, rows=rows, picks=picks), gzip.open(fn, 'wt'))
+        json.dump(dict(flight=fid, rows=rows, picks=picks, device=dev), gzip.open(fn, 'wt'))
         meta['date'] = datetime.datetime.now().isoformat(timespec='seconds'); meta['commit'] = git_commit()
         json.dump(meta, open(meta_fn, 'w'), indent=1)
     json.dump(meta, open(meta_fn, 'w'), indent=1)

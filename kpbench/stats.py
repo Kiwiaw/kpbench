@@ -72,12 +72,12 @@ def gate(cand, inc, flights, qs, flat, envs=None, n_boot=N_BOOT, block=BLOCK):
     dall = paired_diff(cand, inc, blocks, n_boot)
     b, w, t = per_flight(cand[flat], inc[flat], flights[flat]); pB = sign_test(b, w)
     rel = (inc[flat].mean() - cand[flat].mean()) / max(inc[flat].mean(), 1e-9)
-    out = dict(flat_cand=100 * cand[flat].mean(), flat_inc=100 * inc[flat].mean(), flat_diff=dA, all_diff=dall,
-               flights_better=b, flights_worse=w, flights_tied=t, sign_p=pB, rel_drop=rel,
-               route_A=dA[2] < 0, route_B=pB <= 0.025, guard_rel=rel >= 0.10, guard_all=dall[2] <= 0.2)
+    out = dict(flat_cand=float(100 * cand[flat].mean()), flat_inc=float(100 * inc[flat].mean()), flat_diff=dA, all_diff=dall,
+               flights_better=b, flights_worse=w, flights_tied=t, sign_p=float(pB), rel_drop=float(rel),
+               route_A=bool(dA[2] < 0), route_B=bool(pB <= 0.025), guard_rel=bool(rel >= 0.10), guard_all=bool(dall[2] <= 0.2))
     if envs is not None:
         envs = np.asarray(envs)
-        out['per_env'] = {e: (100 * cand[flat & (envs == e)].mean(), 100 * inc[flat & (envs == e)].mean())
+        out['per_env'] = {e: (float(100 * cand[flat & (envs == e)].mean()), float(100 * inc[flat & (envs == e)].mean()))
                           for e in sorted(set(envs[flat]))}
     out['win'] = bool((out['route_A'] or out['route_B']) and out['guard_rel'] and out['guard_all'])
     return out

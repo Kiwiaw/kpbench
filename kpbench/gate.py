@@ -1,0 +1,121 @@
+"""Keep/revert gate: does a candidate run beat the incumbent run on a frozen split? (rule in kpbench.stats)
+
+  python -m kpbench.gate --cand raco_cube0.5_K100_same_lg --inc raco_sd_K100_same_lg --split held_out [--log]
+
+Both runs must hold every flight of the split, with the same queries, and each flight of both runs must come from the same
+device (LightGlue output differs between devices: audit 11 Oct, C4). euler/gate.sbatch produces such pairs: candidate and
+incumbent of one flight run back to back in one array task.
+HELD_OUT discipline (--log): one held-out verdict per candidate picker, only after it beat the incumbent on DEV
+(flat difference < 0); every verdict is appended to results/gates/log.jsonl and kept. --force-held-out overrides, logged.
+"""
+import os, json, gzip, datetime
+import numpy as np
+from .data import slug
+from .cache import REPO
+from .splits import load as load_splits, FLAT
+from .stats import fail_flags, gate as gate_rule
+
+RESULTS = os.environ.get('KPBENCH_RESULTS', os.path.join(REPO, 'results'))
+GATES = os.path.join(RESULTS, 'gates')
+LOG = os.path.join(GATES, 'log.jsonl')
+
+
+class GateError(Exception):
+    pass
+
+
+def load_run(rid, flights):
+    d = os.path.join(RESULTS, 'runs', rid); meta = json.load(open(os.path.join(d, 'meta.json')))
+    out = {}
+    for f in flights:
+        fn = os.path.join(d, slug(f) + '.json.gz')
+        if not os.path.isfile(fn):
+            raise GateError('%s: flight %s missing' % (rid, f))
+        j = json.load(gzip.open(fn, 'rt')); out[f] = (j['rows'], j.get('device'))
+    return meta, out
+
+
+def labels(f):
+    return json.load(open(os.path.join(REPO, 'results', 'labels', slug(f) + '.json')))
+
+
+def log_entries():
+    return [json.loads(l) for l in open(LOG)] if os.path.isfile(LOG) else []
+
+
+def compare(cand, inc, split):
+    flights = load_splits()[split]
+    mc, rc = load_run(cand, flights); mi, ri = load_run(inc, flights)
+    for k in ('det', 'K', 'map', 'matcher'):
+        if mc.get(k) != mi.get(k):
+            raise GateError('runs differ in %s: %s vs %s' % (k, mc.get(k), mi.get(k)))
+    fa, fb, fl, qs, flat, envs, dev = [], [], [], [], [], [], {}
+    for f in flights:
+        (ra, da), (rb, db) = rc[f], ri[f]
+        if [r[1] for r in ra] != [r[1] for r in rb]:
+            raise GateError('%s: query lists differ' % f)
+        dev[f] = 'same' if da and da == db else ('unknown' if not (da and db) else 'DIFFERENT %s | %s' % (da, db))
+        lab = labels(f)
+        fa.append(fail_flags(ra)); fb.append(fail_flags(rb))
+        for r in ra:
+            pf = lab[str(r[1])].get('plane_frac')
+            fl.append(f); qs.append(r[1]); flat.append(pf is not None and pf >= FLAT); envs.append(f.split('/')[0])
+    bad = [f for f, v in dev.items() if v.startswith('DIFFERENT')]
+    if bad:
+        raise GateError('device mismatch on %d flights, e.g. %s: %s' % (len(bad), bad[0], dev[bad[0]]))
+    g = gate_rule(np.concatenate(fa), np.concatenate(fb), np.array(fl), np.array(qs), np.array(flat), np.array(envs))
+    g.update(cand=cand, inc=inc, split=split, n=len(fl), n_flat=int(np.sum(flat)),
+             device_check='same' if all(v == 'same' for v in dev.values()) else
+             'unknown on %d flights' % sum(v == 'unknown' for v in dev.values()),
+             date=datetime.datetime.now().isoformat(timespec='seconds'), picker=mc.get('picker'))
+    return g
+
+
+def held_out_allowed(picker):
+    E = log_entries()
+    if any(e['split'] == 'held_out' and e.get('picker') == picker for e in E):
+        return 'candidate %s already had its held-out verdict' % picker
+    if not any(e['split'] == 'dev' and e.get('picker') == picker and e['flat_diff'][0] < 0 for e in E):
+        return 'candidate %s has no logged DEV gate with flat difference < 0' % picker
+    return None
+
+
+def fmt(g):
+    d, a = g['flat_diff'], g['all_diff']
+    s = ['%s vs %s on %s (%d frames, %d flat; devices %s)' % (g['cand'], g['inc'], g['split'], g['n'], g['n_flat'], g['device_check']),
+         '  flat fail      %.2f %% vs %.2f %%  (relative drop %.0f %%)' % (g['flat_cand'], g['flat_inc'], 100 * g['rel_drop']),
+         '  A size         flat diff %+.2f [%+.2f, %+.2f] points -> %s' % (d[0], d[1], d[2], 'PASS' if g['route_A'] else 'no'),
+         '  B consistency  flights better/worse/tied %d/%d/%d, p %.3f -> %s' % (
+             g['flights_better'], g['flights_worse'], g['flights_tied'], g['sign_p'], 'PASS' if g['route_B'] else 'no'),
+         '  guard rel>=10%% %s; guard all-frames hi %+.2f <= +0.2 %s' % (g['guard_rel'], a[2], g['guard_all']),
+         '  per env flat   ' + ', '.join('%s %.1f vs %.1f' % (e, c, i) for e, (c, i) in g.get('per_env', {}).items()),
+         '  VERDICT        %s' % ('KEEP candidate' if g['win'] else 'REVERT (incumbent stays)')]
+    return '\n'.join(s)
+
+
+def main(argv=None):
+    import argparse
+    ap = argparse.ArgumentParser()
+    ap.add_argument('--cand', required=True); ap.add_argument('--inc', required=True)
+    ap.add_argument('--split', default='dev', choices=['dev', 'held_out']); ap.add_argument('--log', action='store_true')
+    ap.add_argument('--force-held-out', default='', help='reason; allows a repeated or DEV-less held-out verdict (logged)')
+    a = ap.parse_args(argv)
+    if a.log and a.split == 'held_out':
+        picker = json.load(open(os.path.join(RESULTS, 'runs', a.cand, 'meta.json'))).get('picker')
+        why = held_out_allowed(picker)
+        if why and not a.force_held_out:
+            raise SystemExit('refused: %s (use --force-held-out "<reason>")' % why)
+    g = compare(a.cand, a.inc, a.split)
+    if a.force_held_out:
+        g['forced'] = a.force_held_out
+    print(fmt(g))
+    os.makedirs(GATES, exist_ok=True)
+    fn = os.path.join(GATES, '%s__vs__%s__%s.json' % (a.cand, a.inc, a.split))
+    json.dump(g, open(fn, 'w'), indent=1, default=float)
+    if a.log:
+        open(LOG, 'a').write(json.dumps(g, default=float) + '\n')
+    print('saved', os.path.relpath(fn, REPO))
+
+
+if __name__ == '__main__':
+    main()
