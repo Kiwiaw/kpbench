@@ -8,9 +8,12 @@ from the keyframes within 20 frames (usually 4), using ground-truth depth and po
 the **picker**: which K of a detector's candidates are kept. Strongest-K is the baseline.
 
 **Protocol (C23).** Candidates = the detector's strongest 2000 (RaCo ranker score or SuperPoint score), all with
-SuperPoint descriptors. Matching = mutual nearest neighbour. Solver = `cv2.solvePnPRansac`, 3 px, 2000 iterations,
-at least 6 inliers. A query fails at threshold T when there is no pose, the position error is above T cm, or the
-rotation error is above 5 degrees. Results are split into planarity bins (share of a frame's 3D points on one plane):
+SuperPoint descriptors. Matching = LightGlue (SuperPoint weights) per map keyframe, the headline setting (`lg`), or
+mutual nearest neighbour (`nn`). Solver = `cv2.solvePnPRansac` with the AP3P minimal solver, 3 px, 2000 iterations,
+at least 6 inliers, then Levenberg-Marquardt refinement on the inliers; position error = distance between estimated and
+true camera centres. A query fails at a threshold pair when there is no pose, the position error is above T, or the
+rotation error is above R: 25 cm / 2 deg (headline), 5 cm / 2 deg, 50 cm / 5 deg, 5 m / 10 deg. LightGlue output
+depends slightly on the device (GPU model vs CPU), so pickers are compared only on runs made on the same device. Results are split into planarity bins (share of a frame's 3D points on one plane):
 ordinary < 0.55, mid 0.55-0.85, flat >= 0.85, very flat >= 0.95. Each query also carries median depth, share of
 candidates without depth, and map coverage (share of its pixels that some map keyframe sees).
 

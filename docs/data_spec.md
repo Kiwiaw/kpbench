@@ -50,7 +50,7 @@ Values may be `null` when not computed.
 - `q`: frame number of the query.
 - `err_cm`: camera position error in cm; `null` = solver gave no pose. `rot_deg`: rotation error; `null` with `err_cm`.
 - A query FAILS at threshold T when `err_cm` is null, or `err_cm > T`, or `rot_deg > rot_fail_deg`.
-- `n_sel`: number of points kept by the picker; `n_match`: mutual nearest-neighbour matches to the map; `n_inl`: RANSAC inliers (0 when no pose).
+- `n_sel`: number of points kept by the picker; `n_match`: matches to the map (LightGlue for `lg` runs, mutual nearest neighbours for `nn` runs); `n_inl`: RANSAC inliers (0 when no pose).
 - `rep1/rep5/rep10`: repeatability of the kept points at +1/+5/+10 frames (share re-found within 3 px); may be `null`.
 Runs can cover different flight subsets; compare runs only on the queries they share (same flight index and q).
 

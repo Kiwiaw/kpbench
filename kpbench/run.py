@@ -26,6 +26,20 @@ def git_commit():
         return ''
 
 
+def device_name(matcher):
+    """host + LightGlue device: LightGlue output differs slightly between devices, so runs record where they were made"""
+    import socket
+    dev = 'cpu'
+    if matcher == 'lg':
+        try:
+            import torch
+            if (os.environ.get('DEV') or ('cuda' if torch.cuda.is_available() else 'cpu')) == 'cuda':
+                dev = torch.cuda.get_device_name(0)
+        except Exception:
+            pass
+    return '%s/%s' % (socket.gethostname().split('.')[0], dev)
+
+
 def main(argv=None):
     import argparse
     ap = argparse.ArgumentParser()
@@ -43,7 +57,7 @@ def main(argv=None):
                 protocol='C23: keyframes every 10, %s, %s, PnP AP3P-RANSAC 3 px 2000 it >= 6 inliers + LM refinement, camera-centre error' % (
                     'map = top-%s keyframes by VLAD retrieval over the whole flight' % a.map[3:] if a.map.startswith('ret') else 'map = keyframes within +-20 frames',
                     'LightGlue per keyframe' if a.matcher == 'lg' else 'mutual NN'),
-                has_picks=bool(a.save_picks) or meta.get('has_picks', False))
+                has_picks=bool(a.save_picks) or meta.get('has_picks', False), device=device_name(a.matcher))
     if a.notes:
         meta['notes'] = a.notes
     for fid in parse_flights(a.flights):

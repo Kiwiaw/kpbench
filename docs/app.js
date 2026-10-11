@@ -407,10 +407,10 @@ function flightsBadge(id) {
 const GLOSS = {
   run: 'det_picker_K_map_matcher, see the legend',
   n: 'number of queries behind the row',
-  bin: 'share of failed queries at the chosen threshold (no pose, position error above it, or rotation above 5 deg); n in brackets; +- = half width of the 95 % block-bootstrap confidence interval (blocks of 20 consecutive frames)',
+  bin: 'share of failed queries at the chosen threshold (no pose, position error above it, or rotation above the paired threshold: 2 deg at 5 and 25 cm, 5 deg at 50 cm, 10 deg at 5 m); n in brackets; +- = half width of the 95 % block-bootstrap confidence interval (blocks of 20 consecutive frames)',
   auc: 'area under "share of queries with error <= x" for x in 0..25 cm, divided by 25 (1 = every pose exact)',
   med: 'median position error of the queries that passed at the threshold',
-  n_match: 'mean number of mutual nearest neighbour matches per query',
+  n_match: 'mean number of matches per query (LightGlue matches for lg runs, mutual nearest neighbours for nn runs)',
   n_inl: 'mean number of RANSAC inliers per query',
   rep1: 'share of kept points found again 1 frame later (within 3 px, depth within 5 %)',
   rep5: 'share of kept points found again 5 frames later (within 3 px, depth within 5 %)',
@@ -831,6 +831,7 @@ function renderBins(el) {
       const pairs = run.rows.filter(r => base.byKey.has(r.key)).map(r => [r, base.byKey.get(r.key)]);
       return bins.map((b, bi) => {
         let saves = 0, breaks = 0, n = 0, fr = 0, fb = 0;
+        const blk = new Map(), flt = new Map();   // net (run fails - baseline fails) per 20-frame block and per flight
         for (const [r, q] of pairs) {
           if (!inBin(b, r)) continue;
           n++;
@@ -839,22 +840,30 @@ function renderBins(el) {
           if (c) fb++;
           if (c && !a) saves++;
           if (a && !c) breaks++;
+          const kb = `${r.flight}:${Math.floor(r.q / BLOCK)}`, d = (a ? 1 : 0) - (c ? 1 : 0);
+          blk.set(kb, (blk.get(kb) || 0) + d); flt.set(r.flight, (flt.get(r.flight) || 0) + d);
         }
-        const p = signTestP(saves, breaks);
-        const cls = p < 0.05 ? (saves > breaks ? 'good' : 'bad') : '';
+        const count = m => { let s = 0, w = 0; for (const v of m.values()) { if (v < 0) s++; else if (v > 0) w++; } return [s, w]; };
+        const [bs, bb] = count(blk), [fs, fw] = count(flt);
+        const p = signTestP(bs, bb), pq = signTestP(saves, breaks), pf = signTestP(fs, fw);
+        const cls = p < 0.05 ? (bs > bb ? 'good' : 'bad') : '';
         const first = bi === 0 ? `<td class="l nowrap" rowspan="${bins.length}">${runLabel(id)}${runActions(id)}</td>` : '';
         return `<tr class="${bi === 0 ? 'grp' : ''}">${first}<td class="l">${esc(b.label)}</td><td>${n}</td>
           <td>${n ? fmt(100 * fb / n) : '–'}</td><td>${n ? fmt(100 * fr / n) : '–'}</td>
           <td>${saves}</td><td>${breaks}</td><td>${saves - breaks > 0 ? '+' : ''}${saves - breaks}</td>
-          <td class="${cls}">${fmtP(p)}${saves + breaks > 500 ? ' <span class="muted">(normal)</span>' : ''}</td></tr>`;
+          <td class="${cls}">${fmtP(p)} <span class="muted">(${bs}/${bb})</span></td>
+          <td>${fs}/${fw} <span class="muted">p ${fmtP(pf)}</span></td>
+          <td class="muted">${fmtP(pq)}</td></tr>`;
       }).join('');
     }).join('');
     paired = others.length ? `<div class="tablewrap"><table class="data">
       <thead><tr><th class="l">run</th><th class="l">bin</th><th>n paired</th><th>baseline fail %</th><th>run fail %</th>
-      <th>saves</th><th>breaks</th><th>net</th><th>p (two-sided)</th></tr></thead><tbody>${prow}</tbody></table></div>
+      <th>saves</th><th>breaks</th><th>net</th><th>p, 20-frame blocks (better/worse)</th><th>flights better/worse</th><th>p per query (too optimistic)</th></tr></thead><tbody>${prow}</tbody></table></div>
       <p class="note">Paired on the queries the run and the baseline (${esc(S.base)}) both have, at ${T} cm. Saves: baseline fails, run passes.
-      Breaks: run fails, baseline passes. p: exact two-sided binomial (sign) test on saves vs breaks with probability 1/2;
-      normal approximation when saves + breaks &gt; 500. Green / red: p &lt; 0.05 in favour of / against the run.</p>`
+      Breaks: run fails, baseline passes. Neighbouring frames fail together, so single queries are not independent: the main p is a
+      two-sided sign test over 20-frame blocks (a block counts as better when the run has fewer failures in it), next to the same
+      test over flights. The per-query p (exact binomial on saves vs breaks) is shown only for reference; it overstates certainty.
+      Green / red: block p &lt; 0.05 in favour of / against the run.</p>`
       : '<p class="muted">Select at least one run besides the baseline.</p>';
   }
 
