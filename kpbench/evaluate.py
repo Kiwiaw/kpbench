@@ -1,6 +1,6 @@
 """Score one picker on a frozen split (splits.json) under the kpbench protocol, with the search rules enforced.
 
-  python -m kpbench.evaluate --picker cube0.5 [--split micro|dev|held_out] [--matcher lg] [--save]
+  python -m kpbench.evaluate --picker cube0.5 [--split micro|dev_flat|dev] [--matcher lg] [--save]
 
 evaluate(picker) is the scoring function for code search (ShinkaEvolve / OpenEvolve) and tuning (Optuna).
 picker = a name for kpbench.pickers.parse or a function f(u, v, s, z, K) -> indices into the candidates.
@@ -54,6 +54,9 @@ def query_sets(split):
     sp = load_splits()
     if split == 'micro':
         return {f: qs for f, qs in sp['micro'].items()}
+    if split == 'dev_flat':                          # flat queries of every DEV flight: the tuning objective (Optuna)
+        from .splits import flat_queries
+        return {f: flat_queries(f) for f in sp['dev']}
     if split in ('dev', 'held_out'):
         return {f: None for f in sp[split]}          # None = every query of the flight
     raise ValueError(split)
@@ -114,7 +117,7 @@ def evaluate(picker, split='micro', K=100, det='raco', matcher='lg', allow_oracl
 def main(argv=None):
     import argparse
     ap = argparse.ArgumentParser()
-    ap.add_argument('--picker', required=True); ap.add_argument('--split', default='micro')
+    ap.add_argument('--picker', required=True); ap.add_argument('--split', default='micro', choices=['micro', 'dev_flat', 'dev'])
     ap.add_argument('--K', type=int, default=100); ap.add_argument('--det', default='raco')
     ap.add_argument('--matcher', default='lg', choices=['lg', 'nn']); ap.add_argument('--save', action='store_true')
     a = ap.parse_args(argv)
