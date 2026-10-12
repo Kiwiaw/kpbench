@@ -1,6 +1,6 @@
 """Score one picker on a frozen split (splits.json) under the kpbench protocol, with the search rules enforced.
 
-  python -m kpbench.evaluate --picker cube0.5 [--split micro|dev_flat|dev] [--matcher lg] [--save]
+  python -m kpbench.evaluate --picker cube0.5 [--split micro|dev_flat|dev] [--matcher lg] [--save] [--metrics]
 
 evaluate(picker) is the scoring function for code search (ShinkaEvolve / OpenEvolve) and tuning (Optuna).
 picker = a name for kpbench.pickers.parse or a function f(u, v, s, z, K) -> indices into the candidates.
@@ -12,6 +12,7 @@ Protocol = kpbench.bench (same map: keyframes keep the same picker's points; Lig
 fail = no pose, > 25 cm or > 2 deg). Only the frames a query set needs are picked (its queries and their keyframes), so
 MICRO runs in about a minute on the laptop GPU. Output: fail % on the flat bin and all queries of the split, mean
 repeatability at lag 5, rows per query (for paired comparisons with kpbench.stats).
+--metrics appends the SUB1 candidate columns of kpbench.metrics (MCOLS) after the existing ones.
 """
 import os, json, time, gzip
 import numpy as np
@@ -21,6 +22,7 @@ from .pickers import parse as parse_picker
 from .bench import match_lightglue, match_mutual, pnp, repeat, COLS
 from .splits import load as load_splits, FLAT
 from .stats import fail_flags
+from .metrics import query_metrics, MCOLS
 
 EVAL_DIR = os.path.join(REPO, 'results', 'eval')
 
@@ -62,7 +64,7 @@ def query_sets(split):
     raise ValueError(split)
 
 
-def eval_flight(fid, qs, pk, K, det, matcher, allow_oracle):
+def eval_flight(fid, qs, pk, K, det, matcher, allow_oracle, metrics=False):
     F = Flight(fid); C = Cands(F.slug, det)
     if C.N != F.N:
         raise RuntimeError('%s: cache has %d frames, flight has %d' % (fid, C.N, F.N))
@@ -86,20 +88,22 @@ def eval_flight(fid, qs, pk, K, det, matcher, allow_oracle):
         else:
             mq, mm = match_mutual(de[i], np.concatenate([MAP[k][1] for k in near]))
             obj = np.concatenate([MAP[k][0] for k in near])[mm]
-        err, rot, ninl = pnp(obj, np.stack([u[i][mq], v[i][mq]], 1), Rq, tq)
+        img = np.stack([u[i][mq], v[i][mq]], 1)
+        err, rot, ninl, sol = pnp(obj, img, Rq, tq, full=True)
         rep = repeat(F, C, q, i, trees)
         for f in [f for f in trees if f < q]:
             del trees[f]
-        rows.append([fid, q, err, rot, int(len(i)), int(len(mq)), ninl] + rep)
+        rows.append([fid, q, err, rot, int(len(i)), int(len(mq)), ninl] + rep +
+                    (query_metrics(obj, img, len(mq), err, rot, sol) if metrics else []))
         pf = lab[str(q)].get('plane_frac'); flat.append(pf is not None and pf >= FLAT)
     return rows, flat
 
 
-def evaluate(picker, split='micro', K=100, det='raco', matcher='lg', allow_oracle=False, save=False, name=None):
+def evaluate(picker, split='micro', K=100, det='raco', matcher='lg', allow_oracle=False, save=False, name=None, metrics=False):
     pk = parse_picker(picker) if isinstance(picker, str) else picker
     t0 = time.time(); rows, flat = [], []
     for fid, qs in query_sets(split).items():
-        r, fl = eval_flight(fid, qs, pk, K, det, matcher, allow_oracle); rows += r; flat += fl
+        r, fl = eval_flight(fid, qs, pk, K, det, matcher, allow_oracle, metrics); rows += r; flat += fl
     fails = fail_flags(rows); flat = np.array(flat, bool)
     rep5 = [r[COLS.index('rep5')] for r in rows if r[COLS.index('rep5')] is not None]
     out = dict(picker=name or (picker if isinstance(picker, str) else getattr(picker, '__name__', 'fn')), split=split, K=K,
@@ -108,8 +112,8 @@ def evaluate(picker, split='micro', K=100, det='raco', matcher='lg', allow_oracl
                rep5=round(float(np.mean(rep5)), 4) if rep5 else None, secs=round(time.time() - t0, 1))
     if save:
         d = os.path.join(EVAL_DIR, split); os.makedirs(d, exist_ok=True)
-        fn = os.path.join(d, '%s_%s_K%d_%s.json.gz' % (det, out['picker'], K, matcher))
-        json.dump(dict(summary=out, cols=COLS, rows=rows, flat=flat.tolist()), gzip.open(fn, 'wt'))
+        fn = os.path.join(d, '%s_%s_K%d_%s%s.json.gz' % (det, out['picker'], K, matcher, '_m' if metrics else ''))
+        json.dump(dict(summary=out, cols=COLS + (MCOLS if metrics else []), rows=rows, flat=flat.tolist()), gzip.open(fn, 'wt'))
         out['saved'] = os.path.relpath(fn, REPO)
     return out, rows, flat
 
@@ -117,11 +121,12 @@ def evaluate(picker, split='micro', K=100, det='raco', matcher='lg', allow_oracl
 def main(argv=None):
     import argparse
     ap = argparse.ArgumentParser()
-    ap.add_argument('--picker', required=True); ap.add_argument('--split', default='micro', choices=['micro', 'dev_flat', 'dev'])
+    ap.add_argument('--picker', required=True); ap.add_argument('--split', default='micro', choices=['micro', 'dev_flat', 'dev', 'held_out'])
     ap.add_argument('--K', type=int, default=100); ap.add_argument('--det', default='raco')
     ap.add_argument('--matcher', default='lg', choices=['lg', 'nn']); ap.add_argument('--save', action='store_true')
+    ap.add_argument('--metrics', action='store_true')
     a = ap.parse_args(argv)
-    out, _, _ = evaluate(a.picker, a.split, a.K, a.det, a.matcher, save=a.save)
+    out, _, _ = evaluate(a.picker, a.split, a.K, a.det, a.matcher, save=a.save, metrics=a.metrics)
     print(json.dumps(out))
 
 

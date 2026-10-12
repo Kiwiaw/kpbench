@@ -76,30 +76,32 @@ def match_lightglue(uvq, dq, kfs):
     return qi, [(best[a][1], best[a][2]) for a in qi]
 
 
-def pnp(obj, img, Rq, tq):
-    """-> (err_cm, rot_deg, n_inl); err/rot None when no pose.
+def pnp(obj, img, Rq, tq, full=False):
+    """-> (err_cm, rot_deg, n_inl); err/rot None when no pose. full=True appends (R, tvec, inlier indices) or None.
     RANSAC with the AP3P minimal solver (3 px, 2000 it, conf 0.9999), then Levenberg-Marquardt refinement on all inliers,
     as in hloc / visuallocalization.net. The OpenCV RNG is seeded per query, so a run is reproducible exactly.
     Errors as in the visual localisation benchmarks: position = distance between the estimated and true camera CENTRES
     in metres (c = -R^T t), rotation = angle of R_est R_true^T in degrees."""
+    none = (None, None, 0) + ((None,) if full else ())
     if len(obj) < 6:
-        return None, None, 0
+        return none
     obj = np.ascontiguousarray(obj.reshape(-1, 1, 3), dtype=np.float64); img = np.ascontiguousarray(img.reshape(-1, 1, 2), dtype=np.float64)
     try:
         cv2.setRNGSeed(0)
         ok, rvec, tvec, inl = cv2.solvePnPRansac(obj, img, KMAT, None, reprojectionError=3.0, iterationsCount=2000,
                                                  confidence=0.9999, flags=cv2.SOLVEPNP_AP3P)
         if not ok or inl is None or len(inl) < 6:
-            return None, None, 0
+            return none
         inl = inl.ravel()
         rvec, tvec = cv2.solvePnPRefineLM(obj[inl], img[inl], KMAT, None, rvec, tvec)
     except cv2.error:
-        return None, None, 0
+        return none
     R, _ = cv2.Rodrigues(rvec); R_gt = Rq.T
     rot = float(np.degrees(np.arccos(np.clip((np.trace(R.T @ R_gt) - 1) / 2, -1, 1))))
     c_est = -R.T @ tvec.ravel()                       # estimated camera centre in the world frame
     err = float(np.linalg.norm(c_est - tq) * 100)     # tq = true camera centre
-    return round(err, 3), round(rot, 4), int(len(inl))
+    out = (round(err, 3), round(rot, 4), int(len(inl)))
+    return out + ((R, tvec.ravel(), inl),) if full else out
 
 
 def vlad_codebook(C, frames, k=64, seed=0, cap=60000):
