@@ -12,7 +12,7 @@ source ~/kpbench/euler/env.sh >/dev/null 2>&1; cd ~/kpbench
 python -m kpbench.tune --study $STUDY --seed-only
 PER=$(( (TRIALS + W - 1) / W ))
 J=$(sbatch --parsable --array=0-$((W-1)) --account=ls_polle --cpus-per-task=8 --mem-per-cpu=6G --time=12:00:00 --job-name=kpb_tune \
-  --output=$HOME/kpbench/logs/tune_${STUDY}_%A_%a.log --wrap="source ~/kpbench/euler/env.sh && python -m kpbench.tune --study $STUDY --trials $PER")
+  --output=$HOME/kpbench/logs/tune_${STUDY}_%A_%a.log --wrap="bash -c 'source ~/kpbench/euler/env.sh && python -m kpbench.tune --study $STUDY --trials $PER'")
 S=$(sbatch --parsable --dependency=afterany:$J --account=ls_polle --time=00:10:00 --mem-per-cpu=4G --job-name=kpb_tsum \
-  --output=$HOME/kpbench/logs/tsum_%j.log --wrap="source ~/kpbench/euler/env.sh && python -m kpbench.tune --study $STUDY --summary")
+  --output=$HOME/kpbench/logs/tsum_%j.log --wrap="bash -c 'source ~/kpbench/euler/env.sh && python -m kpbench.tune --study $STUDY --summary'")
 echo "tune $STUDY: array $J ($W workers x $PER trials), summary $S"

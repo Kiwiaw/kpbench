@@ -25,5 +25,5 @@ J=$(sbatch --parsable --array=$IDX --export=ALL,CAND=$CAND,INC=$INC euler/gate.s
 R="raco_%s_K100_same_lg_g-$CAND"
 S=$(sbatch --parsable --dependency=afterok:$J --account=ls_polle --time=00:20:00 --mem-per-cpu=4G --job-name=kpb_gsum \
   --output=$HOME/kpbench/logs/gsum_%j.log \
-  --wrap="source ~/kpbench/euler/env.sh && python -m kpbench.gate --cand $(printf $R $CAND) --inc $(printf $R $INC) --split $SPLIT --log")
+  --wrap="bash -c 'source ~/kpbench/euler/env.sh && python -m kpbench.gate --cand $(printf $R $CAND) --inc $(printf $R $INC) --split $SPLIT --log'")
 echo "gate $CAND vs $INC on $SPLIT: array $J ($IDX), summary $S"
