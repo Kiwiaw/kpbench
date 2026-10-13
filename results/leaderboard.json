@@ -1,19 +1,68 @@
 {
- "generated": "2026-10-11T19:45:57",
+ "generated": "2026-10-13T14:32:37",
  "det": "raco",
  "K": 100,
  "map": "same",
  "matcher": "lg",
  "runs": [
   {
+   "id": "raco_dpp0.5_K100_same_lg",
+   "picker": "dpp0.5",
+   "n": 18571,
+   "devices": [
+    "eu-a2p-278/AMD EPYC 7763 64-Core Processor",
+    "eu-a2p-279/AMD EPYC 7763 64-Core Processor",
+    "eu-a2p-283/AMD EPYC 7763 64-Core Processor",
+    "eu-a2p-284/AMD EPYC 7763 64-Core Processor",
+    "eu-a2p-287/AMD EPYC 7763 64-Core Processor",
+    "eu-a2p-288/AMD EPYC 7763 64-Core Processor",
+    "eu-a2p-290/AMD EPYC 7763 64-Core Processor",
+    "eu-a2p-292/AMD EPYC 7763 64-Core Processor",
+    "eu-a2p-411/AMD EPYC 7763 64-Core Processor",
+    "eu-a2p-412/AMD EPYC 7763 64-Core Processor",
+    "eu-a2p-413/AMD EPYC 7763 64-Core Processor",
+    "eu-a2p-414/AMD EPYC 7763 64-Core Processor",
+    "eu-a2p-435/AMD EPYC 7763 64-Core Processor",
+    "eu-a2p-445/AMD EPYC 7763 64-Core Processor",
+    "eu-a2p-496/AMD EPYC 7763 64-Core Processor",
+    "eu-a2p-522/AMD EPYC 7763 64-Core Processor",
+    "eu-a2p-525/AMD EPYC 7763 64-Core Processor",
+    "eu-a2p-529/AMD EPYC 7763 64-Core Processor",
+    "eu-a2p-531/AMD EPYC 7763 64-Core Processor",
+    "eu-a2p-533/AMD EPYC 7763 64-Core Processor"
+   ],
+   "rep5": 0.5997,
+   "all": [
+    1.384,
+    0.964,
+    1.808
+   ],
+   "n_all": 18571,
+   "flat": [
+    10.59,
+    7.176,
+    14.688
+   ],
+   "n_flat": 1813,
+   "vflat": [
+    16.068,
+    10.661,
+    21.876
+   ],
+   "n_vflat": 1058
+  },
+  {
    "id": "raco_cube0.5_K100_same_lg",
    "picker": "cube0.5",
    "n": 18571,
    "devices": [
+    "eu-a2p-011/node (from sacct, job 16816317_3)",
     "eu-a2p-038/AMD EPYC 7H12 64-Core Processor",
+    "eu-a2p-044/node (from sacct, job 16816317_4)",
     "eu-a2p-098/AMD EPYC 7H12 64-Core Processor",
     "eu-a2p-106/AMD EPYC 7H12 64-Core Processor",
     "eu-a2p-161/AMD EPYC 7H12 64-Core Processor",
+    "eu-a2p-236/node (from sacct, job 16816317_1)",
     "eu-a2p-253/AMD EPYC 7H12 64-Core Processor",
     "eu-a2p-261/AMD EPYC 7H12 64-Core Processor",
     "eu-a2p-269/AMD EPYC 7H12 64-Core Processor",
@@ -24,14 +73,18 @@
     "eu-a2p-337/AMD EPYC 7H12 64-Core Processor",
     "eu-a2p-363/AMD EPYC 7763 64-Core Processor",
     "eu-a2p-365/AMD EPYC 7763 64-Core Processor",
+    "eu-a2p-368/node (from sacct, job 16816317_0)",
     "eu-a2p-395/AMD EPYC 7763 64-Core Processor",
+    "eu-a2p-405/node (from sacct, job 16816317_2)",
     "eu-a2p-455/AMD EPYC 7763 64-Core Processor",
     "eu-a2p-480/AMD EPYC 7763 64-Core Processor",
     "eu-a2p-481/AMD EPYC 7763 64-Core Processor",
     "eu-a2p-490/AMD EPYC 7763 64-Core Processor",
     "eu-a2p-522/AMD EPYC 7763 64-Core Processor",
     "eu-a2p-524/AMD EPYC 7763 64-Core Processor",
-    "unknown"
+    "eu-g5-028-4/node (from sacct, job 16816317_5)",
+    "eu-g5-038-1/node (from sacct, job 16816317_6)",
+    "eu-g5-046-3/node (from sacct, job 16816317_7)"
    ],
    "rep5": 0.5889,
    "all": [
@@ -58,10 +111,13 @@
    "picker": "grid",
    "n": 18571,
    "devices": [
+    "eu-a2p-011/node (from sacct, job 16816317_3)",
     "eu-a2p-038/AMD EPYC 7H12 64-Core Processor",
+    "eu-a2p-044/node (from sacct, job 16816317_4)",
     "eu-a2p-098/AMD EPYC 7H12 64-Core Processor",
     "eu-a2p-106/AMD EPYC 7H12 64-Core Processor",
     "eu-a2p-161/AMD EPYC 7H12 64-Core Processor",
+    "eu-a2p-236/node (from sacct, job 16816317_1)",
     "eu-a2p-253/AMD EPYC 7H12 64-Core Processor",
     "eu-a2p-261/AMD EPYC 7H12 64-Core Processor",
     "eu-a2p-269/AMD EPYC 7H12 64-Core Processor",
@@ -72,14 +128,18 @@
     "eu-a2p-337/AMD EPYC 7H12 64-Core Processor",
     "eu-a2p-363/AMD EPYC 7763 64-Core Processor",
     "eu-a2p-365/AMD EPYC 7763 64-Core Processor",
+    "eu-a2p-368/node (from sacct, job 16816317_0)",
     "eu-a2p-395/AMD EPYC 7763 64-Core Processor",
+    "eu-a2p-405/node (from sacct, job 16816317_2)",
     "eu-a2p-455/AMD EPYC 7763 64-Core Processor",
     "eu-a2p-480/AMD EPYC 7763 64-Core Processor",
     "eu-a2p-481/AMD EPYC 7763 64-Core Processor",
     "eu-a2p-490/AMD EPYC 7763 64-Core Processor",
     "eu-a2p-522/AMD EPYC 7763 64-Core Processor",
     "eu-a2p-524/AMD EPYC 7763 64-Core Processor",
-    "unknown"
+    "eu-g5-028-4/node (from sacct, job 16816317_5)",
+    "eu-g5-038-1/node (from sacct, job 16816317_6)",
+    "eu-g5-046-3/node (from sacct, job 16816317_7)"
    ],
    "rep5": 0.5604,
    "all": [
@@ -106,10 +166,13 @@
    "picker": "sd",
    "n": 18571,
    "devices": [
+    "eu-a2p-011/node (from sacct, job 16816317_3)",
     "eu-a2p-038/AMD EPYC 7H12 64-Core Processor",
+    "eu-a2p-044/node (from sacct, job 16816317_4)",
     "eu-a2p-098/AMD EPYC 7H12 64-Core Processor",
     "eu-a2p-106/AMD EPYC 7H12 64-Core Processor",
     "eu-a2p-161/AMD EPYC 7H12 64-Core Processor",
+    "eu-a2p-236/node (from sacct, job 16816317_1)",
     "eu-a2p-253/AMD EPYC 7H12 64-Core Processor",
     "eu-a2p-261/AMD EPYC 7H12 64-Core Processor",
     "eu-a2p-269/AMD EPYC 7H12 64-Core Processor",
@@ -120,14 +183,18 @@
     "eu-a2p-337/AMD EPYC 7H12 64-Core Processor",
     "eu-a2p-363/AMD EPYC 7763 64-Core Processor",
     "eu-a2p-365/AMD EPYC 7763 64-Core Processor",
+    "eu-a2p-368/node (from sacct, job 16816317_0)",
     "eu-a2p-395/AMD EPYC 7763 64-Core Processor",
+    "eu-a2p-405/node (from sacct, job 16816317_2)",
     "eu-a2p-455/AMD EPYC 7763 64-Core Processor",
     "eu-a2p-480/AMD EPYC 7763 64-Core Processor",
     "eu-a2p-481/AMD EPYC 7763 64-Core Processor",
     "eu-a2p-490/AMD EPYC 7763 64-Core Processor",
     "eu-a2p-522/AMD EPYC 7763 64-Core Processor",
     "eu-a2p-524/AMD EPYC 7763 64-Core Processor",
-    "unknown"
+    "eu-g5-028-4/node (from sacct, job 16816317_5)",
+    "eu-g5-038-1/node (from sacct, job 16816317_6)",
+    "eu-g5-046-3/node (from sacct, job 16816317_7)"
    ],
    "rep5": 0.6182,
    "all": [

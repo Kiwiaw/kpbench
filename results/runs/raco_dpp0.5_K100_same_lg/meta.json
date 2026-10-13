@@ -19,8 +19,9 @@
   "rep10"
  ],
  "protocol": "C23: keyframes every 10, map = keyframes within +-20 frames, LightGlue per keyframe, PnP AP3P-RANSAC 3 px 2000 it >= 6 inliers + LM refinement, camera-centre error",
- "has_picks": true,
- "notes": "cube size / Poisson-disk radius sweep; corrected protocol (AP3P+LM, centre error)",
- "date": "2026-10-07T13:43:04",
- "commit": "daeeca0d"
+ "has_picks": false,
+ "device": "eu-a2p-531/AMD EPYC 7763 64-Core Processor",
+ "date": "2026-10-13T00:48:59",
+ "commit": "",
+ "source": "held-out + DEV gate runs raco_dpp0.5_K100_same_lg_g-dpp0.5 (each flight on the same node as its cube0.5 partner)"
 }

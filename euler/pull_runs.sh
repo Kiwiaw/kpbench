@@ -8,4 +8,4 @@ for rid in "$@"; do
   ssh euler "cd ~/kpbench/results/runs/$rid && tar czf - ." | tar xzf - -C "results/runs/$rid.tmp"
   rm -rf "results/runs/$rid"; mv "results/runs/$rid.tmp" "results/runs/$rid"; echo "pulled $rid"
 done
-python -m kpbench.export
+[ -n "${NOEXPORT:-}" ] || python -m kpbench.export
