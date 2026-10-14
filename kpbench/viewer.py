@@ -4,6 +4,11 @@
                            [--kmax 2000] [--step 4]
 -> docs/frames/<slug>_<frame>.html (plotly.js from the CDN, all data inline as JSON).
 
+DPP pages (fresh stock-RaCo run, 3000 candidates with depth, slider = first k picks of each picker's order):
+  python -m kpbench.viewer --flight oldtown/P001 --frame 334 --ncand 3000 --pickers dpp0.5,sd,cube0.5 --default dpp0.5
+                           --out dpp_tartanair_oldtown_P001_334.html --title "..."
+  Hypersim: set KPBENCH_INTR="554.256258 554.256258 320 240" first (see data.py).
+
 Plot axes follow the usual convention: x = right (camera x), y = forward (camera z), z = up (-camera y).
 """
 import argparse
@@ -24,6 +29,9 @@ OUT_DIR = os.path.join(REPO, 'docs', 'frames')
 PLOTLY = 'https://cdn.plot.ly/plotly-2.35.2.min.js'
 # Pickers whose selection for K is NOT the first K entries of the selection for kmax (stored per K).
 NOT_PREFIX = ('grid',)
+# plain picker names and colours for --ncand pages
+LABELS = {'dpp0.5': 'DPP', 'sd': 'strongest first', 'cube0.5': 'cubes 0.5 m'}
+COLOURS = {'dpp0.5': '#1f9bff', 'sd': '#ff3b30', 'cube0.5': '#ff9500'}
 
 
 def plot_axes(P):
@@ -35,7 +43,44 @@ def r3(a):
     return [round(float(x), 3) for x in a]
 
 
-def build(fid, f, det='raco', pickers=('sd', 'cube0.5', 'far2d', 'far3d'), kmax=2000, step=4):
+def raco_cands(img, dep, ncand):
+    """Fresh stock-RaCo candidates for one frame (instead of the 2000-point cache): the top n detections, ranker-sorted as
+    in extract.py, with n grown until ncand of them have depth; returns (u, v, s, z) of those ncand in ranker order."""
+    import torch
+    from .extract import RACO_DIR
+    dev = 'cuda' if torch.cuda.is_available() else 'cpu'
+    x = torch.from_numpy(img.astype(np.float32) / 255.0).permute(2, 0, 1)[None].to(dev)
+    n = ncand
+    while True:
+        raco = torch.hub.load(RACO_DIR, 'raco', source='local', pretrained=True, max_num_keypoints=n,
+                              ranker=True, covariance_estimator=True).eval().to(dev)
+        with torch.no_grad():
+            p = raco({'image': x})
+        kp = p['keypoints'][0].cpu().numpy(); sc = p['ranker_scores'][0].cpu().numpy()
+        o = np.argsort(-sc, kind='stable'); kp, sc = kp[o], sc[o]
+        u = np.clip(kp[:, 0], 0, W - 1); v = np.clip(kp[:, 1], 0, H - 1)
+        z = dep[np.clip(np.rint(v).astype(int), 0, H - 1), np.clip(np.rint(u).astype(int), 0, W - 1)]
+        ok = np.flatnonzero((z > 0) & (z < DEPTH_MAX))
+        if len(ok) >= ncand:
+            ok = ok[:ncand]
+            return u[ok].astype(np.float64), v[ok].astype(np.float64), sc[ok].astype(np.float64), z[ok].astype(np.float64)
+        n = int(np.ceil(n * ncand / max(1, len(ok)) * 1.05))
+
+
+def own_picks(sel, n):
+    """number of leading picks a picker made itself, before pickers.fill topped the selection up in score order
+    (fill appends the unused candidates in index order, so the tail of the selection is that sequence)"""
+    sel = np.asarray(sel, int); m = len(sel)
+    # the property "sel[m:] = first entries of the sorted unused-by-sel[:m] candidates" holds for all m >= the true split
+    while m > 0:
+        rest = np.setdiff1d(np.arange(n), sel[:m - 1])[:len(sel) - m + 1]
+        if not np.array_equal(rest, sel[m - 1:]):
+            break
+        m -= 1
+    return m
+
+
+def build(fid, f, det='raco', pickers=('sd', 'cube0.5', 'far2d', 'far3d'), kmax=2000, step=4, ncand=0):
     F = Flight(fid)
     img = F.img(f)
     dep = F.depth(f)
@@ -51,7 +96,11 @@ def build(fid, f, det='raco', pickers=('sd', 'cube0.5', 'far2d', 'far3d'), kmax=
              'c': ['#%02x%02x%02x' % tuple(int(c) for c in p) for p in rgb]}
 
     # 2. candidates with valid depth (rank = index in score order)
-    u, v, s, z, _ = Cands(F.slug, det).frame(f)
+    if ncand:     # fresh stock-RaCo run for this frame, ncand candidates, all with depth
+        assert det == 'raco', 'ncand needs det raco'
+        u, v, s, z = raco_cands(img, dep, ncand)
+    else:
+        u, v, s, z, _ = Cands(F.slug, det).frame(f)
     valid = np.flatnonzero((z > 0) & (z < DEPTH_MAX))
     pos = {int(j): i for i, j in enumerate(valid)}       # candidate index -> position in the embedded list
     Pc = to3d(u[valid], v[valid], z[valid])
@@ -66,12 +115,14 @@ def build(fid, f, det='raco', pickers=('sd', 'cube0.5', 'far2d', 'far3d'), kmax=
     # kmax are exactly the selection for K, so one ordered list per picker covers every K. grid is not, so its
     # selection is stored separately for every K (perK[name][K-1]). Indices point into the embedded candidate list;
     # candidates without depth (possible only through a picker's top-up fill) are dropped.
-    sel, perK, dropped = {}, {}, {}
+    sel, perK, dropped, own = {}, {}, {}, {}
     for name in pickers:
         fn = parse(name)
         idx = fn(u, v, s, z, kmax)
         sel[name] = [pos[int(j)] for j in idx if int(j) in pos]
         dropped[name] = len(idx) - len(sel[name])
+        if name.startswith('dpp'):    # greedy DPP stops when no gain is left; pickers.fill adds the rest strongest first
+            own[name] = own_picks(idx, len(u))
         if name in NOT_PREFIX:
             perK[name] = [[pos[int(j)] for j in fn(u, v, s, z, K) if int(j) in pos] for K in range(1, kmax + 1)]
 
@@ -82,12 +133,12 @@ def build(fid, f, det='raco', pickers=('sd', 'cube0.5', 'far2d', 'far3d'), kmax=
 
     data = {'flight': fid, 'frame': int(f), 'det': det, 'kmax': int(kmax), 'step': int(step),
             'W': W, 'H': H, 'fx': FX, 'fy': FY, 'pickers': list(pickers), 'cloud': cloud, 'cands': cands,
-            'sel': sel, 'perK': perK, 'dropped': dropped}
+            'sel': sel, 'perK': perK, 'dropped': dropped, 'own': own, 'ncand': int(ncand)}
     return data, jpg
 
 
 def render(data, jpg):
-    title = '%s frame %d (%s)' % (data['flight'], data['frame'], data['det'])
+    title = data.get('title') or '%s frame %d (%s)' % (data['flight'], data['frame'], data['det'])
     blob = json.dumps(data, separators=(',', ':'))
     return (HTML.replace('__TITLE__', title).replace('__PLOTLY__', PLOTLY)
             .replace('__JPG__', jpg).replace('__DATA__', blob))
@@ -124,10 +175,11 @@ HTML = r'''<!doctype html>
   <span>K <input id="kslider" type="range" min="1" step="1"> <input id="kbox" type="number" min="1" step="1"></span>
   <label><input type="checkbox" id="cubes"> show 0.5 m cubes</label>
   <label><input type="checkbox" id="cloud" checked> show point cloud</label>
-  <label><input type="checkbox" id="allc"> show all candidates</label>
-  <label><input type="checkbox" id="byrank"> colour selected by rank (default: pixel colour)</label>
+  <label id="allcl"><input type="checkbox" id="allc"> show all candidates</label>
+  <label id="byrankl"><input type="checkbox" id="byrank"> colour selected by rank (default: pixel colour)</label>
   <span title="points farther forward than this are outside the 3D view (they stay in the statistics)">view depth <input id="dmax" type="range" min="2" step="0.5"> <span id="dmaxv"></span> m</span>
 </div>
+<div id="note" style="color:#555;margin-bottom:6px;max-width:1200px"></div>
 <div id="readout"></div>
 <div id="panels">
   <div id="scene"></div>
@@ -137,7 +189,14 @@ HTML = r'''<!doctype html>
 const D = __DATA__;
 const JPG = "data:image/jpeg;base64,__JPG__";
 const C = D.cands, NC = C.u.length, CUBE = 0.5;
-const st = { picker: D.pickers.includes('sd') ? 'sd' : D.pickers[0], K: Math.min(100, D.kmax), dmax: 0 };
+const st = { picker: D.default || (D.pickers.includes('sd') ? 'sd' : D.pickers[0]), K: Math.min(100, D.kmax), dmax: 0 };
+// 'order' pages (one fresh candidate set, pickers compared at the same k): faint unpicked candidates, one colour per picker
+const ORDER = D.mode === 'order', LAB = D.labels || {}, HL = D.colours || {};
+const lab = p => LAB[p] || p, hl = p => HL[p] || '#ffd400';
+document.getElementById('note').textContent = D.note || '';
+if (ORDER) { document.getElementById('allc').checked = true;
+  document.getElementById('allcl').lastChild.textContent = ' show unpicked candidates';
+  document.getElementById('byrankl').lastChild.textContent = ' colour picks by pick order (default: one colour per picker)'; }
 // default view depth: twice the median candidate depth, between 4 and 30 m, so the near scene fills the view
 { const ys = C.y.slice().sort((a, b) => a - b); st.dmax = Math.round(Math.min(30, Math.max(4, 2 * ys[ys.length >> 1])) * 2) / 2; }
 
@@ -205,6 +264,11 @@ function nnStats(S) {
   return [median(px), median(m)];
 }
 
+function ordinal(n) {
+  const t = n % 100, e = n % 10;
+  return n + (t >= 11 && t <= 13 ? 'th' : e === 1 ? 'st' : e === 2 ? 'nd' : e === 3 ? 'rd' : 'th');
+}
+
 function rankColour(r) {   // rank 0..kmax -> viridis-like ramp (dark purple = strongest pick)
   const stops = [[68, 1, 84], [59, 82, 139], [33, 145, 140], [94, 201, 98], [253, 231, 37]];
   const t = Math.min(1, r / Math.max(1, D.kmax - 1)) * (stops.length - 1), i = Math.min(stops.length - 2, Math.floor(t)), f = t - i;
@@ -218,12 +282,28 @@ im.onload = draw2d; im.src = JPG;
 
 function draw2d() {
   ctx.drawImage(im, 0, 0, D.W, D.H);
-  if (document.getElementById('allc').checked) {
-    ctx.fillStyle = 'rgba(150,150,150,0.85)';
-    for (let i = 0; i < NC; i++) ctx.fillRect(C.u[i] - 1, C.v[i] - 1, 2, 2);
-  }
   const S = selection(), byr = document.getElementById('byrank').checked;
+  if (document.getElementById('allc').checked) {
+    if (ORDER) {
+      const inS = new Uint8Array(NC); for (const i of S) inS[i] = 1;
+      for (let i = 0; i < NC; i++) if (!inS[i]) {
+        ctx.fillStyle = 'rgba(255,255,255,0.45)'; ctx.fillRect(C.u[i] - 1.5, C.v[i] - 1.5, 3, 3);
+        ctx.fillStyle = 'rgba(0,0,0,0.45)'; ctx.fillRect(C.u[i] - 0.75, C.v[i] - 0.75, 1.5, 1.5);
+      }
+    } else {
+      ctx.fillStyle = 'rgba(150,150,150,0.85)';
+      for (let i = 0; i < NC; i++) ctx.fillRect(C.u[i] - 1, C.v[i] - 1, 2, 2);
+    }
+  }
   ctx.lineWidth = 2;
+  if (ORDER) {
+    S.forEach((i, n) => {
+      ctx.beginPath(); ctx.arc(C.u[i], C.v[i], 3.2, 0, 2 * Math.PI);
+      ctx.fillStyle = byr ? rankColour(n) : hl(st.picker); ctx.fill();
+      ctx.strokeStyle = 'rgba(0,0,0,0.9)'; ctx.lineWidth = 1; ctx.stroke();
+    });
+    return;
+  }
   S.forEach((i, n) => {
     ctx.beginPath(); ctx.arc(C.u[i], C.v[i], 3.5, 0, 2 * Math.PI);
     ctx.strokeStyle = 'rgba(0,0,0,0.8)'; ctx.lineWidth = 2.5; ctx.stroke();
@@ -236,8 +316,8 @@ function selTrace(S) {
   const byr = document.getElementById('byrank').checked;
   return {
     x: S.map(i => C.x[i]), y: S.map(i => C.y[i]), z: S.map(i => C.z[i]),
-    text: S.map((i, n) => 'pick ' + (n + 1) + '<br>rank ' + C.rank[i] + '<br>depth ' + C.d[i] + ' m'),
-    color: byr ? S.map((i, n) => rankColour(n)) : S.map(i => C.col[i])
+    text: S.map((i, n) => 'pick ' + (n + 1) + (ORDER ? '<br>' + ordinal(C.rank[i] + 1) + ' strongest' : '<br>rank ' + C.rank[i]) + '<br>depth ' + C.d[i] + ' m'),
+    color: byr ? S.map((i, n) => rankColour(n)) : ORDER ? hl(st.picker) : S.map(i => C.col[i])
   };
 }
 
@@ -262,7 +342,8 @@ function init() {
     { type: 'scatter3d', mode: 'markers', x: D.cloud.x, y: D.cloud.y, z: D.cloud.z, name: 'cloud',
       marker: { size: 1.5, color: D.cloud.c }, hoverinfo: 'skip', visible: true },
     { type: 'scatter3d', mode: 'markers', x: C.x, y: C.y, z: C.z, name: 'candidates',
-      marker: { size: 2, color: '#888' }, hoverinfo: 'skip', visible: false },
+      marker: ORDER ? { size: 1.6, color: '#555', opacity: 0.35 } : { size: 2, color: '#888' }, hoverinfo: 'skip',
+      visible: document.getElementById('allc').checked },
     { type: 'scatter3d', mode: 'lines', x: cb.x, y: cb.y, z: cb.z, name: 'cubes',
       line: { color: '#777', width: 1.5 }, hoverinfo: 'skip', visible: false },
     camTrace(),
@@ -295,6 +376,22 @@ function update() {
   } else {
     Plotly.restyle('scene', { visible: false }, [T_CUBES]);
   }
+  if (ORDER) {
+    const cell = 20, gx = Math.ceil(D.W / cell), gy = Math.ceil(D.H / cell), cells = new Set();
+    let rs = 0;
+    for (const i of S) { cells.add(Math.floor(C.u[i] / cell) * gy + Math.floor(C.v[i] / cell)); rs += C.rank[i] + 1; }
+    const own = D.own[st.picker];
+    document.getElementById('readout').innerHTML =
+      '<b>' + lab(st.picker) + '</b> | k = ' + S.length + ' picked of ' + NC + ' candidates' +
+      ' | picks are on average the ' + (S.length ? ordinal(Math.round(rs / S.length)) : '-') + ' strongest point' +
+      ' | image coverage ' + (100 * cells.size / (gx * gy)).toFixed(1) + '% (' + cells.size + ' of ' + gx * gy + ' image squares of ' + cell + ' px hold a pick)' +
+      ' | 0.5 m cubes covered ' + keys.size +
+      (own !== undefined && own < D.kmax ? '<br>' + lab(st.picker) + ' chooses the first ' + own +
+        ' picks itself; it then has nothing left to gain, so the benchmark picker adds the remaining points strongest first' +
+        (S.length > own ? ' (that is happening at this k)' : '') : '');
+    draw2d();
+    return;
+  }
   const [npx, nm] = nnStats(S);
   document.getElementById('readout').textContent =
     'K selected ' + S.length + ' | occupied 0.5 m cubes ' + keys.size +
@@ -318,7 +415,7 @@ for (const p of D.pickers) {
   const l = document.createElement('label'), r = document.createElement('input');
   r.type = 'radio'; r.name = 'picker'; r.value = p; r.checked = p === st.picker;
   r.addEventListener('change', () => { st.picker = p; update(); });
-  l.append(r, ' ' + p + ' '); box.append(l);
+  l.append(r, ' ' + lab(p) + ' '); box.append(l);
 }
 document.getElementById('cloud').addEventListener('change', e => Plotly.restyle('scene', { visible: e.target.checked }, [T_CLOUD]));
 document.getElementById('allc').addEventListener('change', e => { Plotly.restyle('scene', { visible: e.target.checked }, [T_ALL]); draw2d(); });
@@ -347,11 +444,26 @@ def main():
     ap.add_argument('--pickers', default='sd,cube0.5,far2d,far3d,far3dw,far2dp400')
     ap.add_argument('--kmax', type=int, default=2000)
     ap.add_argument('--step', type=int, default=4)
+    ap.add_argument('--ncand', type=int, default=0,
+                    help='>0: fresh stock-RaCo run, the top ncand candidates with depth, pickers compared at the same k')
+    ap.add_argument('--default', default='', help='picker shown first')
+    ap.add_argument('--title', default='')
+    ap.add_argument('--note', default='', help='one plain sentence under the title')
+    ap.add_argument('--out', default='', help='file name in docs/frames (default <flight>_<frame>.html)')
     a = ap.parse_args()
     pickers = [p.strip() for p in a.pickers.split(',') if p.strip()]
-    data, jpg = build(a.flight, a.frame, a.det, pickers, a.kmax, a.step)
+    data, jpg = build(a.flight, a.frame, a.det, pickers, a.kmax, a.step, a.ncand)
+    if a.ncand:
+        data.update(mode='order', labels={p: LABELS.get(p, p) for p in pickers},
+                    colours={p: COLOURS[p] for p in pickers if p in COLOURS})
+    if a.default:
+        data['default'] = a.default
+    if a.title:
+        data['title'] = a.title
+    if a.note:
+        data['note'] = a.note
     os.makedirs(OUT_DIR, exist_ok=True)
-    out = os.path.join(OUT_DIR, '%s_%d.html' % (data['flight'].replace('/', '_'), a.frame))
+    out = os.path.join(OUT_DIR, a.out or '%s_%d.html' % (data['flight'].replace('/', '_'), a.frame))
     with open(out, 'w', encoding='utf-8') as fh:
         fh.write(render(data, jpg))
     print('%s  %.2f MB  cloud %d  candidates %d  picks %s' % (out, os.path.getsize(out) / 1e6, len(data['cloud']['x']),
