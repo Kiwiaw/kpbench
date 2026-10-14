@@ -1,0 +1,132 @@
+{
+ "generated": "2026-10-14T13:55:17",
+ "dataset": "Hypersim (preliminary), PnP relocalisation against a local map of ground-truth 3D points, same pipeline as TartanAir",
+ "flights": [
+  {
+   "id": "hypersim/ai_001_001",
+   "slug": "hypersim_ai_001_001",
+   "env": "hypersim",
+   "n_queries": 49,
+   "n_frames": 98
+  },
+  {
+   "id": "hypersim/ai_001_002",
+   "slug": "hypersim_ai_001_002",
+   "env": "hypersim",
+   "n_queries": 49,
+   "n_frames": 99
+  }
+ ],
+ "bins": [
+  {
+   "id": "all",
+   "label": "all frames"
+  },
+  {
+   "id": "ordinary",
+   "label": "ordinary (<0.55)",
+   "lo": -1,
+   "hi": 0.55
+  },
+  {
+   "id": "mid",
+   "label": "mid (0.55-0.85)",
+   "lo": 0.55,
+   "hi": 0.85
+  },
+  {
+   "id": "flat",
+   "label": "flat (>=0.85)",
+   "lo": 0.85,
+   "hi": 2
+  },
+  {
+   "id": "very_flat",
+   "label": "very flat (>=0.95)",
+   "lo": 0.95,
+   "hi": 2
+  }
+ ],
+ "thresholds_cm": [
+  5,
+  25,
+  50,
+  500
+ ],
+ "rot_fail": {
+  "5": 2,
+  "25": 2,
+  "50": 5,
+  "500": 10
+ },
+ "rot_fail_deg": 2,
+ "name": "hypersim",
+ "label": "Hypersim (2 scenes, preliminary)",
+ "kf": 2,
+ "win": 3,
+ "protocol": [
+  "Apple Hypersim, 2 scenes ai_001_001 and ai_001_002, camera cam_00 (ai_003_001 dropped: its renders are black in the released data)",
+  "images 1024x768 resized to 640x480, fx = fy = 554.256 px, cx = 320, cy = 240; planar depth from depth_meters",
+  "frames are about 1.1 m apart, so a keyframe every 2nd frame and a query uses the keyframes within +-3 frames (4 keyframes)",
+  "RaCo candidates, K = 100, same map, LightGlue, AP3P RANSAC + LM refinement; fail = no pose, > 25 cm or > 2 deg (as TartanAir)",
+  "planarity bins, thresholds and block bootstrap (20-frame blocks) as TartanAir; preliminary: few queries, wide intervals"
+ ],
+ "source": "Apple Hypersim (Roberts et al., ICCV 2021), https://github.com/apple/ml-hypersim, CC BY-SA 3.0",
+ "results": "results_hypersim_w3",
+ "runs": [
+  {
+   "id": "raco_sd_K100_same_lg",
+   "det": "raco",
+   "picker": "sd",
+   "K": 100,
+   "map": "same",
+   "matcher": "lg",
+   "date": "2026-10-14T13:26:34",
+   "commit": "4799484f",
+   "flights": [
+    "hypersim/ai_001_001",
+    "hypersim/ai_001_002"
+   ],
+   "n_queries": 98,
+   "fail25": 10.2,
+   "has_picks": false,
+   "notes": "hypersim KF2 WIN3"
+  },
+  {
+   "id": "raco_cube0.5_K100_same_lg",
+   "det": "raco",
+   "picker": "cube0.5",
+   "K": 100,
+   "map": "same",
+   "matcher": "lg",
+   "date": "2026-10-14T13:26:56",
+   "commit": "4799484f",
+   "flights": [
+    "hypersim/ai_001_001",
+    "hypersim/ai_001_002"
+   ],
+   "n_queries": 98,
+   "fail25": 13.27,
+   "has_picks": false,
+   "notes": "hypersim KF2 WIN3"
+  },
+  {
+   "id": "raco_dpp0.5_K100_same_lg",
+   "det": "raco",
+   "picker": "dpp0.5",
+   "K": 100,
+   "map": "same",
+   "matcher": "lg",
+   "date": "2026-10-14T13:26:13",
+   "commit": "4799484f",
+   "flights": [
+    "hypersim/ai_001_001",
+    "hypersim/ai_001_002"
+   ],
+   "n_queries": 98,
+   "fail25": 6.12,
+   "has_picks": false,
+   "notes": "hypersim KF2 WIN3"
+  }
+ ]
+}

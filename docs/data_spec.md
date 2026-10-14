@@ -1,6 +1,10 @@
 # Site data contract (docs/data/)
 
 Everything the page needs is static JSON and JPEG under `docs/data/`, written by `python -m kpbench.export`.
+Extra datasets (Hypersim) use the same files in `docs/data/<name>/` (index.json, labels.json, runs/, picks/); their
+index.json adds `name`, `label`, `kf` (keyframe step), `win` (keyframe window), `protocol` (list of lines), `source` and
+`results`. The page's dataset dropdown picks the folder (URL hash `ds=<name>`, absent = TartanAir in `docs/data/`).
+Thumbnails stay in `docs/data/thumbs/<flight_slug>/` for every dataset.
 The page is plain HTML + JS, no build step. It must work when served from any sub-path (GitHub Pages
 `https://<user>.github.io/kpbench/`) and from `python -m http.server` inside `docs/`. Use relative fetches (`data/...`).
 

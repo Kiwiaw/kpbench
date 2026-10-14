@@ -43,12 +43,18 @@ Environment variables: `KPBENCH_DATA` (data root; laptop `local_data`, Euler `/c
 
 ## Second dataset: Hypersim (preliminary)
 
-A separate table at the bottom of the page (`docs/data/hypersim.json`, rendered by `docs/hypersim.js`); it never enters the
-TartanAir numbers. Protocol: Apple Hypersim scenes ai_001_001 and ai_001_002, camera cam_00 (ai_003_001 dropped: its
+The page has a **Dataset** dropdown next to the threshold: TartanAir (31 flights, the default; links without `ds` open it),
+**Hypersim (2 scenes, preliminary)** (`#ds=hypersim`, from `results_hypersim_w3/`) and **Hypersim, 2 keyframes per query
+(variant)** (`#ds=hypersim_w2`, from `results_hypersim_w2/`). Every tab (summary with bins and CIs, bins and flights with the
+paired test, error curves, failures with thumbnails and keyframes, runs) works on the chosen dataset; Hypersim numbers never
+enter the TartanAir files. `kpbench/export.py` (`DATASETS`) writes each extra dataset in the TartanAir format to
+`docs/data/<name>/` (index.json, labels.json, runs/); a protocol note shows under the table when it is selected.
+Protocol: Apple Hypersim scenes ai_001_001 and ai_001_002, camera cam_00 (ai_003_001 dropped: its
 renders are black in the released data); images 1024x768 resized to 640x480, fx = fy = 554.256, cx = 320, cy = 240;
 planar depth from `depth_meters`. Frames are about 1.1 m apart, so a keyframe every 2nd frame and a query uses the
-keyframes within +-3 frames (4 keyframes: q-3, q-1, q+1, q+3). RaCo, K = 100, same map, LightGlue, AP3P RANSAC + LM;
-fail = no pose, > 25 cm or > 2 deg; 98 queries; laptop GPU. Preliminary: 2 scenes, wide intervals.
+keyframes within +-3 frames (4 keyframes: q-3, q-1, q+1, q+3; the variant uses +-2, 2 keyframes). RaCo, K = 100, same map,
+LightGlue, AP3P RANSAC + LM; fail = no pose, > 25 cm or > 2 deg; 98 queries; laptop GPU. Bins, thresholds and block
+bootstrap as TartanAir. Preliminary: 2 scenes, wide intervals.
 
 | run | fail % (98 q) | ai_001_001 | ai_001_002 | vs sd [95 % CI] |
 |---|---|---|---|---|
@@ -56,11 +62,17 @@ fail = no pose, > 25 cm or > 2 deg; 98 queries; laptop GPU. Preliminary: 2 scene
 | raco_sd_K100_same_lg | 10.2 | 18.4 | 2.0 | baseline |
 | raco_cube0.5_K100_same_lg | 13.3 | 18.4 | 8.2 | +3.1 [-3.0, +9.2] |
 
+Variant, 2 keyframes per query (`results_hypersim_w2/`, same 98 queries): dpp0.5 14.3, sd 16.3, cube0.5 28.6 % fail;
+vs sd: dpp0.5 -2.0 [-7.3, +3.1], cube0.5 +12.2 [+4.1, +20.2].
+
 ```
 python tools/hypersim_fetch.py ai_001_001 ; python tools/hypersim_convert.py ai_001_001   # per scene: download + convert
 FL=hypersim/ai_001_001,hypersim/ai_001_002 bash tools/run_hypersim.sh    # extract, labels, runs -> results_hypersim_w3/
-python -m kpbench.export --hypersim                                      # -> docs/data/hypersim.json
-PYTHONPATH=. KPBENCH_RESULTS=results_hypersim_w3 KPBENCH_INTR="554.256258 554.256258 320 240" python tools/hypersim_table.py
+WIN=2 RTAG=_w2 bash tools/run_hypersim.sh                                # variant -> results_hypersim_w2/
+export KPBENCH_INTR="554.256258 554.256258 320 240"
+python -m kpbench.thumbs --flights hypersim/ai_001_001,hypersim/ai_001_002   # -> docs/data/thumbs/hypersim_*
+python -m kpbench.export --only hypersim,hypersim_w2                     # -> docs/data/hypersim/, docs/data/hypersim_w2/
+PYTHONPATH=. KPBENCH_RESULTS=results_hypersim_w3 python tools/hypersim_table.py
 ```
 Data: Apple Hypersim, https://github.com/apple/ml-hypersim, CC BY-SA 3.0. M. Roberts, J. Ramapuram, A. Ranjan, A. Kumar,
 M. A. Bautista, N. Paczan, R. Webb, J. M. Susskind, *Hypersim: A Photorealistic Synthetic Dataset for Holistic Indoor

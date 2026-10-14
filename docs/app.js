@@ -3,8 +3,10 @@
  * Results page for the keypoint selection benchmark.
  *
  * Every number on the page is computed here, in the browser, from the static files in data/
- * (format: docs/site_data_spec.md). All fetches use relative paths ("data/...") so the page
+ * (format: docs/data_spec.md). All fetches use relative paths ("data/...") so the page
  * works under any sub-path (GitHub Pages) and under `python -m http.server` run inside docs/.
+ * Datasets: TartanAir lives in data/ (the default, no "ds" in the URL hash); every extra dataset has the
+ * same files in data/<name>/ and is chosen with the dataset dropdown (hash "ds=<name>").
  *
  * Vocabulary used in the comments:
  *   query  = one test frame of one flight, identified by (flight index, frame number q)
@@ -49,6 +51,16 @@ async function fetchJSON(path) {
   if (!r.ok) throw new Error(`${path}: HTTP ${r.status}`);
   return r.json();
 }
+
+// Datasets of the dropdown: id (URL hash "ds", empty = TartanAir), label, folder with index.json / labels.json / runs/ / picks/.
+// Thumbnails are shared by all datasets (data/thumbs/<flight slug>/).
+const DATASETS = [
+  { id: '', label: 'TartanAir (31 flights)', base: 'data/' },
+  { id: 'hypersim', label: 'Hypersim (2 scenes, preliminary)', base: 'data/hypersim/' },
+  { id: 'hypersim_w2', label: 'Hypersim, 2 keyframes per query (variant)', base: 'data/hypersim_w2/' },
+];
+const dsInfo = id => DATASETS.find(d => d.id === id) || DATASETS[0];
+const hashDs = () => dsInfo(new URLSearchParams(location.hash.replace(/^#/, '')).get('ds') || '').id;
 
 // Fixed colour per run, by its position in index.json (so a run keeps its colour when others are toggled).
 const PALETTE = ['#2b6cb0', '#c53030', '#2f855a', '#dd6b20', '#6b46c1', '#975a16', '#d53f8c', '#0987a0', '#4a5568', '#9c9a1c'];
@@ -149,6 +161,8 @@ function fmtP(p) {
 // ---------------------------------------------------------------------------
 
 const S = {
+  ds: '',                 // dataset id (DATASETS), in the URL hash as "ds" when it is not TartanAir
+  base0: 'data/',         // folder of the dataset's files
   removed: [],            // runs taken out with the × buttons (session only), offered for restoring
   index: null,           // index.json
   labels: [],            // per flight index: the labels object of that flight (arrays), or null
@@ -243,9 +257,10 @@ function parseRun(raw) {
 /** Load one run file once; later calls reuse the same promise. */
 function loadRun(id) {
   if (!S.runLoad.has(id)) {
-    const p = fetchJSON(`data/runs/${encodeURIComponent(id)}.json`)
-      .then(raw => { const d = parseRun(raw); S.runData.set(id, d); return d; })
-      .catch(e => { S.runError.set(id, String(e.message || e)); return null; });
+    const data = S.runData, errs = S.runError;   // the maps of this dataset (a dataset switch replaces them)
+    const p = fetchJSON(`${S.base0}runs/${encodeURIComponent(id)}.json`)
+      .then(raw => { const d = parseRun(raw); data.set(id, d); return d; })
+      .catch(e => { errs.set(id, String(e.message || e)); return null; });
     S.runLoad.set(id, p);
   }
   return S.runLoad.get(id);
@@ -264,7 +279,7 @@ const loaded = ids => ids.filter(id => S.runData.has(id));
 function loadPicks(runId, slug) {
   const k = `${runId}|${slug}`;
   if (!S.picks.has(k)) {
-    S.picks.set(k, fetch(`data/picks/${encodeURIComponent(runId)}/${encodeURIComponent(slug)}.json`)
+    S.picks.set(k, fetch(`${S.base0}picks/${encodeURIComponent(runId)}/${encodeURIComponent(slug)}.json`)
       .then(r => (r.ok ? r.json() : null)).catch(() => null));
   }
   return S.picks.get(k);
@@ -318,6 +333,7 @@ function applyMatcher() {
 
 function writeHash() {
   const p = new URLSearchParams();
+  if (S.ds) p.set('ds', S.ds);
   p.set('tab', S.tab);
   p.set('runs', S.sel.join(','));
   if (S.base) p.set('base', S.base);
@@ -528,6 +544,7 @@ function renderHeader() {
   }));
   $$('#runsel [data-base]').forEach(rb => rb.addEventListener('change', () => { S.base = rb.dataset.base; render(); }));
 
+  $('#ds').value = S.ds;
   $('#thr').value = String(S.thr);
   $('#shared').checked = S.shared;
   $('#matcher').value = S.matcher;
@@ -551,12 +568,22 @@ function initControls() {
   });
   $('#runhideall').addEventListener('click', () => { S.sel = S.base ? [S.base] : []; render(); });
   $('#runsel').addEventListener('click', runActionClick);
-  $('#thr').innerHTML = S.index.thresholds_cm.map(t => `<option value="${t}">${t >= 100 ? t / 100 + ' m' : t + ' cm'} / ${rotFail(t)}°</option>`).join('');
+  $('#ds').innerHTML = DATASETS.map(d => `<option value="${esc(d.id)}">${esc(d.label)}</option>`).join('');
+  $('#ds').addEventListener('change', e => {
+    // Switch dataset: keep the tab, threshold and shared toggle; runs, baseline and filters start from the new dataset's defaults.
+    const p = new URLSearchParams();
+    if (e.target.value) p.set('ds', e.target.value);
+    p.set('tab', S.tab); p.set('thr', S.thr); p.set('shared', S.shared ? '1' : '0');
+    history.replaceState(null, '', '#' + p.toString());
+    switchDataset(e.target.value);
+  });
   $('#thr').addEventListener('change', e => { S.thr = +e.target.value; render(); });
   $('#shared').addEventListener('change', e => { S.shared = e.target.checked; render(); });
   $('#matcher').addEventListener('change', e => { S.matcher = e.target.value; applyMatcher(); render(); });
   $$('#tabs button').forEach(b => b.addEventListener('click', () => { S.tab = b.dataset.tab; render(); }));
-  window.addEventListener('hashchange', () => { readHash(); render(); });
+  window.addEventListener('hashchange', () => {
+    if (hashDs() !== S.ds) switchDataset(hashDs()); else { readHash(); render(); }
+  });
   document.addEventListener('keydown', e => {
     // Left / right arrow keys walk the failure table when the detail panel is open.
     if (S.tab !== 'failures' || S.failCur < 0) return;
@@ -1083,9 +1110,10 @@ function renderDetail() {
   const b = base ? base.byKey.get(r.key) : null;
   const T = F.thr;
 
-  // Map keyframes: k = 10*m with |k - q| <= 20, inside the flight.
+  // Map keyframes: k = KF*m with |k - q| <= WIN, inside the flight (TartanAir: KF 10, WIN 20; an index can set others).
+  const KF = S.index.kf || 10, WIN = S.index.win || 20;
   const kfs = [];
-  for (let k = Math.ceil((r.q - 20) / 10) * 10; k <= r.q + 20; k += 10) {
+  for (let k = Math.ceil((r.q - WIN) / KF) * KF; k <= r.q + WIN; k += KF) {
     if (k >= 0 && (fl.n_frames == null || k < fl.n_frames)) kfs.push(k);
   }
 
@@ -1107,7 +1135,7 @@ function renderDetail() {
     <div class="pickline">${hasPicks
       ? `<label><input type="checkbox" id="showPicks" ${S.showPicks ? 'checked' : ''}> show picks of ${esc(F.run)}</label> <span id="pickStatus" class="muted">loading ...</span>`
       : '<span class="muted">no picks exported for this run</span>'}</div>
-    <h4>Map keyframes (|k − q| ≤ 20)</h4>
+    <h4>Map keyframes (|k − q| ≤ ${WIN})</h4>
     <div class="kfs">${kfs.map(k => `<figure><img src="${thumbURL(fl.slug, k)}" width="118" height="88" alt="keyframe ${k}" onerror="this.classList.add('missing')"><figcaption>k=${k}</figcaption></figure>`).join('')}</div>
     <table class="data cmp">
       <thead><tr><th class="l"></th><th>run</th><th>baseline</th></tr>
@@ -1174,28 +1202,87 @@ function renderRuns(el) {
 // Start
 // ---------------------------------------------------------------------------
 
+/** Forget everything loaded for the current dataset (runs, labels, caches, filters, the failure browser). */
+function resetData() {
+  Object.assign(S, {
+    removed: [], index: null, labels: [], labelPos: [], runInfo: new Map(), runColor: new Map(), runLoad: new Map(),
+    runData: new Map(), runError: new Map(), picks: new Map(), ciCache: new Map(),
+    sel: [], base: null, matcher: 'all', curveBin: 'all', fail: { run: null, bin: 'all', flight: 'all', thr: 25, mode: 'fails' },
+    sumSort: { col: null, dir: 1 }, runSort: { col: null, dir: 1 }, runHide: {}, runMenu: null,
+    failSort: { col: 'flight', dir: 1 }, failList: [], failCur: -1, failOpenKey: null,
+  });
+}
+
+/** Load index and labels of dataset S.ds, set the defaults, then apply the URL hash. False when a newer switch overtook it. */
+async function loadDataset() {
+  const D = dsInfo(S.ds);
+  const [index, labels] = await Promise.all([fetchJSON(D.base + 'index.json'), fetchJSON(D.base + 'labels.json').catch(() => ({}))]);
+  if (S.ds !== D.id) return false;
+  resetData();
+  S.base0 = D.base;
+  S.index = index;
+  index.bins = index.bins || [{ id: 'all', label: 'all frames' }];
+  index.thresholds_cm = index.thresholds_cm || [25];
+  index.flights = index.flights || [];
+  index.runs = index.runs || [];
+  index.flights.forEach((f, i) => {
+    const L = labels[f.id] || null;
+    S.labels[i] = L;
+    S.labelPos[i] = L && L.q ? new Map(L.q.map((q, j) => [q, j])) : null;
+  });
+  index.runs.forEach((r, i) => { S.runInfo.set(r.id, r); S.runColor.set(r.id, PALETTE[i % PALETTE.length]); });
+
+  // Defaults before reading the hash: up to 6 runs shown, the first one as baseline, 25 cm.
+  S.sel = index.runs.slice(0, 6).map(r => r.id);
+  S.base = index.runs[0]?.id ?? null;
+  S.thr = index.thresholds_cm.includes(25) ? 25 : index.thresholds_cm[0];
+  S.fail.thr = S.thr;
+  readHash();
+  $('#thr').innerHTML = index.thresholds_cm.map(t => `<option value="${t}">${t >= 100 ? t / 100 + ' m' : t + ' cm'} / ${rotFail(t)}°</option>`).join('');
+  renderDatasetNote();
+  return true;
+}
+
+/** Title, the TartanAir-only header links, and the protocol note under the table for the extra datasets. */
+function renderDatasetNote() {
+  const I = S.index, D = dsInfo(S.ds);
+  const name = S.ds ? D.label : 'TartanAir';
+  $('header h1').textContent = document.title = `Keypoint selection benchmark: ${name}`;
+  $$('.ta-only').forEach(e => { e.hidden = !!S.ds; });
+  const box = $('#dsnote');
+  if (!I.protocol) { box.hidden = true; box.innerHTML = ''; return; }
+  const nq = I.flights.reduce((a, f) => a + (f.n_queries || 0), 0);
+  const every = I.kf === 2 ? '2nd' : I.kf === 3 ? '3rd' : I.kf + 'th';
+  box.hidden = false;
+  box.innerHTML = `<p class="note"><b>Protocol (${esc(D.label)}):</b> ${I.flights.length} scenes (${esc(I.flights.map(f => f.id.replace(/^hypersim\//, '')).join(', '))}),
+      640×480, fx = 554.256 px, a keyframe every ${every} frame, window ±${esc(I.win)} frames, LightGlue, K = 100,
+      fail = no pose, &gt; 25 cm or &gt; 2°, ${nq} queries. ${I.source ? `Data: ${esc(I.source)}.` : ''} ai_003_001 dropped (black renders).
+      Keyframe spacing differs from TartanAir: compare pickers within this dataset only.</p>
+    <details class="note"><summary>full protocol</summary><ul>${I.protocol.map(p => `<li>${esc(p)}</li>`).join('')}</ul>
+      <p>Results folder <code>${esc(I.results || '')}</code>, exported ${esc((I.generated || '').replace('T', ' '))}.
+      M. Roberts, J. Ramapuram, A. Ranjan, A. Kumar, M. A. Bautista, N. Paczan, R. Webb, J. M. Susskind.
+      <i>Hypersim: A Photorealistic Synthetic Dataset for Holistic Indoor Scene Understanding.</i> ICCV 2021.</p></details>`;
+}
+
+/** Dropdown or hash change: load another dataset and redraw everything. */
+async function switchDataset(ds) {
+  S.ds = dsInfo(ds).id;
+  S.renderGen++; S.ciGen++;
+  setStatus('loading dataset ...');
+  $('#main').innerHTML = '<p class="muted pad">loading ...</p>';
+  try {
+    if (await loadDataset()) { setStatus(''); await render(); }
+  } catch (e) {
+    $('#main').innerHTML = `<p class="bad pad">Could not load the data: ${esc(e.message || e)}</p>`;
+    console.error(e);
+  }
+}
+
 async function init() {
   try {
-    const [index, labels] = await Promise.all([fetchJSON('data/index.json'), fetchJSON('data/labels.json').catch(() => ({}))]);
-    S.index = index;
-    index.bins = index.bins || [{ id: 'all', label: 'all frames' }];
-    index.thresholds_cm = index.thresholds_cm || [25];
-    index.flights = index.flights || [];
-    index.runs = index.runs || [];
-    index.flights.forEach((f, i) => {
-      const L = labels[f.id] || null;
-      S.labels[i] = L;
-      S.labelPos[i] = L && L.q ? new Map(L.q.map((q, j) => [q, j])) : null;
-    });
-    index.runs.forEach((r, i) => { S.runInfo.set(r.id, r); S.runColor.set(r.id, PALETTE[i % PALETTE.length]); });
-
-    // Defaults before reading the hash: up to 6 runs shown, the first one as baseline, 25 cm.
-    S.sel = index.runs.slice(0, 6).map(r => r.id);
-    S.base = index.runs[0]?.id ?? null;
-    S.thr = index.thresholds_cm.includes(25) ? 25 : index.thresholds_cm[0];
-    S.fail.thr = S.thr;
-    readHash();
+    S.ds = hashDs();
     initControls();
+    await loadDataset();
     await render();
   } catch (e) {
     $('#main').innerHTML = `<p class="bad pad">Could not load the data: ${esc(e.message || e)}</p>`;

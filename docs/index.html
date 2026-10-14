@@ -13,10 +13,10 @@
     <span id="status" class="status"></span>
   </div>
   <div class="meta"><span id="dataset">loading data ...</span> <span id="generated" class="muted"></span>
-    <span class="muted">· frame viewer (one frame in 3D, K slider, pickers, 0.5 m cubes):
+    <span class="muted ta-only">· frame viewer (one frame in 3D, K slider, pickers, 0.5 m cubes):
       <a href="frames/oldtown_P001_334.html">old town P001 frame 334</a>,
-      <a href="frames/hospital_P041_200.html">hospital P041 frame 200</a> · <a href="#" onclick="document.getElementById('hypersim').scrollIntoView();return false">second dataset: Hypersim (preliminary)</a></span></div>
-  <div class="meta"><span class="muted">quick view: <a href="#tab=summary&runs=raco_sd_K100_same_lg,raco_cube0.5_K100_same_lg,raco_cube0.3_K100_same_lg,raco_pd0.3_K100_same_lg,raco_dpp0.5_K100_same_lg,raco_dpp0.5a0.5_K100_same_lg,raco_dpp0.7_K100_same_lg,raco_seed1o_K100_same_lg,raco_far3dp400_K100_same_lg&base=raco_cube0.5_K100_same_lg&shared=1&m=lg">DPP and Poisson-disk vs cubes (LightGlue, old town P001 + hospital P041)</a></span></div>
+      <a href="frames/hospital_P041_200.html">hospital P041 frame 200</a></span></div>
+  <div class="meta ta-only"><span class="muted">quick view: <a href="#tab=summary&runs=raco_sd_K100_same_lg,raco_cube0.5_K100_same_lg,raco_cube0.3_K100_same_lg,raco_pd0.3_K100_same_lg,raco_dpp0.5_K100_same_lg,raco_dpp0.5a0.5_K100_same_lg,raco_dpp0.7_K100_same_lg,raco_seed1o_K100_same_lg,raco_far3dp400_K100_same_lg&base=raco_cube0.5_K100_same_lg&shared=1&m=lg">DPP and Poisson-disk vs cubes (LightGlue, old town P001 + hospital P041)</a></span></div>
 
   <details id="legend">
     <summary>What is compared here, and what every number means <span class="muted">(legend)</span></summary>
@@ -136,6 +136,9 @@
   </details>
 
   <div class="controls">
+    <label title="Which dataset every table, chart and tab shows. TartanAir is the benchmark; the Hypersim sets are preliminary">Dataset
+      <select id="ds"></select>
+    </label>
     <label>Threshold
       <select id="thr"></select>
     </label>
@@ -159,14 +162,8 @@
 
 <main id="main"></main>
 
-<section id="hypersim" class="dataset2">
-  <h2>Second dataset: Hypersim (preliminary) <span class="muted">· separate table, not part of any TartanAir number above</span></h2>
-  <p class="note">Same pipeline and solver as TartanAir on two indoor Hypersim scenes, for three pickers (RaCo, K = 100, same map,
-    LightGlue). The keyframe spacing differs from TartanAir (see the protocol below), so compare pickers within this table only.</p>
-  <div id="hypersim-body"><p class="muted pad">loading data/hypersim.json ...</p></div>
-</section>
+<section id="dsnote" class="dsnote" hidden></section>
 
 <script src="app.js"></script>
-<script src="hypersim.js"></script>
 </body>
 </html>
