@@ -8,7 +8,8 @@ lag 5 and the picker name are stored per trial. Held-out flights are never touch
 (euler/gate.sh <picker> <incumbent> dev, then held_out). Trials run on different nodes, so LightGlue device noise
 (~1 point on the flat bin, audit C4) stays in the objective; the gate reruns candidate and incumbent on one node.
 Families: dpp (sigma 0.1-2 m log, alpha 0.2-5 log; dpp<sigma>a<alpha>), cube (size 0.15-1.5 m; cube<size>), pd (r 0.1-1.5 m,
-theta 0-0.1; pd<r>a<theta>). Study name = <family>_<anything>.
+theta 0-0.1; pd<r>a<theta>), up (T8: border b px, NMS radius r px, pool n before dpp0.5; upb<b>r<r>+dpp0.5p<n>,
+docs/t8_upstream_design.md). Study name = <family>_<anything>.
 Objective rep5c (SUB3, T4): a study name containing '_rep5c' maximises rep5 subject to fail_flat <= REP5_CAP (incumbent dpp0.5
 DEV flat fail 14.41 %, env KPBENCH_REP5_CAP); value = -rep5, plus 1 + (fail_flat - cap) when the cap is broken, so every
 feasible trial ranks above every infeasible one. Device noise (~1 point) makes the cap soft: the gate decides.
@@ -22,10 +23,14 @@ RESULTS = os.environ.get('KPBENCH_RESULTS', os.path.join(REPO, 'results'))
 TUNE = os.path.join(RESULTS, 'tune')
 SPACES = {'dpp': lambda t: 'dpp%.3ga%.3g' % (t.suggest_float('sigma', 0.1, 2.0, log=True), t.suggest_float('alpha', 0.2, 5.0, log=True)),
           'cube': lambda t: 'cube%.3g' % t.suggest_float('size', 0.15, 1.5, log=True),
-          'pd': lambda t: 'pd%.3ga%.3g' % (t.suggest_float('r', 0.1, 1.5, log=True), t.suggest_float('theta', 0.0, 0.1))}
+          'pd': lambda t: 'pd%.3ga%.3g' % (t.suggest_float('r', 0.1, 1.5, log=True), t.suggest_float('theta', 0.0, 0.1)),
+          'up': lambda t: 'upb%dr%d+dpp0.5p%d' % (t.suggest_categorical('b', [0, 4, 8, 12, 16, 24, 32]), t.suggest_int('r', 0, 12),
+                                                  t.suggest_int('n', 150, 2000, log=True))}
 REP5_CAP = float(os.environ.get('KPBENCH_REP5_CAP', 14.41))
 SEEDS = {'dpp': [dict(sigma=0.5, alpha=1.0), dict(sigma=0.5, alpha=0.5), dict(sigma=0.3, alpha=1.0), dict(sigma=1.0, alpha=2.0)],
-         'cube': [dict(size=0.5), dict(size=0.3)], 'pd': [dict(r=0.5, theta=0.0)]}   # known points enqueued first
+         'cube': [dict(size=0.5), dict(size=0.3)], 'pd': [dict(r=0.5, theta=0.0)],
+         'up': [dict(b=0, r=0, n=2000), dict(b=0, r=6, n=2000), dict(b=16, r=0, n=2000), dict(b=0, r=0, n=500),
+                dict(b=8, r=6, n=800), dict(b=0, r=4, n=2000)]}   # known points enqueued first
 
 
 def study(name):

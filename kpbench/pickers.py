@@ -23,6 +23,8 @@ Names:
   sfar<n>[p<M>] n strongest with depth as seeds + farthest apart (3D metres) over the strongest M (default 400)
   seed1<d|o>[p<M>] ONE stable seed (most re-found in f-20, f-10, f+10, f+20: d = mutual descriptor match, o = ORACLE
                reprojection), then farthest apart over the strongest M (default 400)
+  up[b<m>][r<r>]+dpp<sigma>[a<alpha>][p<N>] upstream filter before dpp (T8, docs/t8_upstream_design.md): border margin m px,
+               greedy NMS radius r px in score order, first N survivors; padded back to K from the dropped points
 A picker returns candidate indices (at most K; fewer only when the frame has too few candidates).
 To add a picker: write a function (u, v, s, z, K) -> indices and register it in PICKERS or in parse().
 """
@@ -516,6 +518,44 @@ def pick_dpp(sigma, alpha):
     return f
 
 
+def nms_order(u, v, r):
+    """greedy NMS in score order: keep a point if no kept point lies within r px (grid hash, cell r)"""
+    if r <= 0:
+        return np.ones(len(u), bool)
+    keep = np.zeros(len(u), bool); cells = {}
+    for i in range(len(u)):
+        cx, cy = int(u[i] // r), int(v[i] // r); ok = True
+        for dx in (-1, 0, 1):
+            for dy in (-1, 0, 1):
+                for j in cells.get((cx + dx, cy + dy), ()):
+                    if (u[i] - u[j]) ** 2 + (v[i] - v[j]) ** 2 < r * r:
+                        ok = False; break
+                if not ok: break
+            if not ok: break
+        if ok:
+            keep[i] = True; cells.setdefault((cx, cy), []).append(i)
+    return keep
+
+
+def pick_upstream(m, r, N, inner):
+    """up...: border margin m, NMS radius r, first N survivors, then inner; pad to K from the rest (depth first, score order).
+    f.stats counts calls and padded frames."""
+    def f(u, v, s, z, K):
+        f.stats['calls'] += 1
+        keep = (u >= m) & (u <= W - m) & (v >= m) & (v <= H - m)
+        sub = np.flatnonzero(keep)
+        sub = sub[nms_order(u[sub], v[sub], r)][:N]
+        sel = sub[np.asarray(inner(u[sub], v[sub], s[sub], z[sub], K), int)] if len(sub) else np.array([], int)
+        if len(sel) < min(K, len(u)):
+            f.stats['padded'] += 1
+            used = np.zeros(len(u), bool); used[sel] = True
+            rest = [i for i in np.argsort(z >= DEPTH_MAX, kind='stable') if not used[i]]
+            sel = np.concatenate([sel, np.asarray(rest[:K - len(sel)], int)])
+        return sel
+    f.stats = dict(calls=0, padded=0)
+    return f
+
+
 def parse(name):
     """picker name -> function. cube<size>; far2d|far3d[w][p<pool>], e.g. far3d, far2dw, far3dp400"""
     if name in PICKERS:
@@ -529,6 +569,9 @@ def parse(name):
     m = re.fullmatch(r'pd([0-9.]+)(?:a([0-9.]+))?', name)
     if m:
         return pick_poisson_disk(float(m.group(1)), float(m.group(2) or 0))
+    m = re.fullmatch(r'up(?:b([0-9]+))?(?:r([0-9]+))?\+(dpp[0-9.]+(?:a[0-9.]+)?)(?:p([0-9]+))?', name)
+    if m:
+        return pick_upstream(int(m.group(1) or 0), int(m.group(2) or 0), int(m.group(4) or 2000), parse(m.group(3)))
     m = re.fullmatch(r'dpp([0-9.]+)(?:a([0-9.]+))?', name)
     if m:
         return pick_dpp(float(m.group(1)), float(m.group(2) or 1.0))
