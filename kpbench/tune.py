@@ -9,6 +9,9 @@ lag 5 and the picker name are stored per trial. Held-out flights are never touch
 (~1 point on the flat bin, audit C4) stays in the objective; the gate reruns candidate and incumbent on one node.
 Families: dpp (sigma 0.1-2 m log, alpha 0.2-5 log; dpp<sigma>a<alpha>), cube (size 0.15-1.5 m; cube<size>), pd (r 0.1-1.5 m,
 theta 0-0.1; pd<r>a<theta>). Study name = <family>_<anything>.
+Objective rep5c (SUB3, T4): a study name containing '_rep5c' maximises rep5 subject to fail_flat <= REP5_CAP (incumbent dpp0.5
+DEV flat fail 14.41 %, env KPBENCH_REP5_CAP); value = -rep5, plus 1 + (fail_flat - cap) when the cap is broken, so every
+feasible trial ranks above every infeasible one. Device noise (~1 point) makes the cap soft: the gate decides.
 """
 import os, json
 import optuna
@@ -20,6 +23,7 @@ TUNE = os.path.join(RESULTS, 'tune')
 SPACES = {'dpp': lambda t: 'dpp%.3ga%.3g' % (t.suggest_float('sigma', 0.1, 2.0, log=True), t.suggest_float('alpha', 0.2, 5.0, log=True)),
           'cube': lambda t: 'cube%.3g' % t.suggest_float('size', 0.15, 1.5, log=True),
           'pd': lambda t: 'pd%.3ga%.3g' % (t.suggest_float('r', 0.1, 1.5, log=True), t.suggest_float('theta', 0.0, 0.1))}
+REP5_CAP = float(os.environ.get('KPBENCH_REP5_CAP', 14.41))
 SEEDS = {'dpp': [dict(sigma=0.5, alpha=1.0), dict(sigma=0.5, alpha=0.5), dict(sigma=0.3, alpha=1.0), dict(sigma=1.0, alpha=2.0)],
          'cube': [dict(size=0.5), dict(size=0.3)], 'pd': [dict(r=0.5, theta=0.0)]}   # known points enqueued first
 
@@ -36,13 +40,22 @@ def family(name):
     return name.split('_')[0]
 
 
-def objective(trial, fam):
+def rep5c(name):
+    return '_rep5c' in name
+
+
+def score(fail_flat, rep5):
+    """rep5c objective (minimised): -rep5 if fail_flat <= cap, else 1 - rep5 + (fail_flat - cap)"""
+    return -rep5 + (1.0 + fail_flat - REP5_CAP if fail_flat > REP5_CAP else 0.0)
+
+
+def objective(trial, fam, rc=False):
     pk = SPACES[fam](trial)
     out, _, _ = evaluate(pk, split='dev_flat')
     for k in ('fail_flat', 'rep5', 'n_flat', 'secs'):
         trial.set_user_attr(k, out[k])
     trial.set_user_attr('picker', pk); trial.set_user_attr('host', os.uname().nodename.split('.')[0] if hasattr(os, 'uname') else '')
-    return out['fail_flat']
+    return score(out['fail_flat'], out['rep5']) if rc else out['fail_flat']
 
 
 def enqueue_seeds(s, fam):
@@ -55,11 +68,12 @@ def enqueue_seeds(s, fam):
 def summary(name):
     s = study(name); done = [t for t in s.trials if t.state == optuna.trial.TrialState.COMPLETE]
     done.sort(key=lambda t: t.value)
-    rows = [dict(n=t.number, picker=t.user_attrs.get('picker'), fail_flat=t.value, rep5=t.user_attrs.get('rep5'),
+    rows = [dict(n=t.number, picker=t.user_attrs.get('picker'), fail_flat=t.user_attrs.get('fail_flat', t.value), rep5=t.user_attrs.get('rep5'),
                  params=t.params, host=t.user_attrs.get('host')) for t in done]
-    out = dict(study=name, split='dev_flat', n_complete=len(done), n_total=len(s.trials), best=rows[:1], trials=rows)
+    out = dict(study=name, split='dev_flat', n_complete=len(done), n_total=len(s.trials), best=rows[:1], trials=rows,
+               objective=('rep5 s.t. fail_flat <= %.2f' % REP5_CAP) if rep5c(name) else 'fail_flat')
     json.dump(out, open(os.path.join(TUNE, name + '.json'), 'w'), indent=1)
-    md = ['# Tuning %s (DEV flat queries, %d of %d trials done)' % (name, len(done), len(s.trials)), '',
+    md = ['# Tuning %s (DEV flat queries, %d of %d trials done, objective %s)' % (name, len(done), len(s.trials), out['objective']), '',
           '| rank | picker | flat fail % | rep5 | trial |', '|---|---|---|---|---|']
     md += ['| %d | %s | %.2f | %s | %d |' % (i + 1, r['picker'], r['fail_flat'], r['rep5'], r['n']) for i, r in enumerate(rows[:15])]
     open(os.path.join(TUNE, name + '.md'), 'w').write('\n'.join(md) + '\n')
@@ -78,7 +92,7 @@ def main(argv=None):
     s = study(a.study)
     if a.seed_only:
         return enqueue_seeds(s, fam)
-    s.optimize(lambda t: objective(t, fam), n_trials=a.trials, catch=(Exception,))
+    s.optimize(lambda t: objective(t, fam, rep5c(a.study)), n_trials=a.trials, catch=(Exception,))
     summary(a.study)
 
 
