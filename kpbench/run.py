@@ -8,7 +8,7 @@ Flights already done are skipped unless --force. Export (kpbench.export) merges 
 """
 import re
 import os, sys, json, gzip, time, subprocess, datetime
-from .data import parse_flights, slug
+from .data import parse_flights, slug, KF, WIN
 from .cache import REPO
 from .bench import run_flight, COLS
 
@@ -58,8 +58,8 @@ def main(argv=None):
     meta_fn = os.path.join(out, 'meta.json')
     meta = json.load(open(meta_fn)) if os.path.isfile(meta_fn) else {}
     meta.update(id=rid, det=a.det, picker=a.picker, K=a.K, map=a.map, matcher=a.matcher, tag=a.tag, cols=COLS,
-                protocol='C23: keyframes every 10, %s, %s, PnP AP3P-RANSAC 3 px 2000 it >= 6 inliers + LM refinement, camera-centre error' % (
-                    'map = top-%s keyframes by VLAD retrieval over the whole flight' % a.map[3:] if a.map.startswith('ret') else 'map = keyframes within +-20 frames',
+                protocol='C23: keyframes every %d, %s, %s, PnP AP3P-RANSAC 3 px 2000 it >= 6 inliers + LM refinement, camera-centre error' % (
+                    'map = top-%s keyframes by VLAD retrieval over the whole flight' % a.map[3:] if a.map.startswith('ret') else 'map = keyframes within +-%d frames' % WIN,
                     'LightGlue per keyframe' if a.matcher == 'lg' else 'mutual NN'),
                 has_picks=bool(a.save_picks) or meta.get('has_picks', False), device=device_name(a.matcher))
     dev = meta['device']

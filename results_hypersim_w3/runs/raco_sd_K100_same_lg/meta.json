@@ -18,7 +18,7 @@
   "rep5",
   "rep10"
  ],
- "protocol": "C23: keyframes every 10, map = keyframes within +-20 frames, LightGlue per keyframe, PnP AP3P-RANSAC 3 px 2000 it >= 6 inliers + LM refinement, camera-centre error",
+ "protocol": "C23: keyframes every 2, map = keyframes within +-3 frames, LightGlue per keyframe, PnP AP3P-RANSAC 3 px 2000 it >= 6 inliers + LM refinement, camera-centre error",
  "has_picks": false,
  "device": "KiwiAw/NVIDIA GeForce RTX 5060 Laptop GPU",
  "notes": "hypersim KF2 WIN3",

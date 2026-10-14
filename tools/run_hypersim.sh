@@ -6,7 +6,7 @@ cd "$(dirname "$0")/.."
 export KPBENCH_DATA="C:/Users/Kinga/Desktop/ETH_lab/local_data" KPBENCH_INTR="554.256258 554.256258 320 240"
 export KPBENCH_KF=2 KPBENCH_WIN=${WIN:-3} KPBENCH_CACHE="$PWD/cache_hypersim" KPBENCH_RESULTS="$PWD/results_hypersim${RTAG:-_w3}" DEV=cuda
 export RACO_DIR="C:/Users/Kinga/Desktop/ETH_lab/local_tools/RaCo"
-FL=${FL:-hypersim/ai_001_001,hypersim/ai_003_001}
+FL=${FL:-hypersim/ai_001_001,hypersim/ai_001_002}   # ai_003_001 dropped: black renders
 python -m kpbench.extract --flights $FL --dets raco,sp
 python -m kpbench.labels --flights $FL
 for p in ${PICKERS:-dpp0.5 sd cube0.5}; do

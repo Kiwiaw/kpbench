@@ -1,5 +1,5 @@
 {
- "generated": "2026-10-14T13:33:46",
+ "generated": "2026-10-14T13:37:21",
  "dataset": "Hypersim (preliminary): PnP relocalisation against a local map, same pipeline as TartanAir",
  "source": "Apple Hypersim (Roberts et al., ICCV 2021), https://github.com/apple/ml-hypersim, CC BY-SA 3.0",
  "protocol": [
