@@ -1,6 +1,8 @@
 """Stage 4: results/ -> docs/data/ (index.json, labels.json, runs/<id>.json, picks/<id>/<slug>.json). See docs/data_spec.md.
+Also results_hypersim_w3/ -> docs/data/hypersim.json, a separate Hypersim table (never mixed into the TartanAir data).
 
-  python -m kpbench.export
+  python -m kpbench.export              # everything
+  python -m kpbench.export --hypersim   # only docs/data/hypersim.json
 Thumbnails are produced separately by kpbench.thumbs (they do not change between runs).
 """
 import os, json, gzip, glob, datetime
@@ -79,7 +81,69 @@ def main():
     json.dump(index, open(os.path.join(SITE, 'index.json'), 'w'), indent=1)
     json.dump({f: labels[slug(f)] for f in flights if slug(f) in labels}, open(os.path.join(SITE, 'labels.json'), 'w'), separators=(',', ':'))
     print('exported', len(runs), 'runs,', len(flights), 'flights ->', SITE)
+    export_hypersim()
+
+
+# Second dataset, kept apart from the TartanAir aggregates: results_hypersim_w3/ -> docs/data/hypersim.json (one precomputed table)
+HS_RESULTS = os.path.join(REPO, 'results_hypersim_w3')
+HS_SCENES = ['hypersim_ai_001_001', 'hypersim_ai_001_002']
+HS_RUNS = ['raco_dpp0.5_K100_same_lg', 'raco_sd_K100_same_lg', 'raco_cube0.5_K100_same_lg']
+HS_BASE = 'raco_sd_K100_same_lg'
+HS_PROTOCOL = [
+    'Apple Hypersim, 2 scenes ai_001_001 and ai_001_002, camera cam_00 (ai_003_001 dropped: its renders are black in the released data)',
+    'images 1024x768 resized to 640x480, fx = fy = 554.256 px, cx = 320, cy = 240; planar depth from depth_meters',
+    'frames are about 1.1 m apart, so a keyframe every 2nd frame and a query uses the keyframes within +-3 frames (4 keyframes: q-3, q-1, q+1, q+3)',
+    'RaCo candidates, K = 100, same map, LightGlue, AP3P RANSAC + LM refinement (as TartanAir)',
+    'fail = no pose, position error > 25 cm or rotation error > 2 deg; 98 queries; laptop GPU (RTX 5060 Laptop)',
+]
+
+
+def export_hypersim():
+    from .stats import fail_flags, paired_diff, block_ids, boot_ci
+    if not os.path.isdir(os.path.join(HS_RESULTS, 'runs')):
+        return
+    lab = {}
+    for s in HS_SCENES:
+        d = json.load(open(os.path.join(HS_RESULTS, 'labels', s + '.json')))
+        lab.update({(s, int(q)): v.get('plane_frac') for q, v in d.items()})
+
+    def load(rid):
+        rows = []
+        for s in HS_SCENES:
+            rows += [[s] + x[1:] for x in json.load(gzip.open(os.path.join(HS_RESULTS, 'runs', rid, s + '.json.gz'), 'rt'))['rows']]
+        return rows
+    base = load(HS_BASE); fb = fail_flags(base)
+    keys = [(r[0], r[1]) for r in base]; blocks = block_ids([k[0] for k in keys], [k[1] for k in keys])
+    pf = np.array([np.nan if lab.get(k) is None else lab[k] for k in keys])
+    bins = []
+    for b in BINS:
+        m = np.ones(len(keys), bool) if b['id'] == 'all' else (pf >= b['lo']) & (pf < b['hi'])
+        bins.append(dict(b, n=int(m.sum()), mask=m))
+    out_runs = []
+    for rid in HS_RUNS:
+        R = load(rid); assert [(r[0], r[1]) for r in R] == keys, rid
+        meta = json.load(open(os.path.join(HS_RESULTS, 'runs', rid, 'meta.json')))
+        fa = fail_flags(R); _, lo, hi = boot_ci(fa, blocks)
+        avg = lambda c: round(float(np.nanmean([np.nan if x[c] is None else x[c] for x in R])), 2)
+        ci = lambda c: meta['cols'].index(c)
+        d = None if rid == HS_BASE else [round(v, 1) for v in paired_diff(fa, fb, blocks)]
+        out_runs.append(dict(id=rid, picker=meta['picker'], n=len(R), fail=round(100 * fa.mean(), 1), ci=[round(lo, 1), round(hi, 1)],
+                             scenes={s: round(100 * fa[np.array([k[0] == s for k in keys])].mean(), 1) for s in HS_SCENES},
+                             diff=d, n_match=avg(ci('n_match')), n_inl=avg(ci('n_inl')), rep1=avg(ci('rep1')), rep5=avg(ci('rep5')),
+                             bins={b['id']: (round(100 * fa[b['mask']].mean(), 1) if b['n'] else None) for b in bins},
+                             device=meta.get('device', ''), date=meta.get('date', ''), commit=meta.get('commit', '')))
+    out = dict(generated=datetime.datetime.now().isoformat(timespec='seconds'),
+               dataset='Hypersim (preliminary): PnP relocalisation against a local map, same pipeline as TartanAir',
+               source='Apple Hypersim (Roberts et al., ICCV 2021), https://github.com/apple/ml-hypersim, CC BY-SA 3.0',
+               protocol=HS_PROTOCOL, scenes=[dict(id=s, n_queries=int(sum(k[0] == s for k in keys))) for s in HS_SCENES],
+               base=HS_BASE, n_boot_block=20, bins=[{k: v for k, v in b.items() if k != 'mask'} for b in bins], runs=out_runs)
+    json.dump(out, open(os.path.join(SITE, 'hypersim.json'), 'w'), indent=1)
+    print('exported hypersim:', len(out_runs), 'runs,', len(keys), 'queries ->', os.path.join(SITE, 'hypersim.json'))
 
 
 if __name__ == '__main__':
-    main()
+    import sys
+    if '--hypersim' in sys.argv:   # only the Hypersim table, TartanAir files untouched
+        export_hypersim()
+    else:
+        main()

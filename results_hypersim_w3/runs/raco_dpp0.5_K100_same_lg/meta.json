@@ -1,0 +1,27 @@
+{
+ "id": "raco_dpp0.5_K100_same_lg",
+ "det": "raco",
+ "picker": "dpp0.5",
+ "K": 100,
+ "map": "same",
+ "matcher": "lg",
+ "tag": "",
+ "cols": [
+  "flight",
+  "q",
+  "err_cm",
+  "rot_deg",
+  "n_sel",
+  "n_match",
+  "n_inl",
+  "rep1",
+  "rep5",
+  "rep10"
+ ],
+ "protocol": "C23: keyframes every 10, map = keyframes within +-20 frames, LightGlue per keyframe, PnP AP3P-RANSAC 3 px 2000 it >= 6 inliers + LM refinement, camera-centre error",
+ "has_picks": false,
+ "device": "KiwiAw/NVIDIA GeForce RTX 5060 Laptop GPU",
+ "notes": "hypersim KF2 WIN3",
+ "date": "2026-10-14T13:26:13",
+ "commit": "4799484f"
+}

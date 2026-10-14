@@ -41,6 +41,31 @@ their strongest 300).
 Environment variables: `KPBENCH_DATA` (data root; laptop `local_data`, Euler `/cluster/scratch/<user>`),
 `KPBENCH_CACHE`, `KPBENCH_RESULTS`, `RACO_DIR`, `DEV`.
 
+## Second dataset: Hypersim (preliminary)
+
+A separate table at the bottom of the page (`docs/data/hypersim.json`, rendered by `docs/hypersim.js`); it never enters the
+TartanAir numbers. Protocol: Apple Hypersim scenes ai_001_001 and ai_001_002, camera cam_00 (ai_003_001 dropped: its
+renders are black in the released data); images 1024x768 resized to 640x480, fx = fy = 554.256, cx = 320, cy = 240;
+planar depth from `depth_meters`. Frames are about 1.1 m apart, so a keyframe every 2nd frame and a query uses the
+keyframes within +-3 frames (4 keyframes: q-3, q-1, q+1, q+3). RaCo, K = 100, same map, LightGlue, AP3P RANSAC + LM;
+fail = no pose, > 25 cm or > 2 deg; 98 queries; laptop GPU. Preliminary: 2 scenes, wide intervals.
+
+| run | fail % (98 q) | ai_001_001 | ai_001_002 | vs sd [95 % CI] |
+|---|---|---|---|---|
+| raco_dpp0.5_K100_same_lg | 6.1 | 10.2 | 2.0 | -4.1 [-9.2, +1.0] |
+| raco_sd_K100_same_lg | 10.2 | 18.4 | 2.0 | baseline |
+| raco_cube0.5_K100_same_lg | 13.3 | 18.4 | 8.2 | +3.1 [-3.0, +9.2] |
+
+```
+python tools/hypersim_fetch.py ai_001_001 ; python tools/hypersim_convert.py ai_001_001   # per scene: download + convert
+FL=hypersim/ai_001_001,hypersim/ai_001_002 bash tools/run_hypersim.sh    # extract, labels, runs -> results_hypersim_w3/
+python -m kpbench.export --hypersim                                      # -> docs/data/hypersim.json
+PYTHONPATH=. KPBENCH_RESULTS=results_hypersim_w3 KPBENCH_INTR="554.256258 554.256258 320 240" python tools/hypersim_table.py
+```
+Data: Apple Hypersim, https://github.com/apple/ml-hypersim, CC BY-SA 3.0. M. Roberts, J. Ramapuram, A. Ranjan, A. Kumar,
+M. A. Bautista, N. Paczan, R. Webb, J. M. Susskind, *Hypersim: A Photorealistic Synthetic Dataset for Holistic Indoor
+Scene Understanding*, ICCV 2021.
+
 ## Frame viewer
 
 `python -m kpbench.viewer --flight oldtown/P001 --frame 334 [--det raco] [--pickers sd,cube0.5,far2d,far3d] [--kmax 300]`

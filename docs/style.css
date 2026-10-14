@@ -207,3 +207,9 @@ table.runsel th.filtered .sortlbl { color: var(--accent); }
 .seg { padding: 2px 10px; font-size: 13px; border: 1px solid #c9ced8; border-radius: 4px; background: #fff; color: #4b5563; cursor: pointer; }
 .seg:hover { border-color: var(--accent); color: var(--accent); }
 .seg.on { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; }
+
+/* Second dataset (Hypersim), below the TartanAir views */
+section.dataset2 { margin: 0 20px 40px; padding-top: 12px; border-top: 3px solid var(--line); }
+section.dataset2 h2 { margin-top: 6px; }
+section.dataset2 .tablewrap { max-height: none; }
+ul.hs-proto { padding-left: 18px; }

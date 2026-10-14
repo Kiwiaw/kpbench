@@ -11,11 +11,14 @@ from PIL import Image
 W, H = 640, 480
 FX = FY = 320.0
 CX, CY = 320.0, 240.0
+# other datasets (Hypersim): KPBENCH_INTR="fx fy cx cy" (must match the flight's intrinsics.txt), KPBENCH_KF / KPBENCH_WIN
+if os.environ.get('KPBENCH_INTR'):
+    FX, FY, CX, CY = map(float, os.environ['KPBENCH_INTR'].split())
 KMAT = np.array([[FX, 0, CX], [0, FY, CY], [0, 0, 1.0]])
 # TartanAir poses are body (NED) frame; this maps camera axes (x right, y down, z forward) into the body frame.
 R_BC = np.array([[0., 0., 1.], [1., 0., 0.], [0., 1., 0.]])
-KF = 10          # a keyframe every 10 frames
-WIN = 20         # a query uses the keyframes within +-20 frames
+KF = int(os.environ.get('KPBENCH_KF', 10))     # a keyframe every 10 frames
+WIN = int(os.environ.get('KPBENCH_WIN', 20))   # a query uses the keyframes within +-20 frames
 DEPTH_MAX = 1000.0   # depth >= this = no depth (sky)
 MIN_FRAMES = 50
 
@@ -31,6 +34,7 @@ CANDIDATES = {
     'oldtown': ['tartanair_hard/{t}', 'tartanair_hard/oldtown/Hard/{t}'],
     'hospital': ['tartanair_envs/hospital/{t}', 'tartanair_hospital/{t}'],
     'factory': ['tartanair_envs/abandonedfactory/{t}', 'tartanair_factory/{t}'],
+    'hypersim': ['hypersim/{t}'],
 }
 FLIGHTS = ['%s/%s' % (e, t) for e, ts in ENVS.items() for t in ts]
 
@@ -71,6 +75,10 @@ class Flight:
         if self.dir is None:
             raise FileNotFoundError('flight %s not found under %s' % (fid, ROOT))
         self.poses = np.loadtxt(os.path.join(self.dir, 'pose_left.txt'))
+        ip = os.path.join(self.dir, 'intrinsics.txt')   # non-TartanAir flights carry their intrinsics
+        intr = np.loadtxt(ip) if os.path.isfile(ip) else np.array([320.0, 320.0, 320.0, 240.0])
+        if not np.allclose(intr, [FX, FY, CX, CY], atol=1e-3):
+            raise RuntimeError('flight %s has intrinsics %s, process uses %s: set KPBENCH_INTR' % (fid, intr, (FX, FY, CX, CY)))
         n_img = len([f for f in os.listdir(os.path.join(self.dir, 'image_left')) if f.endswith('.png')])
         n_dep = len([f for f in os.listdir(os.path.join(self.dir, 'depth_left')) if f.endswith('.npy')])
         self.N = min(len(self.poses), n_img, n_dep)

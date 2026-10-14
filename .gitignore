@@ -8,3 +8,4 @@ docs/dev/out/
 .pytest_cache/
 *.pdf
 reports/
+cache_hypersim/
