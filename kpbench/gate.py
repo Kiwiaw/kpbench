@@ -24,8 +24,8 @@ class GateError(Exception):
     pass
 
 
-def load_run(rid, flights):
-    d = os.path.join(RESULTS, 'runs', rid); meta = json.load(open(os.path.join(d, 'meta.json')))
+def load_run(rid, flights, runs='runs'):
+    d = os.path.join(RESULTS, runs, rid); meta = json.load(open(os.path.join(d, 'meta.json')))
     out = {}
     for f in flights:
         fn = os.path.join(d, slug(f) + '.json.gz')
@@ -43,9 +43,9 @@ def log_entries():
     return [json.loads(l) for l in open(LOG)] if os.path.isfile(LOG) else []
 
 
-def compare(cand, inc, split):
+def compare(cand, inc, split, runs='runs'):
     flights = load_splits()[split]
-    mc, rc = load_run(cand, flights); mi, ri = load_run(inc, flights)
+    mc, rc = load_run(cand, flights, runs); mi, ri = load_run(inc, flights, runs)
     for k in ('det', 'K', 'map', 'matcher'):
         if mc.get(k) != mi.get(k):
             raise GateError('runs differ in %s: %s vs %s' % (k, mc.get(k), mi.get(k)))
