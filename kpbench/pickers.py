@@ -556,6 +556,21 @@ def pick_upstream(m, r, N, inner):
     return f
 
 
+def pick_window(N, inner):
+    """win<N>[+dpp..]: keep the strongest candidate of each N x N px window (R2D2-style local max, favours points that
+    stand out in their neighbourhood), then inner on the survivors (none: score order); pad to K from the rest as up..."""
+    def f(u, v, s, z, K):
+        cell = (v // N).astype(np.int64) * (W // N + 2) + (u // N).astype(np.int64)
+        sub = np.sort(np.unique(cell, return_index=True)[1])          # candidates are in score order: first per cell = max
+        sel = sub[np.asarray(inner(u[sub], v[sub], s[sub], z[sub], K), int)] if inner and len(sub) else sub[:K]
+        if len(sel) < min(K, len(u)):
+            used = np.zeros(len(u), bool); used[sel] = True
+            rest = [i for i in np.argsort(z >= DEPTH_MAX, kind='stable') if not used[i]]
+            sel = np.concatenate([sel, np.asarray(rest[:K - len(sel)], int)])
+        return sel
+    return f
+
+
 def parse(name):
     """picker name -> function. cube<size>; far2d|far3d[w][p<pool>], e.g. far3d, far2dw, far3dp400"""
     if name in PICKERS:
@@ -572,6 +587,9 @@ def parse(name):
     m = re.fullmatch(r'up(?:b([0-9]+))?(?:r([0-9]+))?\+(dpp[0-9.]+(?:a[0-9.]+)?)(?:p([0-9]+))?', name)
     if m:
         return pick_upstream(int(m.group(1) or 0), int(m.group(2) or 0), int(m.group(4) or 2000), parse(m.group(3)))
+    m = re.fullmatch(r'win([0-9]+)(?:\+(dpp[0-9.]+(?:a[0-9.]+)?))?', name)
+    if m:
+        return pick_window(int(m.group(1)), parse(m.group(2)) if m.group(2) else None)
     m = re.fullmatch(r'dpp([0-9.]+)(?:a([0-9.]+))?', name)
     if m:
         return pick_dpp(float(m.group(1)), float(m.group(2) or 1.0))

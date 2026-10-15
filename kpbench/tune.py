@@ -9,14 +9,20 @@ lag 5 and the picker name are stored per trial. Held-out flights are never touch
 (~1 point on the flat bin, audit C4) stays in the objective; the gate reruns candidate and incumbent on one node.
 Families: dpp (sigma 0.1-2 m log, alpha 0.2-5 log; dpp<sigma>a<alpha>), cube (size 0.15-1.5 m; cube<size>), pd (r 0.1-1.5 m,
 theta 0-0.1; pd<r>a<theta>), up (T8: border b px, NMS radius r px, pool n before dpp0.5; upb<b>r<r>+dpp0.5p<n>,
-docs/t8_upstream_design.md). Study name = <family>_<anything>.
+docs/t8_upstream_design.md), win (T4 step 2: strongest per N x N px window, N 8-32, then dpp sigma 0.3-0.7 m, alpha 0.5-2;
+win<N>+dpp<sigma>a<alpha>). Study name = <family>_<anything>.
+Every trial also stores hull (SUB1 metric: mean inlier image-coverage share on the flat queries, no pose = 0) as the
+uniformity guard; None if the metrics path fails, so the trial still counts.
 Objective rep5c (SUB3, T4): a study name containing '_rep5c' maximises rep5 subject to fail_flat <= REP5_CAP (incumbent dpp0.5
 DEV flat fail 14.41 %, env KPBENCH_REP5_CAP); value = -rep5, plus 1 + (fail_flat - cap) when the cap is broken, so every
 feasible trial ranks above every infeasible one. Device noise (~1 point) makes the cap soft: the gate decides.
 """
 import os, json
+import numpy as np
 import optuna
 from .evaluate import evaluate
+from .bench import COLS
+from .metrics import MCOLS
 from .cache import REPO
 
 RESULTS = os.environ.get('KPBENCH_RESULTS', os.path.join(REPO, 'results'))
@@ -25,12 +31,15 @@ SPACES = {'dpp': lambda t: 'dpp%.3ga%.3g' % (t.suggest_float('sigma', 0.1, 2.0, 
           'cube': lambda t: 'cube%.3g' % t.suggest_float('size', 0.15, 1.5, log=True),
           'pd': lambda t: 'pd%.3ga%.3g' % (t.suggest_float('r', 0.1, 1.5, log=True), t.suggest_float('theta', 0.0, 0.1)),
           'up': lambda t: 'upb%dr%d+dpp0.5p%d' % (t.suggest_categorical('b', [0, 4, 8, 12, 16, 24, 32]), t.suggest_int('r', 0, 12),
-                                                  t.suggest_int('n', 150, 2000, log=True))}
+                                                  t.suggest_int('n', 150, 2000, log=True)),
+          'win': lambda t: 'win%d+dpp%.3ga%.3g' % (t.suggest_int('N', 8, 32), t.suggest_float('sigma', 0.3, 0.7),
+                                                  t.suggest_float('alpha', 0.5, 2.0, log=True))}
 REP5_CAP = float(os.environ.get('KPBENCH_REP5_CAP', 14.41))
 SEEDS = {'dpp': [dict(sigma=0.5, alpha=1.0), dict(sigma=0.5, alpha=0.5), dict(sigma=0.3, alpha=1.0), dict(sigma=1.0, alpha=2.0)],
          'cube': [dict(size=0.5), dict(size=0.3)], 'pd': [dict(r=0.5, theta=0.0)],
          'up': [dict(b=0, r=0, n=2000), dict(b=0, r=6, n=2000), dict(b=16, r=0, n=2000), dict(b=0, r=0, n=500),
-                dict(b=8, r=6, n=800), dict(b=0, r=4, n=2000)]}   # known points enqueued first
+                dict(b=8, r=6, n=800), dict(b=0, r=4, n=2000)],
+         'win': [dict(N=8, sigma=0.5, alpha=1.0), dict(N=16, sigma=0.5, alpha=1.0), dict(N=32, sigma=0.5, alpha=1.0)]}   # known points enqueued first
 
 
 def study(name):
@@ -56,9 +65,15 @@ def score(fail_flat, rep5):
 
 def objective(trial, fam, rc=False):
     pk = SPACES[fam](trial)
-    out, _, _ = evaluate(pk, split='dev_flat')
+    try:
+        out, rows, flat = evaluate(pk, split='dev_flat', metrics=True)
+        h = np.array([np.nan if r[len(COLS) + MCOLS.index('hull')] is None else r[len(COLS) + MCOLS.index('hull')] for r in rows], float)
+        hull = round(float(np.nan_to_num(h)[flat].mean()), 4) if flat.any() else None
+    except Exception:
+        (out, _, _), hull = evaluate(pk, split='dev_flat'), None
     for k in ('fail_flat', 'rep5', 'n_flat', 'secs'):
         trial.set_user_attr(k, out[k])
+    trial.set_user_attr('hull', hull)
     trial.set_user_attr('picker', pk); trial.set_user_attr('host', os.uname().nodename.split('.')[0] if hasattr(os, 'uname') else '')
     return score(out['fail_flat'], out['rep5']) if rc else out['fail_flat']
 
@@ -74,13 +89,13 @@ def summary(name):
     s = study(name); done = [t for t in s.trials if t.state == optuna.trial.TrialState.COMPLETE]
     done.sort(key=lambda t: t.value)
     rows = [dict(n=t.number, picker=t.user_attrs.get('picker'), fail_flat=t.user_attrs.get('fail_flat', t.value), rep5=t.user_attrs.get('rep5'),
-                 params=t.params, host=t.user_attrs.get('host')) for t in done]
+                 hull=t.user_attrs.get('hull'), params=t.params, host=t.user_attrs.get('host')) for t in done]
     out = dict(study=name, split='dev_flat', n_complete=len(done), n_total=len(s.trials), best=rows[:1], trials=rows,
                objective=('rep5 s.t. fail_flat <= %.2f' % REP5_CAP) if rep5c(name) else 'fail_flat')
     json.dump(out, open(os.path.join(TUNE, name + '.json'), 'w'), indent=1)
     md = ['# Tuning %s (DEV flat queries, %d of %d trials done, objective %s)' % (name, len(done), len(s.trials), out['objective']), '',
-          '| rank | picker | flat fail % | rep5 | trial |', '|---|---|---|---|---|']
-    md += ['| %d | %s | %.2f | %s | %d |' % (i + 1, r['picker'], r['fail_flat'], r['rep5'], r['n']) for i, r in enumerate(rows[:15])]
+          '| rank | picker | flat fail % | rep5 | hull | trial |', '|---|---|---|---|---|---|']
+    md += ['| %d | %s | %.2f | %s | %s | %d |' % (i + 1, r['picker'], r['fail_flat'], r['rep5'], r['hull'], r['n']) for i, r in enumerate(rows[:15])]
     open(os.path.join(TUNE, name + '.md'), 'w').write('\n'.join(md) + '\n')
     print('\n'.join(md))
 
