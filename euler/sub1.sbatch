@@ -18,3 +18,4 @@ for p in $PICKERS; do
   python -m kpbench.evaluate --picker $p --split $SPLIT --metrics --save
 done
 [ "$PICKERS" != "sd cube0.5 grid" ] || python -m kpbench.sub1 --split $SPLIT
+python -m kpbench.sub1_ferranti --split $SPLIT    # Ferranti baseline over every picker file present
