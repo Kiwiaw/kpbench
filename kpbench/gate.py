@@ -7,8 +7,11 @@ device (LightGlue output differs between devices: audit 11 Oct, C4). euler/gate.
 incumbent of one flight run back to back in one array task.
 HELD_OUT discipline (--log): one held-out verdict per candidate picker, only after it beat the incumbent on DEV
 (flat difference < 0); every verdict is appended to results/gates/log.jsonl and kept. --force-held-out overrides, logged.
+Label guard (audit C15 at run time): before any verdict, every flight's label file must match results/labels_manifest.json
+(canonical JSON sha256) and the flat frame count must equal splits.json flat_counts; else GUARD-FAIL, nothing written.
+--allow-label-mismatch "<reason>" overrides, kept in the verdict. Rebuild the manifest only after an audit: --write-manifest.
 """
-import os, json, gzip, datetime
+import os, json, gzip, hashlib, datetime
 import numpy as np
 from .data import slug
 from .cache import REPO
@@ -18,6 +21,7 @@ from .stats import fail_flags, gate as gate_rule
 RESULTS = os.environ.get('KPBENCH_RESULTS', os.path.join(REPO, 'results'))
 GATES = os.path.join(RESULTS, 'gates')
 LOG = os.path.join(GATES, 'log.jsonl')
+MANIFEST = os.path.join(REPO, 'results', 'labels_manifest.json')
 
 
 class GateError(Exception):
@@ -39,11 +43,30 @@ def labels(f):
     return json.load(open(os.path.join(REPO, 'results', 'labels', slug(f) + '.json')))
 
 
+def label_hash(f, d=None):
+    """sha256 of the label file as canonical JSON (sorted keys), so CRLF/LF checkouts hash the same"""
+    fn = os.path.join(d or os.path.join(REPO, 'results', 'labels'), slug(f) + '.json')
+    return hashlib.sha256(json.dumps(json.load(open(fn)), sort_keys=True).encode()).hexdigest()
+
+
+def label_guard(flights, n_flat, split, d=None):
+    """[] if labels match the manifest and the flat count matches splits.json, else the list of problems"""
+    man = json.load(open(MANIFEST)); bad = []
+    for f in flights:
+        h = label_hash(f, d)
+        if man.get(f) != h:
+            bad.append('%s label hash %s != manifest %s' % (f, h[:10], str(man.get(f))[:10]))
+    want = load_splits()['flat_counts'].get(split)
+    if want is not None and n_flat != want:
+        bad.append('%s flat frames %d != splits.json %d' % (split, n_flat, want))
+    return bad
+
+
 def log_entries():
     return [json.loads(l) for l in open(LOG)] if os.path.isfile(LOG) else []
 
 
-def compare(cand, inc, split, runs='runs'):
+def compare(cand, inc, split, runs='runs', allow_mismatch=''):
     flights = load_splits()[split]
     mc, rc = load_run(cand, flights, runs); mi, ri = load_run(inc, flights, runs)
     for k in ('det', 'K', 'map', 'matcher'):
@@ -63,7 +86,12 @@ def compare(cand, inc, split, runs='runs'):
     bad = [f for f, v in dev.items() if v.startswith('DIFFERENT')]
     if bad:
         raise GateError('device mismatch on %d flights, e.g. %s: %s' % (len(bad), bad[0], dev[bad[0]]))
+    guard = label_guard(flights, int(np.sum(flat)), split)
+    if guard and not allow_mismatch:
+        raise GateError('GUARD-FAIL (labels differ from the audited manifest, no verdict written): ' + '; '.join(guard))
     g = gate_rule(np.concatenate(fa), np.concatenate(fb), np.array(fl), np.array(qs), np.array(flat), np.array(envs))
+    if guard:
+        g['label_guard'] = dict(problems=guard, allowed=allow_mismatch)
     g.update(cand=cand, inc=inc, split=split, n=len(fl), n_flat=int(np.sum(flat)),
              device_check='same' if all(v == 'same' for v in dev.values()) else
              'unknown on %d flights' % sum(v == 'unknown' for v in dev.values()),
@@ -99,13 +127,18 @@ def main(argv=None):
     ap.add_argument('--cand', required=True); ap.add_argument('--inc', required=True)
     ap.add_argument('--split', default='dev', choices=['dev', 'held_out']); ap.add_argument('--log', action='store_true')
     ap.add_argument('--force-held-out', default='', help='reason; allows a repeated or DEV-less held-out verdict (logged)')
+    ap.add_argument('--allow-label-mismatch', default='', help='reason; gate despite a label guard failure (kept in the verdict)')
+    ap.add_argument('--write-manifest', action='store_true', help='hash the current labels of all 31 flights into the manifest and exit')
     a = ap.parse_args(argv)
+    if a.write_manifest:
+        from .data import FLIGHTS
+        json.dump({f: label_hash(f) for f in FLIGHTS}, open(MANIFEST, 'w'), indent=1); print('wrote', MANIFEST); return
     if a.log and a.split == 'held_out':
         picker = json.load(open(os.path.join(RESULTS, 'runs', a.cand, 'meta.json'))).get('picker')
         why = held_out_allowed(picker)
         if why and not a.force_held_out:
             raise SystemExit('refused: %s (use --force-held-out "<reason>")' % why)
-    g = compare(a.cand, a.inc, a.split)
+    g = compare(a.cand, a.inc, a.split, allow_mismatch=a.allow_label_mismatch)
     if a.force_held_out:
         g['forced'] = a.force_held_out
     print(fmt(g))
