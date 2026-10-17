@@ -221,10 +221,15 @@ def c9_paired_test(R, lab):
     bd = np.bincount(inv, fa - fb)
     bs, bb = int((bd < 0).sum()), int((bd > 0).sum()); p_block = min(1.0, 2 * sign_test(bs, bb))
     b_, w_, t_ = per_flight(fa, fb, fl); p_flight = min(1.0, 2 * sign_test(b_, w_))
-    report('C9', 'WARN', 'page paired p-value is per query',
-           'cubes vs strongest, all frames: page-style per-query sign test saves %d breaks %d p=%.1e; per 20-frame block %d vs %d p=%.1e; '
+    js = open(os.path.join(REPO, 'docs', 'app.js'), encoding='utf-8').read()
+    ht = open(os.path.join(REPO, 'docs', 'index.html'), encoding='utf-8').read()
+    i_f, i_b, i_q = (js.find(h) for h in ('flights better/worse, p (main)', 'p, 20-frame blocks', 'p per query (too optimistic)'))
+    ok = 0 <= i_f < i_b < i_q and 'p = two-sided sign test on saves versus breaks' not in ht
+    report('C9', 'PASS' if ok else 'WARN', 'page leads with the per-flight sign test' if ok else 'page paired p-value is per query',
+           'cubes vs strongest, all frames: per-query sign test saves %d breaks %d p=%.1e; per 20-frame block %d vs %d p=%.1e; '
            'per flight %d vs %d (tied %d) p=%.3f. Neighbouring queries fail together, so the per-query p overstates certainty; '
-           'the page should show the block or flight test.' % (saves, breaks, p_query, bs, bb, p_block, b_, w_, t_, p_flight))
+           'page column order flight / block / per-query %s.' % (saves, breaks, p_query, bs, bb, p_block, b_, w_, t_, p_flight,
+                                                                'OK' if ok else 'NOT OK'))
 
 
 def c10_block_length(R, lab):

@@ -873,24 +873,24 @@ function renderBins(el) {
         const count = m => { let s = 0, w = 0; for (const v of m.values()) { if (v < 0) s++; else if (v > 0) w++; } return [s, w]; };
         const [bs, bb] = count(blk), [fs, fw] = count(flt);
         const p = signTestP(bs, bb), pq = signTestP(saves, breaks), pf = signTestP(fs, fw);
-        const cls = p < 0.05 ? (bs > bb ? 'good' : 'bad') : '';
+        const cls = pf < 0.05 ? (fs > fw ? 'good' : 'bad') : '';
         const first = bi === 0 ? `<td class="l nowrap" rowspan="${bins.length}">${runLabel(id)}${runActions(id)}</td>` : '';
         return `<tr class="${bi === 0 ? 'grp' : ''}">${first}<td class="l">${esc(b.label)}</td><td>${n}</td>
           <td>${n ? fmt(100 * fb / n) : '–'}</td><td>${n ? fmt(100 * fr / n) : '–'}</td>
           <td>${saves}</td><td>${breaks}</td><td>${saves - breaks > 0 ? '+' : ''}${saves - breaks}</td>
-          <td class="${cls}">${fmtP(p)} <span class="muted">(${bs}/${bb})</span></td>
-          <td>${fs}/${fw} <span class="muted">p ${fmtP(pf)}</span></td>
+          <td class="${cls}">${fs}/${fw} <span class="muted">p ${fmtP(pf)}</span></td>
+          <td>${fmtP(p)} <span class="muted">(${bs}/${bb})</span></td>
           <td class="muted">${fmtP(pq)}</td></tr>`;
       }).join('');
     }).join('');
     paired = others.length ? `<div class="tablewrap"><table class="data">
       <thead><tr><th class="l">run</th><th class="l">bin</th><th>n paired</th><th>baseline fail %</th><th>run fail %</th>
-      <th>saves</th><th>breaks</th><th>net</th><th>p, 20-frame blocks (better/worse)</th><th>flights better/worse</th><th>p per query (too optimistic)</th></tr></thead><tbody>${prow}</tbody></table></div>
+      <th>saves</th><th>breaks</th><th>net</th><th>flights better/worse, p (main)</th><th>p, 20-frame blocks (better/worse)</th><th>p per query (too optimistic)</th></tr></thead><tbody>${prow}</tbody></table></div>
       <p class="note">Paired on the queries the run and the baseline (${esc(S.base)}) both have, at ${T} cm. Saves: baseline fails, run passes.
-      Breaks: run fails, baseline passes. Neighbouring frames fail together, so single queries are not independent: the main p is a
-      two-sided sign test over 20-frame blocks (a block counts as better when the run has fewer failures in it), next to the same
-      test over flights. The per-query p (exact binomial on saves vs breaks) is shown only for reference; it overstates certainty.
-      Green / red: block p &lt; 0.05 in favour of / against the run.</p>`
+      Breaks: run fails, baseline passes. Neighbouring frames fail together, so single queries are not independent: the main test is
+      the two-sided sign test over flights (a flight counts as better when the run has fewer failures on it; route B of the
+      kpbench gate), next to the same test over 20-frame blocks. The per-query p (exact binomial on saves vs breaks) is shown only
+      for reference; it overstates certainty. Green / red: flight p &lt; 0.05 in favour of / against the run.</p>`
       : '<p class="muted">Select at least one run besides the baseline.</p>';
   }
 

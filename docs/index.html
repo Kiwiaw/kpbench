@@ -79,8 +79,8 @@
             95 % confidence interval from 1000 bootstrap resamples. Queries close in time see the same scene and fail together, so
             the bootstrap resamples <em>blocks</em> of 20 consecutive frames per flight, not single queries (a plain per-query
             bootstrap would give intervals 2 to 3 times too narrow). Two runs whose intervals overlap heavily are not
-            distinguishable on this data. The sign test next to saves / breaks still counts queries as independent and is
-            therefore optimistic.</dd>
+            distinguishable on this data. The per-query sign test next to saves / breaks counts queries as independent and is
+            therefore optimistic; the paired table leads with the per-flight sign test.</dd>
           <dt>AUC ≤25 cm</dt><dd>area under the curve "share of queries with position error ≤ x" for x from 0 to 25 cm,
             divided by 25, so 1 would mean every pose is exact. It rewards precise poses, not only passes.</dd>
           <dt>median err</dt><dd>median position error in cm over the queries that passed at the threshold.</dd>
@@ -90,7 +90,8 @@
             with depth agreeing within 5 %.</dd>
           <dt>saves / breaks / net / p</dt><dd>paired comparison with the <span class="tag base">BASELINE</span> run on the same
             queries. saves = queries the baseline fails and this run passes; breaks = the opposite; net = saves − breaks;
-            p = two-sided sign test on saves versus breaks (exact binomial, normal approximation above 500 pairs).</dd>
+            main p = two-sided sign test over flights (flights where the run fails less vs more; the kpbench gate's route B),
+            then the same test over 20-frame blocks; the per-query sign test on saves vs breaks is shown last, for reference only.</dd>
           <dt>shared queries only</dt><dd>restricts every number to the queries that all shown runs have, so runs with different
             flight sets stay comparable. A "x/y flights" badge marks a run that covers fewer flights than the selection.</dd>
           <dt>fail25 (index)</dt><dd>fail % at 25 cm over all queries of the run, as stored at export time; a quick sort key.</dd>
