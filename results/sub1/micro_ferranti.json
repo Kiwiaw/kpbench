@@ -1,5 +1,7 @@
 {
  "split": "micro",
+ "metric": "hull",
+ "posed": false,
  "pickers": [
   "cube0.5",
   "grid",

@@ -1,0 +1,93 @@
+{
+ "split": "micro",
+ "metric": "crlb",
+ "posed": true,
+ "pickers": [
+  "cube0.5",
+  "grid",
+  "sd"
+ ],
+ "results": {
+  "cube0.5": {
+   "n": 359,
+   "fails": 55,
+   "count": {
+    "auroc": 0.7689,
+    "prauc": 0.3925
+   },
+   "hull": {
+    "auroc": 0.6318,
+    "prauc": 0.3207
+   },
+   "count+hull": {
+    "auroc": 0.8091,
+    "prauc": 0.5023
+   },
+   "delta": {
+    "auroc": 0.0402,
+    "prauc": 0.1098
+   }
+  },
+  "grid": {
+   "n": 371,
+   "fails": 93,
+   "count": {
+    "auroc": 0.7005,
+    "prauc": 0.5207
+   },
+   "hull": {
+    "auroc": 0.589,
+    "prauc": 0.3239
+   },
+   "count+hull": {
+    "auroc": 0.6639,
+    "prauc": 0.4437
+   },
+   "delta": {
+    "auroc": -0.0366,
+    "prauc": -0.077
+   }
+  },
+  "sd": {
+   "n": 367,
+   "fails": 108,
+   "count": {
+    "auroc": 0.6031,
+    "prauc": 0.4237
+   },
+   "hull": {
+    "auroc": 0.3416,
+    "prauc": 0.2314
+   },
+   "count+hull": {
+    "auroc": 0.4909,
+    "prauc": 0.3301
+   },
+   "delta": {
+    "auroc": -0.1122,
+    "prauc": -0.0936
+   }
+  },
+  "pooled": {
+   "n": 1097,
+   "fails": 256,
+   "count": {
+    "auroc": 0.6668,
+    "prauc": 0.4446
+   },
+   "hull": {
+    "auroc": 0.5218,
+    "prauc": 0.2716
+   },
+   "count+hull": {
+    "auroc": 0.6244,
+    "prauc": 0.3852
+   },
+   "delta": {
+    "auroc": -0.0424,
+    "prauc": -0.0594
+   }
+  }
+ },
+ "verdict": "KILL: crlb adds < 0.01 AUROC and PR-AUC over inlier count"
+}

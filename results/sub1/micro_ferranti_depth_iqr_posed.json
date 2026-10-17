@@ -1,0 +1,93 @@
+{
+ "split": "micro",
+ "metric": "depth_iqr",
+ "posed": true,
+ "pickers": [
+  "cube0.5",
+  "grid",
+  "sd"
+ ],
+ "results": {
+  "cube0.5": {
+   "n": 359,
+   "fails": 55,
+   "count": {
+    "auroc": 0.7689,
+    "prauc": 0.3925
+   },
+   "hull": {
+    "auroc": 0.685,
+    "prauc": 0.2564
+   },
+   "count+hull": {
+    "auroc": 0.737,
+    "prauc": 0.3822
+   },
+   "delta": {
+    "auroc": -0.0319,
+    "prauc": -0.0103
+   }
+  },
+  "grid": {
+   "n": 371,
+   "fails": 93,
+   "count": {
+    "auroc": 0.7005,
+    "prauc": 0.5207
+   },
+   "hull": {
+    "auroc": 0.7802,
+    "prauc": 0.6471
+   },
+   "count+hull": {
+    "auroc": 0.7387,
+    "prauc": 0.5482
+   },
+   "delta": {
+    "auroc": 0.0382,
+    "prauc": 0.0275
+   }
+  },
+  "sd": {
+   "n": 367,
+   "fails": 108,
+   "count": {
+    "auroc": 0.6031,
+    "prauc": 0.4237
+   },
+   "hull": {
+    "auroc": 0.7677,
+    "prauc": 0.6716
+   },
+   "count+hull": {
+    "auroc": 0.6908,
+    "prauc": 0.4715
+   },
+   "delta": {
+    "auroc": 0.0877,
+    "prauc": 0.0478
+   }
+  },
+  "pooled": {
+   "n": 1097,
+   "fails": 256,
+   "count": {
+    "auroc": 0.6668,
+    "prauc": 0.4446
+   },
+   "hull": {
+    "auroc": 0.7752,
+    "prauc": 0.6157
+   },
+   "count+hull": {
+    "auroc": 0.7154,
+    "prauc": 0.4631
+   },
+   "delta": {
+    "auroc": 0.0486,
+    "prauc": 0.0185
+   }
+  }
+ },
+ "verdict": "depth_iqr adds over inlier count: dAUROC +0.0486, dPR-AUC +0.0185"
+}
