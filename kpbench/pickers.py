@@ -23,6 +23,8 @@ Names:
   sfar<n>[p<M>] n strongest with depth as seeds + farthest apart (3D metres) over the strongest M (default 400)
   seed1<d|o>[p<M>] ONE stable seed (most re-found in f-20, f-10, f+10, f+20: d = mutual descriptor match, o = ORACLE
                reprojection), then farthest apart over the strongest M (default 400)
+  dpp2d<sigma>[a<alpha>] dpp with the kernel on pixel coordinates (sigma in px) instead of camera-frame metres: depth only
+               decides which candidates are eligible (as for sd), not the spread (T11 (b), docs/t11_dpp2d.md)
   up[b<m>][r<r>]+dpp<sigma>[a<alpha>][p<N>] upstream filter before dpp (T8, docs/t8_upstream_design.md): border margin m px,
                greedy NMS radius r px in score order, first N survivors; padded back to K from the dropped points
 A picker returns candidate indices (at most K; fewer only when the frame has too few candidates).
@@ -498,15 +500,16 @@ def pick_poisson_disk(r0, theta):
     return f
 
 
-def pick_dpp(sigma, alpha):
+def pick_dpp(sigma, alpha, space='3d'):
     """dpp<sigma>[a<alpha>]: greedy MAP of a determinantal point process over the candidates with depth, L = diag(q) K diag(q),
     K_ij = exp(-|X_i - X_j|^2 / (2 sigma^2)) in camera-frame metres, quality q_i = exp(-alpha * rank_i / 100).
-    One objective for strength and spread: each pick maximises the gain in log det (fast greedy of Chen, Zhang, Zhou 2018)."""
+    One objective for strength and spread: each pick maximises the gain in log det (fast greedy of Chen, Zhang, Zhou 2018).
+    space='2d' (dpp2d..): X = pixel coordinates, sigma in px."""
     def f(u, v, s, z, K):
         ok = np.flatnonzero(z < DEPTH_MAX)
         if not len(ok):
             return np.arange(min(K, len(u)))
-        P = to3d(u[ok], v[ok], z[ok]); n = len(ok); q = np.exp(-alpha * np.arange(n) / 100.0)
+        P = to3d(u[ok], v[ok], z[ok]) if space == '3d' else np.stack([u[ok], v[ok]], 1); n = len(ok); q = np.exp(-alpha * np.arange(n) / 100.0)
         d2 = q ** 2; c = np.zeros((0, n)); sel = []
         for _ in range(min(K, n)):
             j = int(np.argmax(d2))
@@ -590,6 +593,9 @@ def parse(name):
     m = re.fullmatch(r'win([0-9]+)(?:\+(dpp[0-9.]+(?:a[0-9.]+)?))?', name)
     if m:
         return pick_window(int(m.group(1)), parse(m.group(2)) if m.group(2) else None)
+    m = re.fullmatch(r'dpp2d([0-9.]+)(?:a([0-9.]+))?', name)
+    if m:
+        return pick_dpp(float(m.group(1)), float(m.group(2) or 1.0), '2d')
     m = re.fullmatch(r'dpp([0-9.]+)(?:a([0-9.]+))?', name)
     if m:
         return pick_dpp(float(m.group(1)), float(m.group(2) or 1.0))
