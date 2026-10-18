@@ -7,7 +7,8 @@ picker = a name for kpbench.pickers.parse or a function f(u, v, s, z, K) -> indi
 Rules (a violation raises PickerError, the candidate scores nothing):
   - indices are integers, unique, inside the candidate list
   - exactly K of them whenever the frame has >= K candidates
-  - no oracle: pickers marked needs_ctx (they see true poses / other frames) are refused unless allow_oracle=True
+  - no oracle: pickers marked needs_ctx (they see true poses / other frames) are refused unless allow_oracle=True;
+    needs_past pickers (dppr) get the same ctx but by contract read only the detections of earlier frames
 Protocol = kpbench.bench (same map: keyframes keep the same picker's points; LightGlue by default; AP3P-RANSAC + LM;
 fail = no pose, > 25 cm or > 2 deg). Only the frames a query set needs are picked (its queries and their keyframes), so
 MICRO runs in about a minute on the laptop GPU. Output: fail % on the flat bin and all queries of the split, mean
@@ -36,6 +37,8 @@ def checked_pick(pk, u, v, s, z, de, K, ctx, allow_oracle):
     if getattr(pk, 'needs_ctx', False):
         if not allow_oracle:
             raise PickerError('oracle picker (needs_ctx) not allowed')
+        kw['ctx'] = ctx
+    elif getattr(pk, 'needs_past', False):          # past frames' detections only (dppr): allowed, no pose / no future
         kw['ctx'] = ctx
     if getattr(pk, 'needs_desc', False):
         kw['de'] = de

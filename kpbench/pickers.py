@@ -27,6 +27,7 @@ Names:
                decides which candidates are eligible (as for sd), not the spread (T11 (b), docs/t11_dpp2d.md)
   up[b<m>][r<r>]+dpp<sigma>[a<alpha>][p<N>] upstream filter before dpp (T8, docs/t8_upstream_design.md): border margin m px,
                greedy NMS radius r px in score order, first N survivors; padded back to K from the dropped points
+  dppr<sigma>a<alpha>b<beta>t<tau> dpp whose quality also rewards past-frame track count r^beta (T4, docs/t4_dppr_design.md)
 A picker returns candidate indices (at most K; fewer only when the frame has too few candidates).
 To add a picker: write a function (u, v, s, z, K) -> indices and register it in PICKERS or in parse().
 """
@@ -500,6 +501,18 @@ def pick_poisson_disk(r0, theta):
     return f
 
 
+def dpp_greedy(P, q, K, sigma):
+    """greedy MAP of L = diag(q) K diag(q), K_ij = exp(-|P_i - P_j|^2 / (2 sigma^2)) (fast greedy of Chen, Zhang, Zhou 2018)"""
+    n = len(P); d2 = q ** 2; c = np.zeros((0, n)); sel = []
+    for _ in range(min(K, n)):
+        j = int(np.argmax(d2))
+        if d2[j] <= 1e-12:
+            break
+        dj = np.sqrt(d2[j]); Lj = q[j] * q * np.exp(-np.sum((P - P[j]) ** 2, 1) / (2 * sigma ** 2))
+        e = (Lj - (c[:, j] @ c if len(c) else 0.0)) / dj; c = np.vstack([c, e]); d2 = d2 - e ** 2; d2[j] = -np.inf; sel.append(j)
+    return np.array(sel, int)
+
+
 def pick_dpp(sigma, alpha, space='3d'):
     """dpp<sigma>[a<alpha>]: greedy MAP of a determinantal point process over the candidates with depth, L = diag(q) K diag(q),
     K_ij = exp(-|X_i - X_j|^2 / (2 sigma^2)) in camera-frame metres, quality q_i = exp(-alpha * rank_i / 100).
@@ -509,15 +522,57 @@ def pick_dpp(sigma, alpha, space='3d'):
         ok = np.flatnonzero(z < DEPTH_MAX)
         if not len(ok):
             return np.arange(min(K, len(u)))
-        P = to3d(u[ok], v[ok], z[ok]) if space == '3d' else np.stack([u[ok], v[ok]], 1); n = len(ok); q = np.exp(-alpha * np.arange(n) / 100.0)
-        d2 = q ** 2; c = np.zeros((0, n)); sel = []
-        for _ in range(min(K, n)):
-            j = int(np.argmax(d2))
-            if d2[j] <= 1e-12:
-                break
-            dj = np.sqrt(d2[j]); Lj = q[j] * q * np.exp(-np.sum((P - P[j]) ** 2, 1) / (2 * sigma ** 2))
-            e = (Lj - (c[:, j] @ c if len(c) else 0.0)) / dj; c = np.vstack([c, e]); d2 = d2 - e ** 2; d2[j] = -np.inf; sel.append(j)
-        return fill(ok[np.array(sel, int)], len(u), K)
+        P = to3d(u[ok], v[ok], z[ok]) if space == '3d' else np.stack([u[ok], v[ok]], 1); q = np.exp(-alpha * np.arange(len(ok)) / 100.0)
+        return fill(ok[dpp_greedy(P, q, K, sigma)], len(u), K)
+    return f
+
+
+DPPR_PAST = (1, 2, 3)      # past frames used by the dppr track count
+DPPR_POOL = 1000           # candidates matched per frame
+
+
+def track_count(C, q, de, ok, tau, cache):
+    """r_i = (m_i + 1) / (M + 1): m_i = past frames q-1..q-3 (M of them inside the flight) where candidate ok[i] has a mutual
+    nearest-neighbour descriptor match with cosine >= tau among that frame's strongest DPPR_POOL candidates. No pose, no future."""
+    pool = ok[:DPPR_POOL]; m = np.zeros(len(ok)); M = 0
+    D1 = de[pool].astype(np.float32); D1 /= np.linalg.norm(D1, axis=1, keepdims=True) + 1e-9
+    for L in DPPR_PAST:
+        g = q - L
+        if g < 0:
+            continue
+        M += 1
+        if g not in cache:
+            D2 = C.frame(g)[4][:DPPR_POOL].astype(np.float32); D2 /= np.linalg.norm(D2, axis=1, keepdims=True) + 1e-9
+            cache[g] = D2
+        D2 = cache[g]
+        if not len(D2) or not len(pool):
+            continue
+        S = D1 @ D2.T; a = S.argmax(1); b = S.argmax(0)
+        m[:len(pool)] += (b[a] == np.arange(len(pool))) & (S[np.arange(len(pool)), a] >= tau)
+    while len(cache) > 8:
+        cache.pop(min(cache))
+    return (m + 1) / (M + 1)
+
+
+def pick_dppr(sigma, alpha, beta, tau):
+    """dppr<sigma>a<alpha>b<beta>t<tau> (T4 step 3, SUB3, docs/t4_dppr_design.md): dpp with quality
+    q_i = exp(-alpha * rank_i / 100) * r_i^beta, r_i = track_count over the PAST frames q-1..q-3 (descriptor matches, no pose).
+    beta = 0 is dpp<sigma>a<alpha> exactly. ABLATION env KPBENCH_DPPR_QMODE: quality (beta 0) | rep (alpha 0) | both.
+    Needs ctx=(Flight, Cands, frame) for the past frames only (needs_past, not an oracle) and de=descriptors."""
+    mode = os.environ.get('KPBENCH_DPPR_QMODE', 'both')
+    a_, b_ = (alpha, 0.0) if mode == 'quality' else (0.0, beta) if mode == 'rep' else (alpha, beta)
+    caches = {}
+    def f(u, v, s, z, K, ctx=None, de=None):
+        F, C, q = ctx
+        ok = np.flatnonzero(z < DEPTH_MAX)
+        if not len(ok):
+            return np.arange(min(K, len(u)))
+        w = np.exp(-a_ * np.arange(len(ok)) / 100.0)
+        if b_ > 0:
+            r = track_count(C, q, de, ok, tau, caches.setdefault(F.slug, {})); w = w * r ** b_
+            f.rstd.append(float(r.std()))
+        return fill(ok[dpp_greedy(to3d(u[ok], v[ok], z[ok]), w, K, sigma)], len(u), K)
+    f.needs_past = True; f.needs_desc = True; f.rstd = []
     return f
 
 
@@ -593,6 +648,9 @@ def parse(name):
     m = re.fullmatch(r'win([0-9]+)(?:\+(dpp[0-9.]+(?:a[0-9.]+)?))?', name)
     if m:
         return pick_window(int(m.group(1)), parse(m.group(2)) if m.group(2) else None)
+    m = re.fullmatch(r'dppr([0-9.]+)a([0-9.]+)b([0-9.]+)t([0-9.]+)', name)
+    if m:
+        return pick_dppr(*map(float, m.groups()))
     m = re.fullmatch(r'dpp2d([0-9.]+)(?:a([0-9.]+))?', name)
     if m:
         return pick_dpp(float(m.group(1)), float(m.group(2) or 1.0), '2d')

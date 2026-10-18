@@ -177,7 +177,7 @@ def run_flight(fid, det, picker, K, mapmode, workers=None, save_picks=False, fli
     for f in range(F.N):
         u, v, s, z, de = C.frame(f)
         kw = {}
-        if getattr(pk, 'needs_ctx', False): kw['ctx'] = (F, C, f)       # oracle pickers see the flight
+        if getattr(pk, 'needs_ctx', False) or getattr(pk, 'needs_past', False): kw['ctx'] = (F, C, f)   # oracle / past-frame pickers
         if getattr(pk, 'needs_desc', False): kw['de'] = de               # descriptor-based pickers
         sel[f] = np.asarray(pk(u, v, s, z, K, **kw), int)
     MAP = {}

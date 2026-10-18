@@ -10,7 +10,8 @@ lag 5 and the picker name are stored per trial. Held-out flights are never touch
 Families: dpp (sigma 0.1-2 m log, alpha 0.2-5 log; dpp<sigma>a<alpha>), cube (size 0.15-1.5 m; cube<size>), pd (r 0.1-1.5 m,
 theta 0-0.1; pd<r>a<theta>), up (T8: border b px, NMS radius r px, pool n before dpp0.5; upb<b>r<r>+dpp0.5p<n>,
 docs/t8_upstream_design.md), win (T4 step 2: strongest per N x N px window, N 8-32, then dpp sigma 0.3-0.7 m, alpha 0.5-2;
-win<N>+dpp<sigma>a<alpha>). Study name = <family>_<anything>.
+win<N>+dpp<sigma>a<alpha>), dppr (T4 step 3: sigma 0.25-1 m log, alpha 0-2, beta 0-3, tau 0.7/0.8/0.9;
+dppr<sigma>a<alpha>b<beta>t<tau>, docs/t4_dppr_design.md; ablation via env KPBENCH_DPPR_QMODE). Study name = <family>_<anything>.
 Every trial also stores hull (SUB1 metric: mean inlier image-coverage share on the flat queries, no pose = 0) as the
 uniformity guard; None if the metrics path fails, so the trial still counts.
 Objective rep5c (SUB3, T4): a study name containing '_rep5c' maximises rep5 subject to fail_flat <= REP5_CAP (incumbent dpp0.5
@@ -33,13 +34,17 @@ SPACES = {'dpp': lambda t: 'dpp%.3ga%.3g' % (t.suggest_float('sigma', 0.1, 2.0, 
           'up': lambda t: 'upb%dr%d+dpp0.5p%d' % (t.suggest_categorical('b', [0, 4, 8, 12, 16, 24, 32]), t.suggest_int('r', 0, 12),
                                                   t.suggest_int('n', 150, 2000, log=True)),
           'win': lambda t: 'win%d+dpp%.3ga%.3g' % (t.suggest_int('N', 8, 32), t.suggest_float('sigma', 0.3, 0.7),
-                                                  t.suggest_float('alpha', 0.5, 2.0, log=True))}
+                                                  t.suggest_float('alpha', 0.5, 2.0, log=True)),
+          'dppr': lambda t: 'dppr%.3ga%.3gb%.3gt%.2g' % (t.suggest_float('sigma', 0.25, 1.0, log=True), t.suggest_float('alpha', 0.0, 2.0),
+                                                     t.suggest_float('beta', 0.0, 3.0), t.suggest_categorical('tau', [0.7, 0.8, 0.9]))}
 REP5_CAP = float(os.environ.get('KPBENCH_REP5_CAP', 14.41))
 SEEDS = {'dpp': [dict(sigma=0.5, alpha=1.0), dict(sigma=0.5, alpha=0.5), dict(sigma=0.3, alpha=1.0), dict(sigma=1.0, alpha=2.0)],
          'cube': [dict(size=0.5), dict(size=0.3)], 'pd': [dict(r=0.5, theta=0.0)],
          'up': [dict(b=0, r=0, n=2000), dict(b=0, r=6, n=2000), dict(b=16, r=0, n=2000), dict(b=0, r=0, n=500),
                 dict(b=8, r=6, n=800), dict(b=0, r=4, n=2000)],
-         'win': [dict(N=8, sigma=0.5, alpha=1.0), dict(N=16, sigma=0.5, alpha=1.0), dict(N=32, sigma=0.5, alpha=1.0)]}   # known points enqueued first
+         'win': [dict(N=8, sigma=0.5, alpha=1.0), dict(N=16, sigma=0.5, alpha=1.0), dict(N=32, sigma=0.5, alpha=1.0)],
+         'dppr': [dict(sigma=0.5, alpha=1.0, beta=0.0, tau=0.8), dict(sigma=0.5, alpha=1.0, beta=1.0, tau=0.8),
+                  dict(sigma=0.5, alpha=1.0, beta=2.0, tau=0.8), dict(sigma=0.5, alpha=0.0, beta=1.0, tau=0.8)]}   # known points enqueued first
 
 
 def study(name):
