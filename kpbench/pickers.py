@@ -27,6 +27,7 @@ Names:
                decides which candidates are eligible (as for sd), not the spread (T11 (b), docs/t11_dpp2d.md)
   up[b<m>][r<r>]+dpp<sigma>[a<alpha>][p<N>] upstream filter before dpp (T8, docs/t8_upstream_design.md): border margin m px,
                greedy NMS radius r px in score order, first N survivors; padded back to K from the dropped points
+  ssc[<o>][p<M>] suppression via square covering (ANMS, Bailo 2018) over the strongest M with depth, ~o*K kept, K strongest
   dppr<sigma>a<alpha>b<beta>t<tau> dpp whose quality also rewards past-frame track count r^beta (T4, docs/t4_dppr_design.md)
 A picker returns candidate indices (at most K; fewer only when the frame has too few candidates).
 To add a picker: write a function (u, v, s, z, K) -> indices and register it in PICKERS or in parse().
@@ -595,6 +596,43 @@ def nms_order(u, v, r):
     return keep
 
 
+def pick_ssc(o, M):
+    """ssc<o>[p<M>]: suppression via square covering (Bailo et al. 2018, the ANMS baseline of the spread class): among the
+    strongest M candidates with depth, binary search on the square side w px so that greedy covering in score order (a kept
+    point suppresses every weaker point inside its w x w square) keeps about o*K points; the K strongest of those are returned,
+    fill by rank. o = 1: plain SSC; o > 1 trades spread for strength."""
+    def keep_count(u, v, w):
+        keep = np.zeros(len(u), bool); cells = {}
+        for i in range(len(u)):
+            cx, cy = int(u[i] // w), int(v[i] // w); ok = True
+            for dx in (-1, 0, 1):
+                for dy in (-1, 0, 1):
+                    for j in cells.get((cx + dx, cy + dy), ()):
+                        if abs(u[i] - u[j]) < w / 2 and abs(v[i] - v[j]) < w / 2:
+                            ok = False; break
+                    if not ok: break
+                if not ok: break
+            if ok:
+                keep[i] = True; cells.setdefault((cx, cy), []).append(i)
+        return keep
+
+    def f(u, v, s, z, K):
+        ok = np.flatnonzero(z < DEPTH_MAX)[:M]
+        if not len(ok):
+            return np.arange(min(K, len(u)))
+        T = min(len(ok), int(round(o * K))); lo, hi = 1.0, float(max(W, H)); best = np.ones(len(ok), bool)
+        for _ in range(14):                                   # largest w that still keeps >= T points
+            w = 0.5 * (lo + hi); kp = keep_count(u[ok], v[ok], w)
+            if kp.sum() >= T:
+                lo, best = w, kp
+            else:
+                hi = w
+            if hi - lo < 0.5:
+                break
+        return fill(ok[np.flatnonzero(best)[:K]], len(u), K)
+    return f
+
+
 def pick_upstream(m, r, N, inner):
     """up...: border margin m, NMS radius r, first N survivors, then inner; pad to K from the rest (depth first, score order).
     f.stats counts calls and padded frames."""
@@ -648,6 +686,9 @@ def parse(name):
     m = re.fullmatch(r'win([0-9]+)(?:\+(dpp[0-9.]+(?:a[0-9.]+)?))?', name)
     if m:
         return pick_window(int(m.group(1)), parse(m.group(2)) if m.group(2) else None)
+    m = re.fullmatch(r'ssc([0-9.]+)?(?:p([0-9]+))?', name)
+    if m:
+        return pick_ssc(float(m.group(1) or 1.0), int(m.group(2) or 2000))
     m = re.fullmatch(r'dppr([0-9.]+)a([0-9.]+)b([0-9.]+)t([0-9.]+)', name)
     if m:
         return pick_dppr(*map(float, m.groups()))
