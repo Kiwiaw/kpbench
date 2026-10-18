@@ -12,8 +12,8 @@ theta 0-0.1; pd<r>a<theta>), up (T8: border b px, NMS radius r px, pool n before
 docs/t8_upstream_design.md), win (T4 step 2: strongest per N x N px window, N 8-32, then dpp sigma 0.3-0.7 m, alpha 0.5-2;
 win<N>+dpp<sigma>a<alpha>), dppr (T4 step 3: sigma 0.25-1 m log, alpha 0-2, beta 0-3, tau 0.7/0.8/0.9;
 dppr<sigma>a<alpha>b<beta>t<tau>, docs/t4_dppr_design.md; ablation via env KPBENCH_DPPR_QMODE), ssc (MAIN spread-class baseline, Bailo 2018 ANMS: oversample o 1-2, pool M 200-2000
-log; ssc<o>p<M>), dppm (sigma = c x frame median depth, c 0.05-0.6 log, alpha 0.5-2 log; dppm<c>a<alpha>) and dppl
-(per-point scale c x depth, c 0.08-1 log, alpha 0.5-2 log; dppl<c>a<alpha>); their first seeds are the dpp0.5 equivalents
+log; ssc<o>p<M>), dppm (sigma = c x frame median depth, c 0.05-1 log, alpha 0.5-2 log; dppm<c>a<alpha>) and dppl
+(per-point scale c x depth, c 0.08-1.5 log, alpha 0.5-2 log; dppl<c>a<alpha>); their first seeds are the dpp0.5 equivalents
 (dppm0.256 = 0.5 m at the ~1.95 m DEV flat median candidate depth; dppl0.43 by pick overlap). Study name = <family>_<anything>.
 Every trial also stores hull (SUB1 metric: mean inlier image-coverage share on the flat queries, no pose = 0) as the
 uniformity guard; None if the metrics path fails, so the trial still counts.
@@ -41,8 +41,8 @@ SPACES = {'dpp': lambda t: 'dpp%.3ga%.3g' % (t.suggest_float('sigma', 0.1, 2.0, 
           'dppr': lambda t: 'dppr%.3ga%.3gb%.3gt%.2g' % (t.suggest_float('sigma', 0.25, 1.0, log=True), t.suggest_float('alpha', 0.0, 2.0),
                                                      t.suggest_float('beta', 0.0, 3.0), t.suggest_categorical('tau', [0.7, 0.8, 0.9])),
           'ssc': lambda t: 'ssc%.3gp%d' % (t.suggest_float('o', 1.0, 2.0), t.suggest_int('M', 200, 2000, log=True)),
-          'dppm': lambda t: 'dppm%.3ga%.3g' % (t.suggest_float('c', 0.05, 0.6, log=True), t.suggest_float('alpha', 0.5, 2.0, log=True)),
-          'dppl': lambda t: 'dppl%.3ga%.3g' % (t.suggest_float('c', 0.08, 1.0, log=True), t.suggest_float('alpha', 0.5, 2.0, log=True))}
+          'dppm': lambda t: 'dppm%.3ga%.3g' % (t.suggest_float('c', 0.05, 1.0, log=True), t.suggest_float('alpha', 0.5, 2.0, log=True)),
+          'dppl': lambda t: 'dppl%.3ga%.3g' % (t.suggest_float('c', 0.08, 1.5, log=True), t.suggest_float('alpha', 0.5, 2.0, log=True))}
 REP5_CAP = float(os.environ.get('KPBENCH_REP5_CAP', 14.41))
 SEEDS = {'dpp': [dict(sigma=0.5, alpha=1.0), dict(sigma=0.5, alpha=0.5), dict(sigma=0.3, alpha=1.0), dict(sigma=1.0, alpha=2.0)],
          'cube': [dict(size=0.5), dict(size=0.3)], 'pd': [dict(r=0.5, theta=0.0)],
@@ -52,8 +52,8 @@ SEEDS = {'dpp': [dict(sigma=0.5, alpha=1.0), dict(sigma=0.5, alpha=0.5), dict(si
          'dppr': [dict(sigma=0.5, alpha=1.0, beta=0.0, tau=0.8), dict(sigma=0.5, alpha=1.0, beta=1.0, tau=0.8),
                   dict(sigma=0.5, alpha=1.0, beta=2.0, tau=0.8), dict(sigma=0.5, alpha=0.0, beta=1.0, tau=0.8)],
          'ssc': [dict(o=1.0, M=2000), dict(o=1.0, M=400), dict(o=1.5, M=2000)],
-         'dppm': [dict(c=0.256, alpha=1.0), dict(c=0.15, alpha=1.0), dict(c=0.4, alpha=1.0), dict(c=0.256, alpha=0.5)],
-         'dppl': [dict(c=0.43, alpha=1.0), dict(c=0.256, alpha=1.0), dict(c=0.7, alpha=1.0), dict(c=0.43, alpha=0.5)]}   # known points enqueued first
+         'dppm': [dict(c=0.256, alpha=1.0), dict(c=0.15, alpha=1.0), dict(c=0.4, alpha=1.0), dict(c=0.6, alpha=1.0), dict(c=0.256, alpha=0.5)],
+         'dppl': [dict(c=0.43, alpha=1.0), dict(c=0.256, alpha=1.0), dict(c=0.7, alpha=1.0), dict(c=1.0, alpha=1.0), dict(c=0.43, alpha=0.5)]}   # known points enqueued first
 
 
 def study(name):
