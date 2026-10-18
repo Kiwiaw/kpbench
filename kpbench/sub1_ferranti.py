@@ -8,7 +8,8 @@ precision, fail = positive). delta = count+hull minus count alone. Kill rule (di
 both AUROC and PR-AUC on DEV => hull is Ferranti's coverage restated, SUB1 moves to metric #2 (crlb).
 No-pose queries: n_inl 0 and hull 0 (as kpbench.sub1 NOPOSE).
 --metric m tests another pre-registered column the same way (crlb, inl_ratio, reproj_med, depth_iqr; no-pose fill as
-docs/sub1_metrics.md: crlb = pooled 99th percentile, depth_iqr = 0). --posed keeps only queries with a pose (fail = > 25 cm or
+docs/sub1_metrics.md: crlb = pooled 99th percentile, depth_iqr = 0; prereg v2 results/sub1/prereg.md adds rep5, cells, ent,
+offplane, no-pose fill 0). --posed keeps only queries with a pose (fail = > 25 cm or
 > 2 deg), so the no-pose fill cannot carry the signal. Output <split>_ferranti[_<m>][_posed].md + .json.
 """
 import os, json, gzip, glob
@@ -18,7 +19,7 @@ from .stats import fail_flags
 from .sub1 import auroc, OUT, NOPOSE
 
 MODELS = {'count': ('n_inl',), 'hull': ('hull',), 'count+hull': ('n_inl', 'hull')}
-FILL = dict(NOPOSE, depth_iqr=0.0)
+FILL = dict(NOPOSE, depth_iqr=0.0, cells=0.0, ent=0.0, offplane=0.0, rep5=0.0)   # prereg v2 fills (results/sub1/prereg.md)
 
 
 def load(split, metric='hull', posed=False):
@@ -112,7 +113,7 @@ def write(out):
 def main(argv=None):
     import argparse
     ap = argparse.ArgumentParser(); ap.add_argument('--split', default='dev')
-    ap.add_argument('--metric', default='hull', choices=['hull', 'crlb', 'inl_ratio', 'reproj_med', 'depth_iqr'])
+    ap.add_argument('--metric', default='hull', choices=['hull', 'crlb', 'inl_ratio', 'reproj_med', 'depth_iqr', 'rep5', 'cells', 'ent', 'offplane'])
     ap.add_argument('--posed', action='store_true'); a = ap.parse_args(argv)
     out = analyse(a.split, a.metric, a.posed); print(write(out)); print(out['verdict'])
 

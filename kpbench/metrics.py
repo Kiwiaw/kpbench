@@ -11,12 +11,15 @@ analysis time, not here. n_inl is already a bench column, so it is not repeated.
   log_r       log10(max(rotation error deg, 0.01))
   thr_score   mean over tau in (1, 2, 5, 10, 25) cm of [t_err <= tau and r_err <= tau / 12.5 deg]
   depth_iqr   interquartile range of the inliers' camera depth, m (for the depth-spread check, boring explanation B)
+  cells       share of the 8 x 6 image cells (80 px) holding >= 1 inlier (prereg v2, results/sub1/prereg.md)
+  ent         entropy of the inlier counts over those 48 cells / log 48 (0 = one cell, 1 = even spread)
+  offplane    RMS distance of the inliers (camera frame) to their total-least-squares plane / their median depth
 """
 import numpy as np
 from scipy.spatial import ConvexHull
 from .data import FX, FY, CX, CY, W, H
 
-MCOLS = ['crlb', 'inl_ratio', 'hull', 'reproj_med', 'log_t', 'log_r', 'thr_score', 'depth_iqr']
+MCOLS = ['crlb', 'inl_ratio', 'hull', 'reproj_med', 'log_t', 'log_r', 'thr_score', 'depth_iqr', 'cells', 'ent', 'offplane']
 TAUS = (1, 2, 5, 10, 25)
 
 
@@ -54,6 +57,9 @@ def query_metrics(obj, img, n_match, err, rot, sol):
         hull = 0.0
     q75, q25 = np.percentile(Xc[:, 2], [75, 25])
     thr = np.mean([err <= tau and rot <= tau / 12.5 for tau in TAUS])
+    cnt = np.bincount((np.clip(uv[:, 1] // 80, 0, 5) * 8 + np.clip(uv[:, 0] // 80, 0, 7)).astype(int), minlength=48)
+    pr = cnt[cnt > 0] / cnt.sum(); D = Xc - Xc.mean(0)
+    off = float(np.sqrt(np.linalg.eigvalsh(D.T @ D / len(Xc))[0]) / max(np.median(Xc[:, 2]), 1e-6)) if len(Xc) >= 4 else None
     out = [np.log10(c) if c else None, len(inl) / max(n_match, 1), hull, float(np.median(np.linalg.norm(proj - uv, axis=1))),
-           np.log10(max(err, 0.1)), np.log10(max(rot, 0.01)), thr, q75 - q25]
+           np.log10(max(err, 0.1)), np.log10(max(rot, 0.01)), thr, q75 - q25, (cnt > 0).mean(), float(-(pr * np.log(pr)).sum() / np.log(48)), off]
     return [None if v is None else round(float(v), 4) for v in out]
