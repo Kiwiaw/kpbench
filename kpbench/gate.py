@@ -10,6 +10,8 @@ HELD_OUT discipline (--log): one held-out verdict per candidate picker, only aft
 Label guard (audit C15 at run time): before any verdict, every flight's label file must match results/labels_manifest.json
 (canonical JSON sha256) and the flat frame count must equal splits.json flat_counts; else GUARD-FAIL, nothing written.
 --allow-label-mismatch "<reason>" overrides, kept in the verdict. Rebuild the manifest only after an audit: --write-manifest.
+Split fresh (near-miss retests, kpbench.fresh): flights and flat count from splits_fresh.json, label hashes from
+results/labels_manifest_fresh.json (written once by --write-manifest --split fresh); held-out discipline does not apply.
 """
 import os, json, gzip, hashlib, datetime
 import numpy as np
@@ -22,6 +24,15 @@ RESULTS = os.environ.get('KPBENCH_RESULTS', os.path.join(REPO, 'results'))
 GATES = os.path.join(RESULTS, 'gates')
 LOG = os.path.join(GATES, 'log.jsonl')
 MANIFEST = os.path.join(REPO, 'results', 'labels_manifest.json')
+MANIFEST_FRESH = os.path.join(REPO, 'results', 'labels_manifest_fresh.json')
+SPLITS_FRESH = os.path.join(REPO, 'splits_fresh.json')
+
+
+def split_info(split):
+    """-> (flights, flat count the labels must give, manifest path)"""
+    if split == 'fresh':
+        s = json.load(open(SPLITS_FRESH)); return s['fresh'], s['flat_counts']['fresh'], MANIFEST_FRESH
+    s = load_splits(); return s[split], s['flat_counts'].get(split), MANIFEST
 
 
 class GateError(Exception):
@@ -51,12 +62,11 @@ def label_hash(f, d=None):
 
 def label_guard(flights, n_flat, split, d=None):
     """[] if labels match the manifest and the flat count matches splits.json, else the list of problems"""
-    man = json.load(open(MANIFEST)); bad = []
+    _, want, mf = split_info(split); man = json.load(open(mf)); bad = []
     for f in flights:
         h = label_hash(f, d)
         if man.get(f) != h:
             bad.append('%s label hash %s != manifest %s' % (f, h[:10], str(man.get(f))[:10]))
-    want = load_splits()['flat_counts'].get(split)
     if want is not None and n_flat != want:
         bad.append('%s flat frames %d != splits.json %d' % (split, n_flat, want))
     return bad
@@ -67,7 +77,7 @@ def log_entries():
 
 
 def compare(cand, inc, split, runs='runs', allow_mismatch=''):
-    flights = load_splits()[split]
+    flights = split_info(split)[0]
     mc, rc = load_run(cand, flights, runs); mi, ri = load_run(inc, flights, runs)
     for k in ('det', 'K', 'map', 'matcher'):
         if mc.get(k) != mi.get(k):
@@ -125,11 +135,15 @@ def main(argv=None):
     import argparse
     ap = argparse.ArgumentParser()
     ap.add_argument('--cand', required=True); ap.add_argument('--inc', required=True)
-    ap.add_argument('--split', default='dev', choices=['dev', 'held_out']); ap.add_argument('--log', action='store_true')
+    ap.add_argument('--split', default='dev', choices=['dev', 'held_out', 'fresh']); ap.add_argument('--log', action='store_true')
     ap.add_argument('--force-held-out', default='', help='reason; allows a repeated or DEV-less held-out verdict (logged)')
     ap.add_argument('--allow-label-mismatch', default='', help='reason; gate despite a label guard failure (kept in the verdict)')
-    ap.add_argument('--write-manifest', action='store_true', help='hash the current labels of all 31 flights into the manifest and exit')
+    ap.add_argument('--write-manifest', action='store_true', help='hash the current labels of all 31 flights (--split fresh: the FRESH flights) into the manifest and exit')
     a = ap.parse_args(argv)
+    if a.write_manifest and a.split == 'fresh':
+        if os.path.isfile(MANIFEST_FRESH):
+            raise SystemExit('exists: %s (move it away first)' % MANIFEST_FRESH)
+        json.dump({f: label_hash(f) for f in split_info('fresh')[0]}, open(MANIFEST_FRESH, 'w'), indent=1); print('wrote', MANIFEST_FRESH); return
     if a.write_manifest:
         from .data import FLIGHTS
         json.dump({f: label_hash(f) for f in FLIGHTS}, open(MANIFEST, 'w'), indent=1); print('wrote', MANIFEST); return

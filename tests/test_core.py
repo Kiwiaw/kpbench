@@ -87,3 +87,15 @@ def test_dpp_depth_adaptive():
     s2 = l[:, None] ** 2 + l[None] ** 2
     Kg = (2 * l[:, None] * l[None] / s2) ** 1.5 * np.exp(-((P[:, None] - P[None]) ** 2).sum(2) / s2)
     assert np.linalg.eigvalsh(Kg).min() > -1e-9
+
+
+def test_fresh_pose_roundtrip():
+    from kpbench import fresh
+    rng = np.random.default_rng(5)
+    for _ in range(50):
+        q, _ = np.linalg.qr(rng.normal(size=(3, 3)))
+        R = q * np.sign(np.linalg.det(q))
+        T = np.eye(4); T[:3, :3] = R; T[:3, 3] = rng.normal(size=3) * 10
+        row = fresh.pose_row(T)
+        assert np.allclose(data.quat_to_R(*row[3:7]) @ data.R_BC, R, atol=1e-9) and np.allclose(row[:3], T[:3, 3])
+    assert 'oldtown_easy/P000' not in data.FLIGHTS and data.CANDIDATES['factory_hard'] == ['kpbench_fresh/factory_hard/{t}']

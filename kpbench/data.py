@@ -37,6 +37,11 @@ CANDIDATES = {
     'hypersim': ['hypersim/{t}'],
 }
 FLIGHTS = ['%s/%s' % (e, t) for e, ts in ENVS.items() for t in ts]
+# FRESH split (kpbench.fresh, splits_fresh.json): extra TartanAir trajectories outside the 31 flights, linked into
+# <ROOT>/kpbench_fresh/<env>/<traj> by `python -m kpbench.fresh link`. Not in FLIGHTS (leaderboard, audit, DEV/HELD_OUT unchanged).
+FRESH_ENVS = {'oldtown_easy': 'oldtown/Easy', 'hospital_easy': 'hospital/Easy',
+              'factory_easy': 'abandonedfactory/Easy', 'factory_hard': 'abandonedfactory/Hard'}
+CANDIDATES.update({e: ['kpbench_fresh/%s/{t}' % e] for e in FRESH_ENVS})
 
 
 def slug(fid):

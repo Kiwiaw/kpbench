@@ -1,0 +1,46 @@
+{
+ "written": "2026-10-18, before any FRESH label or picker run",
+ "target": 1872,
+ "reason": "FRESH = new non-HELD_OUT TartanAir trajectories for near-miss retests. target = 2 x the 936 DEV flat queries. Environments as in DEV (oldtown, hospital, factory): oldtown has DEV's largest flat share but the pool holds only its 6 Easy trajectories, so all 6 enter; the rest is split hospital : factory = 2 : 1 (DEV flat ratio 183 : 92). Factory takes its Hard trajectories first (Hard preferred), then Easy. Within a group the order is the depth-only flat-density estimate (share of grid plane_frac >= 0.85 on every 30th frame, no detector, no picker), densest first, so the flat target is met with fewer queries (gate cost scales with all queries). Stop when a group reaches its share by the real label (SuperPoint top-300 plane_frac >= 0.85).",
+ "take_all": {
+  "oldtown": [
+   "oldtown_easy/P002",
+   "oldtown_easy/P005",
+   "oldtown_easy/P001",
+   "oldtown_easy/P000",
+   "oldtown_easy/P007",
+   "oldtown_easy/P004"
+  ]
+ },
+ "fill": {
+  "hospital": {
+   "weight": 2,
+   "order": [
+    "hospital_easy/P025",
+    "hospital_easy/P004",
+    "hospital_easy/P006",
+    "hospital_easy/P019",
+    "hospital_easy/P005",
+    "hospital_easy/P034",
+    "hospital_easy/P000",
+    "hospital_easy/P031",
+    "hospital_easy/P020",
+    "hospital_easy/P016",
+    "hospital_easy/P002",
+    "hospital_easy/P032"
+   ]
+  },
+  "factory": {
+   "weight": 1,
+   "order": [
+    "factory_hard/P011",
+    "factory_hard/P009",
+    "factory_hard/P010",
+    "factory_easy/P005",
+    "factory_easy/P001",
+    "factory_easy/P002",
+    "factory_easy/P009"
+   ]
+  }
+ }
+}
