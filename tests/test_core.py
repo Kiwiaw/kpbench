@@ -58,3 +58,32 @@ def test_pnp_recovers_pose():
 def test_quat_is_rotation():
     R = data.quat_to_R(0.3, -0.2, 0.1, 0.9)
     assert np.allclose(R @ R.T, np.eye(3), atol=1e-9) and np.isclose(np.linalg.det(R), 1)
+
+
+def test_dpp_depth_adaptive():
+    u, v, s, z = toy_frame(600, seed=3)
+    ok = z < 1000; med = float(np.median(z[ok]))
+    # dppm at c = sigma / median depth is dpp<sigma> on that frame
+    assert pickers.parse('dppm%ra1.3' % (0.5 / med))(u, v, s, z, 80).tolist() == pickers.parse('dpp0.5a1.3')(u, v, s, z, 80).tolist()
+    # dppl with one depth everywhere is dpp<c * z>
+    zc = np.where(ok, 8.0, z)
+    assert pickers.parse('dppl0.05')(u, v, s, zc, 80).tolist() == pickers.parse('dpp0.4')(u, v, s, zc, 80).tolist()
+    # both are scale-free: all depths x 3 -> same picks (dpp0.5 is not)
+    z3 = np.where(ok, 3 * z, z)
+    for name in ('dppm0.1', 'dppl0.05a0.7'):
+        a = pickers.parse(name)(u, v, s, z, 80); b = pickers.parse(name)(u, v, s, z3, 80)
+        assert a.tolist() == b.tolist(), name
+        assert len(set(a.tolist())) == 80 and (z[a] < 1000).all(), name
+    # degenerate frames as dpp: no depth -> strongest K; fewer with depth than K -> all of them, then strongest without
+    zn = np.full_like(z, 1e9)
+    for name in ('dppm0.1', 'dppl0.05', 'dpp0.5'):
+        assert pickers.parse(name)(u, v, s, zn, 30).tolist() == list(range(30)), name
+        zf = zn.copy(); zf[[5, 50, 500]] = [2.0, 4.0, 6.0]
+        idx = pickers.parse(name)(u, v, s, zf, 10)
+        assert sorted(idx[:3].tolist()) == [5, 50, 500] and idx[3:].tolist() == [0, 1, 2, 3, 4, 6, 7], name
+        assert len(pickers.parse(name)(u[:20], v[:20], s[:20], z[:20], 50)) == 20, name
+    # the Gibbs kernel of dppl is positive semi-definite for mixed depths
+    P = data.to3d(u[ok][:200], v[ok][:200], z[ok][:200]); l = 0.05 * z[ok][:200]
+    s2 = l[:, None] ** 2 + l[None] ** 2
+    Kg = (2 * l[:, None] * l[None] / s2) ** 1.5 * np.exp(-((P[:, None] - P[None]) ** 2).sum(2) / s2)
+    assert np.linalg.eigvalsh(Kg).min() > -1e-9

@@ -29,6 +29,8 @@ Names:
                greedy NMS radius r px in score order, first N survivors; padded back to K from the dropped points
   ssc[<o>][p<M>] suppression via square covering (ANMS, Bailo 2018) over the strongest M with depth, ~o*K kept, K strongest
   dppr<sigma>a<alpha>b<beta>t<tau> dpp whose quality also rewards past-frame track count r^beta (T4, docs/t4_dppr_design.md)
+  dppm<c>[a<alpha>] dpp with a per-frame scale sigma = c x median depth of the frame's candidates with depth (scene-scale dpp)
+  dppl<c>[a<alpha>] dpp with a per-point scale l_i = c x z_i (Gibbs kernel): spread measured relative to depth (~ angle c rad)
 A picker returns candidate indices (at most K; fewer only when the frame has too few candidates).
 To add a picker: write a function (u, v, s, z, K) -> indices and register it in PICKERS or in parse().
 """
@@ -502,14 +504,22 @@ def pick_poisson_disk(r0, theta):
     return f
 
 
-def dpp_greedy(P, q, K, sigma):
-    """greedy MAP of L = diag(q) K diag(q), K_ij = exp(-|P_i - P_j|^2 / (2 sigma^2)) (fast greedy of Chen, Zhang, Zhou 2018)"""
+def dpp_greedy(P, q, K, sigma, ell=None):
+    """greedy MAP of L = diag(q) K diag(q), K_ij = exp(-|P_i - P_j|^2 / (2 sigma^2)) (fast greedy of Chen, Zhang, Zhou 2018).
+    ell (per-point length scales, dppl): Gibbs kernel K_ij = (2 l_i l_j / (l_i^2 + l_j^2))^(D/2) exp(-|P_i - P_j|^2 / (l_i^2 + l_j^2)),
+    positive semi-definite for any l > 0 (Gibbs 1997, Paciorek 2003); equal l_i = l_j = sigma gives the fixed kernel."""
     n = len(P); d2 = q ** 2; c = np.zeros((0, n)); sel = []
+    if ell is not None:
+        l2 = ell ** 2; hd = P.shape[1] / 2.0
     for _ in range(min(K, n)):
         j = int(np.argmax(d2))
         if d2[j] <= 1e-12:
             break
-        dj = np.sqrt(d2[j]); Lj = q[j] * q * np.exp(-np.sum((P - P[j]) ** 2, 1) / (2 * sigma ** 2))
+        if ell is None:
+            dj = np.sqrt(d2[j]); Lj = q[j] * q * np.exp(-np.sum((P - P[j]) ** 2, 1) / (2 * sigma ** 2))
+        else:
+            s2 = l2 + l2[j]; dj = np.sqrt(d2[j])
+            Lj = q[j] * q * (2 * ell * ell[j] / s2) ** hd * np.exp(-np.sum((P - P[j]) ** 2, 1) / s2)
         e = (Lj - (c[:, j] @ c if len(c) else 0.0)) / dj; c = np.vstack([c, e]); d2 = d2 - e ** 2; d2[j] = -np.inf; sel.append(j)
     return np.array(sel, int)
 
@@ -525,6 +535,28 @@ def pick_dpp(sigma, alpha, space='3d'):
             return np.arange(min(K, len(u)))
         P = to3d(u[ok], v[ok], z[ok]) if space == '3d' else np.stack([u[ok], v[ok]], 1); q = np.exp(-alpha * np.arange(len(ok)) / 100.0)
         return fill(ok[dpp_greedy(P, q, K, sigma)], len(u), K)
+    return f
+
+
+def pick_dpp_depth(c, alpha, mode):
+    """Depth-adaptive dpp, same quality q_i = exp(-alpha * rank_i / 100) and candidates (with depth) as dpp<sigma>a<alpha>.
+    mode 'm' (dppm<c>[a<alpha>]): one scale per frame, sigma = c * median depth of the frame's candidates with depth
+      (dppm c with c * median = 0.5 m is dpp0.5 on that frame).
+    mode 'l' (dppl<c>[a<alpha>]): per-point scale l_i = c * z_i in a Gibbs kernel (dpp_greedy ell), so two points are 'close'
+      when their distance is small relative to their depth (~ angular separation c rad); PSD for any depths.
+    f.sig collects the effective per-frame sigma (dppl: c * median depth of the picks) for diagnostics."""
+    def f(u, v, s, z, K):
+        ok = np.flatnonzero(z < DEPTH_MAX)
+        if not len(ok):
+            return np.arange(min(K, len(u)))
+        zz = z[ok]; P = to3d(u[ok], v[ok], zz); q = np.exp(-alpha * np.arange(len(ok)) / 100.0)
+        if mode == 'm':
+            sig = c * float(np.median(zz)); sel = dpp_greedy(P, q, K, sig)
+        else:
+            sel = dpp_greedy(P, q, K, None, ell=c * zz); sig = c * float(np.median(zz[sel])) if len(sel) else None
+        f.sig.append(sig)
+        return fill(ok[sel], len(u), K)
+    f.sig = []
     return f
 
 
@@ -692,6 +724,9 @@ def parse(name):
     m = re.fullmatch(r'dppr([0-9.]+)a([0-9.]+)b([0-9.]+)t([0-9.]+)', name)
     if m:
         return pick_dppr(*map(float, m.groups()))
+    m = re.fullmatch(r'dpp([ml])([0-9.]+)(?:a([0-9.]+))?', name)
+    if m:
+        return pick_dpp_depth(float(m.group(2)), float(m.group(3) or 1.0), m.group(1))
     m = re.fullmatch(r'dpp2d([0-9.]+)(?:a([0-9.]+))?', name)
     if m:
         return pick_dpp(float(m.group(1)), float(m.group(2) or 1.0), '2d')
