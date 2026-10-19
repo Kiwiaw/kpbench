@@ -89,6 +89,40 @@ def test_dpp_depth_adaptive():
     assert np.linalg.eigvalsh(Kg).min() > -1e-9
 
 
+def test_dppmr_combines_dppm_and_dppr():
+    """dppmr<c>a<alpha>b<beta>t<tau> = dppm's depth-scaled sigma + dppr's past-frame track bonus."""
+    u, v, s, z = toy_frame(600, seed=4)
+    ok = z < 1000; med = float(np.median(z[ok]))
+    rng = np.random.default_rng(9); de = rng.normal(size=(600, 32)).astype(np.float32)
+
+    class F_:
+        slug = 'toy'
+
+    class C_:      # past frames: half of the candidates re-appear with small descriptor noise, in shuffled order
+        def frame(self, g):
+            r = np.random.default_rng(100 + g); d = de.copy(); d[::2] += 0.05 * r.normal(size=d[::2].shape)
+            d[1::2] = r.normal(size=d[1::2].shape); return None, None, None, None, d[r.permutation(600)]
+    ctx = (F_(), C_(), 5)
+    pr = pickers.parse('dppr0.5a0.45b1.5t0.9'); pr(u, v, s, z, 80, ctx=ctx, de=de)
+    assert max(pr.rstd) > 0                          # the track bonus is active on this toy frame
+    # beta 0 is dppm exactly
+    for a in ('1', '0.5'):
+        assert pickers.parse('dppmr0.03a%sb0t0.9' % a)(u, v, s, z, 80, ctx=ctx, de=de).tolist() ==             pickers.parse('dppm0.03a%s' % a)(u, v, s, z, 80).tolist(), a
+    # c x median depth = sigma is dppr exactly (same track bonus)
+    for b, t in (('1.02', '0.9'), ('1.5', '0.8')):
+        m = pickers.parse('dppmr%ra0.45b%st%s' % (0.5 / med, b, t))(u, v, s, z, 80, ctx=ctx, de=de)
+        r = pickers.parse('dppr0.5a0.45b%st%s' % (b, t))(u, v, s, z, 80, ctx=ctx, de=de)
+        assert m.tolist() == r.tolist(), (b, t)
+    # the bonus changes the picks, and dppmr is scale-free in depth like dppm
+    pk = pickers.parse('dppmr0.03a0.45b1.5t0.9')
+    a = pk(u, v, s, z, 80, ctx=ctx, de=de)
+    assert a.tolist() != pickers.parse('dppm0.03a0.45')(u, v, s, z, 80).tolist()
+    assert np.isclose(pk.sig[-1], 0.03 * med) and pk.needs_past and pk.needs_desc and not getattr(pk, 'needs_ctx', False)
+    z3 = np.where(ok, 3 * z, z)
+    assert pk(u, v, s, z3, 80, ctx=ctx, de=de).tolist() == a.tolist()
+    assert len(set(a.tolist())) == 80 and (z[a] < 1000).all()
+
+
 def test_fresh_pose_roundtrip():
     from kpbench import fresh
     rng = np.random.default_rng(5)

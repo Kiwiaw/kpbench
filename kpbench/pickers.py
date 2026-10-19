@@ -30,6 +30,7 @@ Names:
   ssc[<o>][p<M>] suppression via square covering (ANMS, Bailo 2018) over the strongest M with depth, ~o*K kept, K strongest
   dppr<sigma>a<alpha>b<beta>t<tau> dpp whose quality also rewards past-frame track count r^beta (T4, docs/t4_dppr_design.md)
   dppm<c>[a<alpha>] dpp with a per-frame scale sigma = c x median depth of the frame's candidates with depth (scene-scale dpp)
+  dppmr<c>a<alpha>b<beta>t<tau> dppm's per-frame sigma = c x median depth + dppr's past-frame track bonus r^beta
   dppl<c>[a<alpha>] dpp with a per-point scale l_i = c x z_i (Gibbs kernel): spread measured relative to depth (~ angle c rad)
 A picker returns candidate indices (at most K; fewer only when the frame has too few candidates).
 To add a picker: write a function (u, v, s, z, K) -> indices and register it in PICKERS or in parse().
@@ -587,11 +588,13 @@ def track_count(C, q, de, ok, tau, cache):
     return (m + 1) / (M + 1)
 
 
-def pick_dppr(sigma, alpha, beta, tau):
+def pick_dppr(sigma, alpha, beta, tau, depth_scaled=False):
     """dppr<sigma>a<alpha>b<beta>t<tau> (T4 step 3, SUB3, docs/t4_dppr_design.md): dpp with quality
     q_i = exp(-alpha * rank_i / 100) * r_i^beta, r_i = track_count over the PAST frames q-1..q-3 (descriptor matches, no pose).
     beta = 0 is dpp<sigma>a<alpha> exactly. ABLATION env KPBENCH_DPPR_QMODE: quality (beta 0) | rep (alpha 0) | both.
-    Needs ctx=(Flight, Cands, frame) for the past frames only (needs_past, not an oracle) and de=descriptors."""
+    Needs ctx=(Flight, Cands, frame) for the past frames only (needs_past, not an oracle) and de=descriptors.
+    depth_scaled (dppmr<c>a<alpha>b<beta>t<tau>): sigma is c and the kernel scale is c * median depth of the frame's
+    candidates with depth, as in dppm; beta = 0 is dppm<c>a<alpha> exactly. f.sig collects the per-frame scale."""
     mode = os.environ.get('KPBENCH_DPPR_QMODE', 'both')
     a_, b_ = (alpha, 0.0) if mode == 'quality' else (0.0, beta) if mode == 'rep' else (alpha, beta)
     caches = {}
@@ -604,8 +607,11 @@ def pick_dppr(sigma, alpha, beta, tau):
         if b_ > 0:
             r = track_count(C, q, de, ok, tau, caches.setdefault(F.slug, {})); w = w * r ** b_
             f.rstd.append(float(r.std()))
-        return fill(ok[dpp_greedy(to3d(u[ok], v[ok], z[ok]), w, K, sigma)], len(u), K)
-    f.needs_past = True; f.needs_desc = True; f.rstd = []
+        sig = sigma * float(np.median(z[ok])) if depth_scaled else sigma
+        if depth_scaled:
+            f.sig.append(sig)
+        return fill(ok[dpp_greedy(to3d(u[ok], v[ok], z[ok]), w, K, sig)], len(u), K)
+    f.needs_past = True; f.needs_desc = True; f.rstd = []; f.sig = []
     return f
 
 
@@ -724,6 +730,9 @@ def parse(name):
     m = re.fullmatch(r'dppr([0-9.]+)a([0-9.]+)b([0-9.]+)t([0-9.]+)', name)
     if m:
         return pick_dppr(*map(float, m.groups()))
+    m = re.fullmatch(r'dppmr([0-9.]+)a([0-9.]+)b([0-9.]+)t([0-9.]+)', name)
+    if m:
+        return pick_dppr(*map(float, m.groups()), depth_scaled=True)
     m = re.fullmatch(r'dpp([ml])([0-9.]+)(?:a([0-9.]+))?', name)
     if m:
         return pick_dpp_depth(float(m.group(2)), float(m.group(3) or 1.0), m.group(1))
