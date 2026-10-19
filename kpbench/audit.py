@@ -25,6 +25,11 @@ WARN = correct but fragile or misleading. Checks:
                    are stale): repo labels match the manifest and give the splits.json DEV flat count; every provisional file
                    names that count; no provisional picker or number in leaderboard.json / page data; dpp2d / ssc rows say
                    'baseline' (dispatch 2026-10-18)
+  C23 fresh        FRESH-1 (results/gates/FRESH_set.json) shares no trajectory with the 31 flights (DEV + HELD_OUT): no
+                   identical pose_left.txt and no fresh pose within 1 cm of a 31-flight pose of the same environment;
+                   splits_fresh.json / fresh manifest hashes = FRESH_set.json; flat count >= 2 x DEV flat (needs flight data)
+  C25 gates        every DEV gate file results/gates/*__dev.json recomputed from its rows with gate.compare (flat diff + CI,
+                   flights better/worse, verdict); needs the gate runs (Euler) (dispatch 2026-10-19 13:10)
 """
 import os, re, json, gzip, glob, subprocess, tempfile, datetime
 import numpy as np
@@ -373,6 +378,76 @@ def c24_provisional():
                ('; problems: ' + '; '.join(bad[:6])) if bad else ''))
 
 
+def c23_fresh():
+    import hashlib
+    from .data import Flight, FLIGHTS, flight_dir
+    from .splits import load as ls
+    fs = json.load(open(os.path.join(REPO, 'results', 'gates', 'FRESH_set.json'))); bad = []; info = []
+    for fn, key in (('splits_fresh.json', 'splits_fresh_sha256'), (os.path.join('results', 'labels_manifest_fresh.json'), 'manifest_sha256')):
+        p = os.path.join(REPO, fn)
+        if not os.path.isfile(p):
+            bad.append('%s missing' % fn); continue
+        h = hashlib.sha256(open(p, 'rb').read()).hexdigest()
+        if h != fs[key]:
+            bad.append('%s sha %s != FRESH_set %s' % (fn, h[:10], fs[key][:10]))
+    s = ls(); want = 2 * s['flat_counts']['dev']
+    n_dev_flat = sum(len(flat_queries_(f)) for f in s['dev'])
+    if fs['flat_counts']['fresh'] < want and fs['flat_counts']['fresh'] < 1872:
+        bad.append('FRESH flat %d < target %d' % (fs['flat_counts']['fresh'], want))
+    ref = {}
+    for f in FLIGHTS:
+        d = flight_dir(f)
+        if d:
+            P = np.loadtxt(os.path.join(d, 'pose_left.txt')); ref[f] = (hashlib.sha256(open(os.path.join(d, 'pose_left.txt'), 'rb').read()).hexdigest(), P[:, :3])
+    if len(ref) < len(FLIGHTS):
+        bad.append('only %d of %d reference flights have data here' % (len(ref), len(FLIGHTS)))
+    near_min = []
+    for f in fs['fresh']:
+        d = flight_dir(f)
+        if not d:
+            bad.append('%s: no flight data' % f); continue
+        P = np.loadtxt(os.path.join(d, 'pose_left.txt')); h = hashlib.sha256(open(os.path.join(d, 'pose_left.txt'), 'rb').read()).hexdigest()
+        env = f.split('/')[0].split('_')[0]
+        for g, (hg, Q) in ref.items():
+            if hg == h:
+                bad.append('%s pose file identical to %s' % (f, g))
+            if g.split('/')[0] == env and len(P) == len(Q):
+                dist = float(np.abs(P[:, :3] - Q).max())
+                near_min.append((dist, f, g))
+                if dist < 0.01:
+                    bad.append('%s = %s (all positions within %.3f m)' % (f, g, dist))
+    near_min.sort()
+    info.append('%d fresh flights vs %d reference flights; DEV flat %d, FRESH flat %d / %d queries; closest same-length same-env pair %s' % (
+        len(fs['fresh']), len(ref), n_dev_flat, fs['flat_counts']['fresh'], fs['n_queries']['fresh'],
+        ('%s vs %s max |dpos| %.2f m' % (near_min[0][1], near_min[0][2], near_min[0][0])) if near_min else 'none'))
+    report('C23', 'PASS' if not bad else 'FAIL', 'FRESH-1 disjoint from the 31 flights', '; '.join(info + bad[:8]))
+
+
+def flat_queries_(f):
+    from .splits import flat_queries
+    return flat_queries(f)
+
+
+def c25_gates():
+    from .gate import compare, GATES, GateError
+    rows = []; bad = []
+    for fn in sorted(glob.glob(os.path.join(GATES, '*__dev.json'))):
+        g0 = json.load(open(fn))
+        try:
+            g = compare(g0['cand'], g0['inc'], 'dev')
+        except (GateError, OSError) as e:
+            bad.append('%s: %s' % (g0.get('picker'), str(e)[:80])); continue
+        d0, d1 = g0['flat_diff'], g['flat_diff']
+        same = all(abs(a - b) < 0.006 for a, b in zip(d0, d1)) and (g0['flights_better'], g0['flights_worse']) == (g['flights_better'], g['flights_worse'])             and g0['win'] == g['win'] and g0['n_flat'] == g['n_flat']
+        rows.append('%s %+.2f [%+.2f, %+.2f] %d/%d %s n_flat %d%s' % (g['picker'], *d1, g['flights_better'], g['flights_worse'],
+                    'KEEP' if g['win'] else 'REVERT', g['n_flat'], '' if same else ' (file: %+.2f [%+.2f, %+.2f] %d/%d n_flat %d)' % (
+                        *d0, g0['flights_better'], g0['flights_worse'], g0['n_flat'])))
+        if not same:
+            bad.append('%s differs from its file' % g['picker'])
+    st = 'FAIL' if any('differs' in b for b in bad) else ('WARN' if bad else 'PASS')
+    report('C25', st, 'DEV gate verdicts recomputed from rows', '%d recomputed: %s%s' % (len(rows), '; '.join(rows), ('; problems: ' + '; '.join(bad)) if bad else ''))
+
+
 def write_report(path):
     lines = ['# kpbench audit %s' % datetime.date.today().isoformat(), '',
              'Generated by `python -m kpbench.audit`. FAIL = a published number or text is wrong; WARN = correct but misleading or fragile.', '',
@@ -390,7 +465,7 @@ def main(argv=None):
     lab = labels(); R = {rid: run_rows(rid) for rid in RUNS31}
     C = dict(C1=lambda: c1_counts(lab, R), C2=lambda: c2_k(R), C3=lambda: c3_keyframes(lab), C6=lambda: c6_fail_rule(R),
              C7=lambda: c7_page(R), C8=lambda: c8_bootstrap(R, lab), C9=lambda: c9_paired_test(R, lab),
-             C10=lambda: c10_block_length(R, lab), C11=lambda: c11_headline(R, lab), C14=c14_texts, C15=lambda: c15_incumbent(lab), C24=c24_provisional,
+             C10=lambda: c10_block_length(R, lab), C11=lambda: c11_headline(R, lab), C14=c14_texts, C15=lambda: c15_incumbent(lab), C23=c23_fresh, C24=c24_provisional, C25=c25_gates,
              C4=c4_reproduce, C5=c5_ground_truth, C12=lambda: c12_planarity(lab), C13=c13_canaries)
     only = [c.strip() for c in a.only.split(',') if c.strip()]
     for cid in only or [c for c in C if not (a.quick and c in ('C4', 'C5', 'C12', 'C13'))]:
