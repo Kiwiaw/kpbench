@@ -1,0 +1,240 @@
+{
+ "split": "dev",
+ "metric": "hull",
+ "posed": false,
+ "pickers": [
+  "cube0.5",
+  "dpp0.5",
+  "dppr0.288a1.56b0.785t0.9",
+  "dppr0.367a0.744b2.34t0.9",
+  "dppr0.5a0b1t0.8",
+  "dppr0.5a1b1t0.8",
+  "dppr0.5a1b2t0.8",
+  "grid",
+  "sd",
+  "ssc1.13p836"
+ ],
+ "results": {
+  "cube0.5": {
+   "n": 8273,
+   "fails": 200,
+   "count": {
+    "auroc": 0.9576,
+    "prauc": 0.6686
+   },
+   "hull": {
+    "auroc": 0.8828,
+    "prauc": 0.6559
+   },
+   "count+hull": {
+    "auroc": 0.9325,
+    "prauc": 0.6816
+   },
+   "delta": {
+    "auroc": -0.0251,
+    "prauc": 0.013
+   }
+  },
+  "dpp0.5": {
+   "n": 8273,
+   "fails": 180,
+   "count": {
+    "auroc": 0.9142,
+    "prauc": 0.5016
+   },
+   "hull": {
+    "auroc": 0.7759,
+    "prauc": 0.3693
+   },
+   "count+hull": {
+    "auroc": 0.8794,
+    "prauc": 0.5013
+   },
+   "delta": {
+    "auroc": -0.0348,
+    "prauc": -0.0003
+   }
+  },
+  "dppr0.288a1.56b0.785t0.9": {
+   "n": 8273,
+   "fails": 180,
+   "count": {
+    "auroc": 0.9175,
+    "prauc": 0.5303
+   },
+   "hull": {
+    "auroc": 0.7504,
+    "prauc": 0.4315
+   },
+   "count+hull": {
+    "auroc": 0.8861,
+    "prauc": 0.5181
+   },
+   "delta": {
+    "auroc": -0.0314,
+    "prauc": -0.0122
+   }
+  },
+  "dppr0.367a0.744b2.34t0.9": {
+   "n": 8273,
+   "fails": 157,
+   "count": {
+    "auroc": 0.9525,
+    "prauc": 0.549
+   },
+   "hull": {
+    "auroc": 0.7948,
+    "prauc": 0.3861
+   },
+   "count+hull": {
+    "auroc": 0.9259,
+    "prauc": 0.5293
+   },
+   "delta": {
+    "auroc": -0.0266,
+    "prauc": -0.0197
+   }
+  },
+  "dppr0.5a0b1t0.8": {
+   "n": 8273,
+   "fails": 297,
+   "count": {
+    "auroc": 0.9407,
+    "prauc": 0.7168
+   },
+   "hull": {
+    "auroc": 0.9477,
+    "prauc": 0.6917
+   },
+   "count+hull": {
+    "auroc": 0.9714,
+    "prauc": 0.7865
+   },
+   "delta": {
+    "auroc": 0.0307,
+    "prauc": 0.0697
+   }
+  },
+  "dppr0.5a1b1t0.8": {
+   "n": 8273,
+   "fails": 164,
+   "count": {
+    "auroc": 0.9438,
+    "prauc": 0.5011
+   },
+   "hull": {
+    "auroc": 0.7743,
+    "prauc": 0.3462
+   },
+   "count+hull": {
+    "auroc": 0.9128,
+    "prauc": 0.4857
+   },
+   "delta": {
+    "auroc": -0.031,
+    "prauc": -0.0154
+   }
+  },
+  "dppr0.5a1b2t0.8": {
+   "n": 8273,
+   "fails": 163,
+   "count": {
+    "auroc": 0.9512,
+    "prauc": 0.5599
+   },
+   "hull": {
+    "auroc": 0.7819,
+    "prauc": 0.3666
+   },
+   "count+hull": {
+    "auroc": 0.9259,
+    "prauc": 0.5422
+   },
+   "delta": {
+    "auroc": -0.0253,
+    "prauc": -0.0177
+   }
+  },
+  "grid": {
+   "n": 8273,
+   "fails": 236,
+   "count": {
+    "auroc": 0.8924,
+    "prauc": 0.5549
+   },
+   "hull": {
+    "auroc": 0.8658,
+    "prauc": 0.559
+   },
+   "count+hull": {
+    "auroc": 0.8888,
+    "prauc": 0.5811
+   },
+   "delta": {
+    "auroc": -0.0036,
+    "prauc": 0.0262
+   }
+  },
+  "sd": {
+   "n": 8273,
+   "fails": 296,
+   "count": {
+    "auroc": 0.8544,
+    "prauc": 0.492
+   },
+   "hull": {
+    "auroc": 0.8925,
+    "prauc": 0.5292
+   },
+   "count+hull": {
+    "auroc": 0.8998,
+    "prauc": 0.5529
+   },
+   "delta": {
+    "auroc": 0.0454,
+    "prauc": 0.0609
+   }
+  },
+  "ssc1.13p836": {
+   "n": 8273,
+   "fails": 238,
+   "count": {
+    "auroc": 0.8913,
+    "prauc": 0.5649
+   },
+   "hull": {
+    "auroc": 0.875,
+    "prauc": 0.5945
+   },
+   "count+hull": {
+    "auroc": 0.886,
+    "prauc": 0.5974
+   },
+   "delta": {
+    "auroc": -0.0053,
+    "prauc": 0.0325
+   }
+  },
+  "pooled": {
+   "n": 82730,
+   "fails": 2111,
+   "count": {
+    "auroc": 0.9171,
+    "prauc": 0.5652
+   },
+   "hull": {
+    "auroc": 0.8415,
+    "prauc": 0.5104
+   },
+   "count+hull": {
+    "auroc": 0.8991,
+    "prauc": 0.5876
+   },
+   "delta": {
+    "auroc": -0.018,
+    "prauc": 0.0224
+   }
+  }
+ },
+ "verdict": "hull adds over inlier count: dAUROC -0.0180, dPR-AUC +0.0224"
+}
