@@ -70,7 +70,9 @@ if __name__ == '__main__':
     trgb, rrgb = read_list(os.path.join(a.seq, 'rgb.txt')); tdep, rdep = read_list(os.path.join(a.seq, 'depth.txt'))
     tgt, rgt = read_list(os.path.join(a.seq, 'groundtruth.txt')); gt = np.array(rgt, float)
     idd, dd = nearest(trgb, tdep); ig, dg = nearest(trgb, tgt)
-    keep = np.flatnonzero((dd <= 0.02) & (dg <= 0.01) & np.all(np.isfinite(gt[ig]), 1))[::a.stride]
+    have = np.array([os.path.isfile(os.path.join(a.seq, rrgb[i][0])) and os.path.isfile(os.path.join(a.seq, rdep[idd[i]][0]))
+                     for i in range(len(trgb))])   # some listed files are missing on disk (fr2_desk, fr2_pioneer_slam, ...)
+    keep = np.flatnonzero((dd <= 0.02) & (dg <= 0.01) & np.all(np.isfinite(gt[ig]), 1) & have)[::a.stride]
     os.makedirs(os.path.join(dst, 'image_left'), exist_ok=True); os.makedirs(os.path.join(dst, 'depth_left'), exist_ok=True)
     poses = []
     for f, i in enumerate(keep):
