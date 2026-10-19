@@ -35,6 +35,7 @@ CANDIDATES = {
     'hospital': ['tartanair_envs/hospital/{t}', 'tartanair_hospital/{t}'],
     'factory': ['tartanair_envs/abandonedfactory/{t}', 'tartanair_factory/{t}'],
     'hypersim': ['hypersim/{t}'],
+    'tum': ['kpbench_tum/{t}'],   # TUM RGB-D via tools/tum_convert.py (KPBENCH_INTR="560 560 320 240", euler/tum.sbatch)
 }
 FLIGHTS = ['%s/%s' % (e, t) for e, ts in ENVS.items() for t in ts]
 # FRESH split (kpbench.fresh, splits_fresh.json): extra TartanAir trajectories outside the 31 flights, linked into
