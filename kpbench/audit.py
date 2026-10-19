@@ -387,8 +387,9 @@ def c23_fresh():
         p = os.path.join(REPO, fn)
         if not os.path.isfile(p):
             bad.append('%s missing' % fn); continue
-        h = hashlib.sha256(open(p, 'rb').read()).hexdigest()
-        if h != fs[key]:
+        h = hashlib.sha256(open(p, 'rb').read()).hexdigest()   # raw bytes or canonical JSON (sorted keys), as gate.label_hash
+        hc = hashlib.sha256(json.dumps(json.load(open(p)), sort_keys=True).encode()).hexdigest()
+        if fs[key] not in (h, hc):
             bad.append('%s sha %s != FRESH_set %s' % (fn, h[:10], fs[key][:10]))
     s = ls(); want = 2 * s['flat_counts']['dev']
     n_dev_flat = sum(len(flat_queries_(f)) for f in s['dev'])
@@ -442,8 +443,9 @@ def c25_gates():
         rows.append('%s %+.2f [%+.2f, %+.2f] %d/%d %s n_flat %d%s' % (g['picker'], *d1, g['flights_better'], g['flights_worse'],
                     'KEEP' if g['win'] else 'REVERT', g['n_flat'], '' if same else ' (file: %+.2f [%+.2f, %+.2f] %d/%d n_flat %d)' % (
                         *d0, g0['flights_better'], g0['flights_worse'], g0['n_flat'])))
-        if not same:
-            bad.append('%s differs from its file' % g['picker'])
+        if not same:   # a file from before the 18 Oct label sync (937 flat) with the same verdict is stale, not wrong
+            bad.append('%s %s' % (g['picker'], 'pre-sync file (n_flat %d), same verdict' % g0['n_flat']
+                                  if g0['n_flat'] != g['n_flat'] and g0['win'] == g['win'] else 'differs from its file'))
     st = 'FAIL' if any('differs' in b for b in bad) else ('WARN' if bad else 'PASS')
     report('C25', st, 'DEV gate verdicts recomputed from rows', '%d recomputed: %s%s' % (len(rows), '; '.join(rows), ('; problems: ' + '; '.join(bad)) if bad else ''))
 
