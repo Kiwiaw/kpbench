@@ -1,0 +1,82 @@
+{
+ "split": "dev",
+ "picker": "dpp0.5",
+ "n_flat": 936,
+ "fails": 133,
+ "fail_pct": 14.21,
+ "aurc_opt": 1.07,
+ "scores": {
+  "rep5": {
+   "auroc": 0.8653,
+   "aurc": 3.33,
+   "e_aurc": 2.26,
+   "risk": {
+    "0.5": 0.85,
+    "0.8": 6.81,
+    "0.9": 10.81
+   },
+   "vs_count": [
+    0.39,
+    -0.45,
+    1.41
+   ]
+  },
+  "count": {
+   "auroc": 0.8855,
+   "aurc": 2.94,
+   "e_aurc": 1.87,
+   "risk": {
+    "0.5": 0.64,
+    "0.8": 6.14,
+    "0.9": 9.14
+   },
+   "vs_count": null
+  },
+  "geom2d": {
+   "auroc": 0.6004,
+   "aurc": 14.87,
+   "e_aurc": 13.8,
+   "risk": {
+    "0.5": 12.18,
+    "0.8": 8.54,
+    "0.9": 9.5
+   },
+   "vs_count": [
+    11.93,
+    4.2,
+    19.14
+   ]
+  },
+  "count+geom2d": {
+   "auroc": 0.8801,
+   "aurc": 3.22,
+   "e_aurc": 2.15,
+   "risk": {
+    "0.5": 0.64,
+    "0.8": 6.28,
+    "0.9": 9.74
+   },
+   "vs_count": [
+    0.28,
+    -0.42,
+    1.18
+   ]
+  },
+  "count+geom2d+rep5": {
+   "auroc": 0.8945,
+   "aurc": 3.0,
+   "e_aurc": 1.93,
+   "risk": {
+    "0.5": 0.64,
+    "0.8": 5.61,
+    "0.9": 8.91
+   },
+   "vs_count": [
+    0.06,
+    -0.81,
+    0.96
+   ]
+  }
+ },
+ "verdict": "KILL: best combination count+geom2d+rep5 AURC +0.06 [-0.81, +0.96] pt vs inlier count, no better"
+}
