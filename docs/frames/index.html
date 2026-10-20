@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Frame pages</title>
+<style>
+  :root { --bg: #fafafa; --fg: #222; --muted: #666; --line: #ddd; --link: #0b62c4; }
+  @media (prefers-color-scheme: dark) { :root { --bg: #16181b; --fg: #e6e6e6; --muted: #9a9a9a; --line: #333; --link: #6fb0ff; } }
+  body { margin: 0; padding: 16px; background: var(--bg); color: var(--fg);
+         font: 14px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  h1 { font-size: 18px; margin: 0 0 4px; }
+  p { color: var(--muted); max-width: 900px; margin: 0 0 12px; }
+  .wrap { overflow-x: auto; }
+  table { border-collapse: collapse; min-width: 560px; }
+  th, td { text-align: left; padding: 5px 12px 5px 0; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { font-weight: 600; }
+  a { color: var(--link); }
+</style>
+</head>
+<body>
+<h1>Frame pages</h1>
+<p>One frame per page: the frame in 3D and as an image, with the keypoints each picker keeps as you move the K slider.
+Back to the <a href="../index.html">kpbench page</a>.</p>
+<div class="wrap"><table>
+<tr><th>dataset</th><th>scene</th><th>frame</th><th>page</th></tr>
+<tr><td>TartanAir</td><td>old town P001</td><td>334</td><td><a href="oldtown_P001_334.html">strongest, cubes and farthest-point pickers, K 1..2000</a></td></tr>
+<tr><td>TartanAir</td><td>hospital P041</td><td>200</td><td><a href="hospital_P041_200.html">strongest, cubes and farthest-point pickers, K 1..2000</a></td></tr>
+<tr><td>TartanAir</td><td>old town P001</td><td>334</td><td><a href="dpp_tartanair_oldtown_P001_334.html">DPP vs strongest vs cubes, K 1..2000 of 3000 RaCo points</a></td></tr>
+<tr><td>Hypersim</td><td>ai_001_001</td><td>87</td><td><a href="dpp_hypersim_ai_001_001_87.html">DPP vs strongest vs cubes, K 1..2000 of 3000 RaCo points</a></td></tr>
+<tr><td>TartanAir</td><td>hospital P042</td><td>163</td><td><a href="dpp_tartanair_hospital_P042_163.html">7 pickers (DPP, scaled DPP, cubes, scaled cubes, RaCo / SuperPoint / ALIKED strongest), K 0..400 of 3000 points</a></td></tr>
+<tr><td>TartanAir</td><td>abandoned factory P000</td><td>363</td><td><a href="dpp_tartanair_factory_P000_363.html">7 pickers (DPP, scaled DPP, cubes, scaled cubes, RaCo / SuperPoint / ALIKED strongest), K 0..400 of 3000 points</a></td></tr>
+<tr><td>TartanAir</td><td>Japanese alley Easy P001</td><td>1003</td><td><a href="dpp_tartanair_japanesealley_P001_1003.html">7 pickers (DPP, scaled DPP, cubes, scaled cubes, RaCo / SuperPoint / ALIKED strongest), K 0..400 of 3000 points</a></td></tr>
+<tr><td>TartanAir</td><td>office Easy P001</td><td>1323</td><td><a href="dpp_tartanair_office_P001_1323.html">7 pickers (DPP, scaled DPP, cubes, scaled cubes, RaCo / SuperPoint / ALIKED strongest), K 0..400 of 3000 points</a></td></tr>
+<tr><td>TartanAir</td><td>seaside town Easy P000</td><td>403</td><td><a href="dpp_tartanair_seasidetown_P000_403.html">7 pickers (DPP, scaled DPP, cubes, scaled cubes, RaCo / SuperPoint / ALIKED strongest), K 0..400 of 3000 points</a></td></tr>
+<tr><td>Hypersim</td><td>ai_001_005</td><td>78</td><td><a href="dpp_hypersim_ai_001_005_78.html">7 pickers (DPP, scaled DPP, cubes, scaled cubes, RaCo / SuperPoint / ALIKED strongest), K 0..400 of 3000 points</a></td></tr>
+<tr><td>Hypersim</td><td>ai_002_003</td><td>53</td><td><a href="dpp_hypersim_ai_002_003_53.html">7 pickers (DPP, scaled DPP, cubes, scaled cubes, RaCo / SuperPoint / ALIKED strongest), K 0..400 of 3000 points</a></td></tr>
+<tr><td>TUM RGB-D</td><td>fr3 long office household</td><td>353</td><td><a href="dpp_tum_fr3_long_office_household_353.html">7 pickers (DPP, scaled DPP, cubes, scaled cubes, RaCo / SuperPoint / ALIKED strongest), K 0..400 of 3000 points</a></td></tr>
+<tr><td>Spring</td><td>0010</td><td>78</td><td><a href="dpp_spring_0010_78.html">7 pickers (DPP, scaled DPP, cubes, scaled cubes, RaCo / SuperPoint / ALIKED strongest), K 0..400 of 3000 points</a></td></tr>
+<tr><td>Point Odyssey</td><td>ani (train)</td><td>853</td><td><a href="dpp_pointodyssey_ani_853.html">7 pickers (DPP, scaled DPP, cubes, scaled cubes, RaCo / SuperPoint / ALIKED strongest), K 0..400 of 3000 points</a></td></tr>
+</table></div>
+</body>
+</html>

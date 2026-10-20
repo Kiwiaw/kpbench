@@ -16,11 +16,12 @@ import base64
 import io
 import json
 import os
+import re
 
 import numpy as np
 from PIL import Image
 
-from .data import Flight, to3d, DEPTH_MAX, W, H, FX, FY
+from .data import Flight, to3d, DEPTH_MAX, W, H, FX, FY, CX, CY
 from .cache import Cands
 from .pickers import parse
 
@@ -32,6 +33,27 @@ NOT_PREFIX = ('grid',)
 # plain picker names and colours for --ncand pages
 LABELS = {'dpp0.5': 'DPP', 'sd': 'strongest first', 'cube0.5': 'cubes 0.5 m'}
 COLOURS = {'dpp0.5': '#1f9bff', 'sd': '#ff3b30', 'cube0.5': '#ff9500'}
+DETNAMES = {'raco': 'RaCo', 'sp': 'SuperPoint', 'aliked': 'ALIKED'}
+DET_COLOURS = {'raco': '#ff3b30', 'sp': '#ffd60a', 'aliked': '#00c7be'}
+
+
+def plain_label(key, det, zc, multi):
+    """picker key -> plain name (and colour) for --ncand pages; zc = median candidate depth that scaled pickers use"""
+    d, name = key.split(':', 1) if ':' in key else (det, key)
+    m = re.fullmatch(r'dppmr([0-9.]+)a[0-9.]+b[0-9.]+t[0-9.]+', name)
+    if m:
+        c = float(m.group(1))
+        return 'DPP %g\u00d7median depth (%.2f m) + re-found bonus' % (c, c * zc), '#b04dff'
+    m = re.fullmatch(r'cubem([0-9.]+)', name)
+    if m:
+        c = float(m.group(1))
+        return 'cubes %g\u00d7median depth (%.2f m)' % (c, c * zc), '#34c759'
+    if name in ('sd', 'score') and multi:
+        return DETNAMES.get(d, d) + ' strongest', DET_COLOURS.get(d, '#ff3b30')
+    m = re.fullmatch(r'dpp([0-9.]+)', name)
+    if m and multi:
+        return 'DPP %s m' % m.group(1), COLOURS['dpp0.5']
+    return LABELS.get(name, name), COLOURS.get(name, '#ffd400')
 
 
 def plot_axes(P):
@@ -43,45 +65,123 @@ def r3(a):
     return [round(float(x), 3) for x in a]
 
 
-def raco_cands(img, dep, ncand):
-    """Fresh stock-RaCo candidates for one frame (instead of the 2000-point cache): the top n detections, ranker-sorted as
-    in extract.py, with n grown until ncand of them have depth; returns (u, v, s, z) of those ncand in ranker order."""
-    import torch
-    from .extract import RACO_DIR
-    dev = 'cuda' if torch.cuda.is_available() else 'cpu'
-    x = torch.from_numpy(img.astype(np.float32) / 255.0).permute(2, 0, 1)[None].to(dev)
-    n = ncand
-    while True:
-        raco = torch.hub.load(RACO_DIR, 'raco', source='local', pretrained=True, max_num_keypoints=n,
-                              ranker=True, covariance_estimator=True).eval().to(dev)
+class Detectors:
+    """Fresh detector runs for one page (instead of the 2000-point caches). cands(det, img, dep, n): the top m detections in
+    score order (RaCo: ranker score, as extract.py; SuperPoint: keypoint score, nms 4, no threshold, as extract.py; ALIKED:
+    aliked-n16 keypoint score, nms 2, top-k), m grown until n of them have depth -> (u, v, s, z) of those n in score order.
+    desc(img, u, v): SuperPoint's dense descriptor sampled at the points (as the cache). past(img): RaCo's strongest 2000 and
+    their descriptors exactly as extract.py caches them (for dppmr's track bonus over the previous frames)."""
+    def __init__(self):
+        import torch
+        from . import extract
+        self.torch = torch
+        self.dev = extract.DEV if torch.cuda.is_available() else 'cpu'
+        extract.DEV = self.dev
+        self.sp_dense, self.sp_sample, self.det2000 = extract.load_models({'raco'})
+        self.raco_dir = extract.RACO_DIR
+        self.models = {}
+
+    def _run(self, det, img, m):
+        torch = self.torch
+        x = torch.from_numpy(img.astype(np.float32) / 255.0).permute(2, 0, 1)[None].to(self.dev)
         with torch.no_grad():
-            p = raco({'image': x})
-        kp = p['keypoints'][0].cpu().numpy(); sc = p['ranker_scores'][0].cpu().numpy()
-        o = np.argsort(-sc, kind='stable'); kp, sc = kp[o], sc[o]
-        u = np.clip(kp[:, 0], 0, W - 1); v = np.clip(kp[:, 1], 0, H - 1)
-        z = dep[np.clip(np.rint(v).astype(int), 0, H - 1), np.clip(np.rint(u).astype(int), 0, W - 1)]
-        ok = np.flatnonzero((z > 0) & (z < DEPTH_MAX))
-        if len(ok) >= ncand:
-            ok = ok[:ncand]
-            return u[ok].astype(np.float64), v[ok].astype(np.float64), sc[ok].astype(np.float64), z[ok].astype(np.float64)
-        n = int(np.ceil(n * ncand / max(1, len(ok)) * 1.05))
+            if det == 'raco':
+                net = torch.hub.load(self.raco_dir, 'raco', source='local', pretrained=True, max_num_keypoints=m,
+                                     ranker=True, covariance_estimator=True).eval().to(self.dev)
+                p = net({'image': x}); sc = p['ranker_scores'][0]
+            else:
+                if det not in self.models:
+                    from lightglue import SuperPoint, ALIKED
+                    net = (SuperPoint(max_num_keypoints=None, detection_threshold=0.0, nms_radius=4) if det == 'sp' else
+                           ALIKED(model_name='aliked-n16', max_num_keypoints=m, detection_threshold=-1, nms_radius=2))
+                    net.preprocess_conf['resize'] = None
+                    self.models[det] = net.eval().to(self.dev)
+                net = self.models[det]; net.conf.max_num_keypoints = m
+                if det == 'aliked':
+                    net.dkd.top_k = m
+                p = net.extract(x[0]); sc = p['keypoint_scores'][0]
+        return p['keypoints'][0].cpu().numpy(), sc.cpu().numpy()
+
+    def cands(self, det, img, dep, n):
+        m = n
+        while True:
+            kp, sc = self._run(det, img, m)
+            o = np.argsort(-sc, kind='stable'); kp, sc = kp[o], sc[o]
+            u = np.clip(kp[:, 0], 0, W - 1); v = np.clip(kp[:, 1], 0, H - 1)
+            z = dep[np.clip(np.rint(v).astype(int), 0, H - 1), np.clip(np.rint(u).astype(int), 0, W - 1)]
+            ok = np.flatnonzero((z > 0) & (z < DEPTH_MAX))
+            if len(ok) >= n or len(kp) < m:
+                ok = ok[:n]
+                return u[ok].astype(np.float64), v[ok].astype(np.float64), sc[ok].astype(np.float64), z[ok].astype(np.float64)
+            m = int(np.ceil(m * n / max(1, len(ok)) * 1.05))
+
+    def desc(self, img, u, v):
+        return self.sp_sample(np.stack([u, v], 1), self.sp_dense(img))
+
+    def past(self, img):
+        kp, sc = self.det2000(img, 'raco')
+        u = np.clip(kp[:, 0], 0, W - 1).astype(np.float32); v = np.clip(kp[:, 1], 0, H - 1).astype(np.float32)
+        return u, v, sc, None, self.desc(img, u, v)
 
 
-def own_picks(sel, n):
-    """number of leading picks a picker made itself, before pickers.fill topped the selection up in score order
-    (fill appends the unused candidates in index order, so the tail of the selection is that sequence)"""
-    sel = np.asarray(sel, int); m = len(sel)
-    # the property "sel[m:] = first entries of the sorted unused-by-sel[:m] candidates" holds for all m >= the true split
-    while m > 0:
-        rest = np.setdiff1d(np.arange(n), sel[:m - 1])[:len(sel) - m + 1]
-        if not np.array_equal(rest, sel[m - 1:]):
-            break
-        m -= 1
-    return m
+class PastFrames:
+    """the Cands stand-in pickers.track_count reads: frame(g)[4] = descriptors of frame g's strongest RaCo candidates"""
+    def __init__(self, F, dets):
+        self.F, self.dets, self.memo = F, dets, {}
+
+    def frame(self, g):
+        if g not in self.memo:
+            self.memo[g] = self.dets.past(self.F.img(g))
+        return self.memo[g]
 
 
-def build(fid, f, det='raco', pickers=('sd', 'cube0.5', 'far2d', 'far3d'), kmax=2000, step=4, ncand=0):
-    F = Flight(fid)
+class FrameDir:
+    """a flight-layout folder (tools/frame_export.py output): image_left/, depth_left/, intrinsics.txt; no pose needed"""
+    def __init__(self, d):
+        self.dir = d; self.slug = os.path.basename(os.path.normpath(d))
+        ip = os.path.join(d, 'intrinsics.txt')
+        intr = np.loadtxt(ip) if os.path.isfile(ip) else np.array([320.0, 320.0, 320.0, 240.0])
+        if not np.allclose(intr, [FX, FY, CX, CY], atol=1e-3):
+            raise RuntimeError('%s has intrinsics %s, process uses %s: set KPBENCH_INTR' % (d, intr, (FX, FY, CX, CY)))
+
+    def img(self, f):
+        return np.array(Image.open(os.path.join(self.dir, 'image_left', '%06d_left.png' % f)).convert('RGB'))
+
+    def depth(self, f):
+        return np.load(os.path.join(self.dir, 'depth_left', '%06d_left_depth.npy' % f)).astype(np.float64)
+
+
+def run_counting_fill(fn, *args, **kw):
+    """run a picker and return (selection, number of picks it made itself before pickers.fill topped it up strongest
+    first; None if it never called fill). pickers.fill is wrapped for the call, so the count is exact."""
+    from . import pickers as pk
+    orig, seen = pk.fill, []
+    def fill(sel, n, K, pool=None):
+        seen.append(len(sel)); return orig(sel, n, K, pool)
+    pk.fill = fill
+    try:
+        idx = fn(*args, **kw)
+    finally:
+        pk.fill = orig
+    return idx, (seen[-1] if seen else None)
+
+
+def cand_list(u, v, z, img, valid):
+    """embedded candidate list (rank = index in score order)"""
+    Pc = to3d(u[valid], v[valid], z[valid])
+    Q = plot_axes(Pc)
+    return {'u': [round(float(x), 1) for x in u[valid]], 'v': [round(float(x), 1) for x in v[valid]],
+            'x': r3(Q[:, 0]), 'y': r3(Q[:, 1]), 'z': r3(Q[:, 2]),
+            'cx': r3(Pc[:, 0]), 'cy': r3(Pc[:, 1]), 'cz': r3(Pc[:, 2]),   # camera frame, for the 0.5 m cubes
+            'rank': [int(j) for j in valid], 'd': [round(float(x), 2) for x in z[valid]],
+            'col': ['#%02x%02x%02x' % tuple(int(c) for c in img[int(min(H - 1, max(0, round(b)))), int(min(W - 1, max(0, round(a))))]) for a, b in zip(u[valid], v[valid])]}
+
+
+def build(fid, f, det='raco', pickers=('sd', 'cube0.5', 'far2d', 'far3d'), kmax=2000, step=4, ncand=0, fdir=None):
+    """pickers: names, or '<det>:<name>' to run a picker on another detector's candidates (needs ncand, e.g. 'sp:sd').
+    ncand > 0: fresh detector runs, the top ncand candidates with depth per detector (Detectors); fdir: a FrameDir folder
+    instead of a flight id."""
+    F = FrameDir(fdir) if fdir else Flight(fid)
     img = F.img(f)
     dep = F.depth(f)
 
@@ -94,46 +194,61 @@ def build(fid, f, det='raco', pickers=('sd', 'cube0.5', 'far2d', 'far3d'), kmax=
     rgb = img[vv[ok].astype(int), uu[ok].astype(int)]
     cloud = {'x': r3(P[:, 0]), 'y': r3(P[:, 1]), 'z': r3(P[:, 2]),
              'c': ['#%02x%02x%02x' % tuple(int(c) for c in p) for p in rgb]}
+    dv = dep[(dep > 0) & (dep < DEPTH_MAX)]
+    zmed = round(float(np.median(dv)), 3) if len(dv) else None
 
-    # 2. candidates with valid depth (rank = index in score order)
-    if ncand:     # fresh stock-RaCo run for this frame, ncand candidates, all with depth
-        assert det == 'raco', 'ncand needs det raco'
-        u, v, s, z = raco_cands(img, dep, ncand)
-    else:
-        u, v, s, z, _ = Cands(F.slug, det).frame(f)
-    valid = np.flatnonzero((z > 0) & (z < DEPTH_MAX))
-    pos = {int(j): i for i, j in enumerate(valid)}       # candidate index -> position in the embedded list
-    Pc = to3d(u[valid], v[valid], z[valid])
-    Q = plot_axes(Pc)
-    cands = {'u': [round(float(x), 2) for x in u[valid]], 'v': [round(float(x), 2) for x in v[valid]],
-             'x': r3(Q[:, 0]), 'y': r3(Q[:, 1]), 'z': r3(Q[:, 2]),
-             'cx': r3(Pc[:, 0]), 'cy': r3(Pc[:, 1]), 'cz': r3(Pc[:, 2]),   # camera frame, for the 0.5 m cubes
-             'rank': [int(j) for j in valid], 'd': [round(float(x), 2) for x in z[valid]],
-             'col': ['#%02x%02x%02x' % tuple(int(c) for c in img[int(min(H - 1, max(0, round(b)))), int(min(W - 1, max(0, round(a))))]) for a, b in zip(u[valid], v[valid])]}
+    # 2. candidates per detector
+    spec = [tuple(p.split(':', 1)) if ':' in p else (det, p) for p in pickers]
+    dets = list(dict.fromkeys(d for d, _ in spec))
+    assert ncand or dets == [det], 'pickers on other detectors need ncand'
+    D = Detectors() if ncand else None
+    raw = {}
+    for d in dets:
+        if ncand:     # fresh run for this frame, ncand candidates, all with depth
+            u, v, s, z = D.cands(d, img, dep, ncand)
+            raw[d] = (u, v, s, z, D.desc(img, u, v) if d == 'raco' else None)
+        else:
+            raw[d] = Cands(F.slug, d).frame(f)
+    sets, poss, zcand = {}, {}, {}
+    for d, (u, v, s, z, _) in raw.items():
+        valid = np.flatnonzero((z > 0) & (z < DEPTH_MAX))
+        poss[d] = {int(j): i for i, j in enumerate(valid)}     # candidate index -> position in the embedded list
+        sets[d] = cand_list(u, v, z, img, valid)
+        zcand[d] = round(float(np.median(z[valid])), 3) if len(valid) else None
 
-    # 3. selections. sd, cube<s>, far2d/far3d are prefix-consistent: the first K entries of the selection for
+    # 3. selections. sd, cube<s>, far2d/far3d, dpp* are prefix-consistent: the first K entries of the selection for
     # kmax are exactly the selection for K, so one ordered list per picker covers every K. grid is not, so its
     # selection is stored separately for every K (perK[name][K-1]). Indices point into the embedded candidate list;
     # candidates without depth (possible only through a picker's top-up fill) are dropped.
-    sel, perK, dropped, own = {}, {}, {}, {}
-    for name in pickers:
-        fn = parse(name)
-        idx = fn(u, v, s, z, kmax)
-        sel[name] = [pos[int(j)] for j in idx if int(j) in pos]
-        dropped[name] = len(idx) - len(sel[name])
+    sel, perK, dropped, own, set_of = {}, {}, {}, {}, {}
+    past = None
+    for key, (d, name) in zip(pickers, spec):
+        u, v, s, z, de = raw[d]; pos = poss[d]
+        fn = parse(name); kw = {}
+        if getattr(fn, 'needs_past', False):     # dppr*: descriptors of the previous frames only (no pose, no future)
+            assert ncand and d == 'raco', 'past-frame pickers need ncand and raco candidates'
+            past = past or PastFrames(F, D)
+            kw = {'ctx': (F, past, f), 'de': de}
+        elif getattr(fn, 'needs_ctx', False) or getattr(fn, 'needs_desc', False):
+            raise ValueError('picker %s needs data the viewer does not provide' % name)
+        idx, made = run_counting_fill(fn, u, v, s, z, kmax, **kw)
+        sel[key] = [pos[int(j)] for j in idx if int(j) in pos]
+        dropped[key] = len(idx) - len(sel[key])
+        set_of[key] = d
         if name.startswith('dpp'):    # greedy DPP stops when no gain is left; pickers.fill adds the rest strongest first
-            own[name] = own_picks(idx, len(u))
+            own[key] = min(made, kmax) if made is not None else len(idx)
         if name in NOT_PREFIX:
-            perK[name] = [[pos[int(j)] for j in fn(u, v, s, z, K) if int(j) in pos] for K in range(1, kmax + 1)]
+            perK[key] = [[pos[int(j)] for j in fn(u, v, s, z, K, **kw) if int(j) in pos] for K in range(1, kmax + 1)]
 
     # 4. image as base64 JPEG
     buf = io.BytesIO()
     Image.fromarray(img).save(buf, format='JPEG', quality=80)
     jpg = base64.b64encode(buf.getvalue()).decode('ascii')
 
-    data = {'flight': fid, 'frame': int(f), 'det': det, 'kmax': int(kmax), 'step': int(step),
-            'W': W, 'H': H, 'fx': FX, 'fy': FY, 'pickers': list(pickers), 'cloud': cloud, 'cands': cands,
-            'sel': sel, 'perK': perK, 'dropped': dropped, 'own': own, 'ncand': int(ncand)}
+    data = {'flight': fid or F.slug, 'frame': int(f), 'det': det, 'kmax': int(kmax), 'step': int(step),
+            'W': W, 'H': H, 'fx': FX, 'fy': FY, 'pickers': list(pickers), 'cloud': cloud,
+            'cands': sets[det] if len(sets) == 1 and not ncand else sets, 'setOf': set_of,
+            'sel': sel, 'perK': perK, 'dropped': dropped, 'own': own, 'ncand': int(ncand), 'zmed': zmed, 'zcand': zcand}
     return data, jpg
 
 
@@ -159,6 +274,8 @@ HTML = r'''<!doctype html>
   #controls label { white-space: nowrap; cursor: pointer; }
   #controls fieldset { border: 1px solid #ddd; border-radius: 4px; padding: 2px 8px; margin: 0; }
   #controls legend { font-size: 11px; color: #666; padding: 0 3px; }
+  #controls fieldset { max-width: 100%; box-sizing: border-box; }
+  #pickers { display: flex; flex-wrap: wrap; gap: 2px 10px; }
   #kslider { width: 260px; vertical-align: middle; }
   #kbox { width: 56px; }
   #readout { font-family: ui-monospace, Consolas, monospace; font-size: 12px; color: #333; margin-bottom: 6px; }
@@ -188,8 +305,14 @@ HTML = r'''<!doctype html>
 <script>
 const D = __DATA__;
 const JPG = "data:image/jpeg;base64,__JPG__";
-const C = D.cands, NC = C.u.length, CUBE = 0.5;
+const CUBE = 0.5, KMIN = D.kmin !== undefined ? D.kmin : 1;
+// candidate sets: one per detector (D.setOf: picker -> detector); older pages carry a single set
+const SETS = D.cands.u ? { _: D.cands } : D.cands;
+const setOf = p => (D.setOf && SETS[D.setOf[p]]) ? D.setOf[p] : Object.keys(SETS)[0];
+let C, NC, CSET;
+function useSet(p) { CSET = setOf(p); C = SETS[CSET]; NC = C.u.length; }
 const st = { picker: D.default || (D.pickers.includes('sd') ? 'sd' : D.pickers[0]), K: Math.min(100, D.kmax), dmax: 0 };
+useSet(st.picker);
 // 'order' pages (one fresh candidate set, pickers compared at the same k): faint unpicked candidates, one colour per picker
 const ORDER = D.mode === 'order', LAB = D.labels || {}, HL = D.colours || {};
 const lab = p => LAB[p] || p, hl = p => HL[p] || '#ffd400';
@@ -380,12 +503,14 @@ function update() {
     const cell = 20, gx = Math.ceil(D.W / cell), gy = Math.ceil(D.H / cell), cells = new Set();
     let rs = 0;
     for (const i of S) { cells.add(Math.floor(C.u[i] / cell) * gy + Math.floor(C.v[i] / cell)); rs += C.rank[i] + 1; }
-    const own = D.own[st.picker];
+    const own = D.own[st.picker], dn = (D.detLabels || {})[CSET];
     document.getElementById('readout').innerHTML =
-      '<b>' + lab(st.picker) + '</b> | k = ' + S.length + ' picked of ' + NC + ' candidates' +
+      '<b>' + lab(st.picker) + '</b> | k = ' + S.length + ' picked of ' + NC + (dn ? ' ' + dn : '') + ' candidates' +
       ' | picks are on average the ' + (S.length ? ordinal(Math.round(rs / S.length)) : '-') + ' strongest point' +
+      (dn ? ' (of ' + dn + ')' : '') +
       ' | image coverage ' + (100 * cells.size / (gx * gy)).toFixed(1) + '% (' + cells.size + ' of ' + gx * gy + ' image squares of ' + cell + ' px hold a pick)' +
       ' | 0.5 m cubes covered ' + keys.size +
+      (D.zmed ? ' | median depth of the frame ' + D.zmed.toFixed(2) + ' m' : '') +
       (own !== undefined && own < D.kmax ? '<br>' + lab(st.picker) + ' chooses the first ' + own +
         ' picks itself; it then has nothing left to gain, so the benchmark picker adds the remaining points strongest first' +
         (S.length > own ? ' (that is happening at this k)' : '') : '');
@@ -402,9 +527,9 @@ function update() {
 
 // ---- controls
 const ks = document.getElementById('kslider'), kb = document.getElementById('kbox');
-ks.max = kb.max = D.kmax; ks.value = kb.value = st.K;
+ks.min = kb.min = KMIN; ks.max = kb.max = D.kmax; ks.value = kb.value = st.K;
 function setK(k) {
-  k = Math.max(1, Math.min(D.kmax, Math.round(+k || 1)));
+  k = Math.max(KMIN, Math.min(D.kmax, Math.round(+k || 0)));
   if (k === st.K && +ks.value === k && +kb.value === k) return;
   st.K = k; ks.value = k; kb.value = k; update();
 }
@@ -414,7 +539,11 @@ const box = document.getElementById('pickers');
 for (const p of D.pickers) {
   const l = document.createElement('label'), r = document.createElement('input');
   r.type = 'radio'; r.name = 'picker'; r.value = p; r.checked = p === st.picker;
-  r.addEventListener('change', () => { st.picker = p; update(); });
+  r.addEventListener('change', () => {
+    st.picker = p; const old = CSET; useSet(p);
+    if (CSET !== old) Plotly.restyle('scene', { x: [C.x], y: [C.y], z: [C.z] }, [T_ALL]);   // that detector's candidates
+    update();
+  });
   l.append(r, ' ' + lab(p) + ' '); box.append(l);
 }
 document.getElementById('cloud').addEventListener('change', e => Plotly.restyle('scene', { visible: e.target.checked }, [T_CLOUD]));
@@ -438,24 +567,31 @@ init(); update();
 
 def main():
     ap = argparse.ArgumentParser(description='standalone 3D frame viewer with picker selections')
-    ap.add_argument('--flight', required=True)
+    ap.add_argument('--flight', default='')
+    ap.add_argument('--dir', default='', help='a frame folder (tools/frame_export.py) instead of --flight')
+    ap.add_argument('--kmin', type=int, default=1)
     ap.add_argument('--frame', type=int, required=True)
     ap.add_argument('--det', default='raco')
     ap.add_argument('--pickers', default='sd,cube0.5,far2d,far3d,far3dw,far2dp400')
     ap.add_argument('--kmax', type=int, default=2000)
     ap.add_argument('--step', type=int, default=4)
     ap.add_argument('--ncand', type=int, default=0,
-                    help='>0: fresh stock-RaCo run, the top ncand candidates with depth, pickers compared at the same k')
+                    help='>0: fresh detector runs, the top ncand candidates with depth per detector, pickers compared at the '
+                         'same k; pickers may name a detector: raco:sd, sp:sd, aliked:sd')
     ap.add_argument('--default', default='', help='picker shown first')
     ap.add_argument('--title', default='')
     ap.add_argument('--note', default='', help='one plain sentence under the title')
     ap.add_argument('--out', default='', help='file name in docs/frames (default <flight>_<frame>.html)')
     a = ap.parse_args()
     pickers = [p.strip() for p in a.pickers.split(',') if p.strip()]
-    data, jpg = build(a.flight, a.frame, a.det, pickers, a.kmax, a.step, a.ncand)
+    assert a.flight or a.dir, 'need --flight or --dir'
+    data, jpg = build(a.flight, a.frame, a.det, pickers, a.kmax, a.step, a.ncand, a.dir or None)
+    data['kmin'] = a.kmin
     if a.ncand:
-        data.update(mode='order', labels={p: LABELS.get(p, p) for p in pickers},
-                    colours={p: COLOURS[p] for p in pickers if p in COLOURS})
+        multi = len(set(data['setOf'].values())) > 1
+        lc = {p: plain_label(p, a.det, data['zcand'][data['setOf'][p]], multi) for p in pickers}
+        data.update(mode='order', labels={p: v[0] for p, v in lc.items()}, colours={p: v[1] for p, v in lc.items()},
+                    detLabels=DETNAMES if multi else {})
     if a.default:
         data['default'] = a.default
     if a.title:
@@ -466,8 +602,8 @@ def main():
     out = os.path.join(OUT_DIR, a.out or '%s_%d.html' % (data['flight'].replace('/', '_'), a.frame))
     with open(out, 'w', encoding='utf-8') as fh:
         fh.write(render(data, jpg))
-    print('%s  %.2f MB  cloud %d  candidates %d  picks %s' % (out, os.path.getsize(out) / 1e6, len(data['cloud']['x']),
-          len(data['cands']['u']), {k: len(v) for k, v in data['sel'].items()}))
+    print('%s  %.2f MB  cloud %d  picks %s  own %s' % (out, os.path.getsize(out) / 1e6, len(data['cloud']['x']),
+          {k: len(v) for k, v in data['sel'].items()}, data['own']))
 
 
 if __name__ == '__main__':

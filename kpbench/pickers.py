@@ -5,6 +5,7 @@ Names:
   score        strongest K, any depth
   sd           strongest K with depth
   cube<s>      round robin over s-metre cubes in the camera frame (e.g. cube0.5), strongest first per cube
+  cubem<c>     cube<s> with s = c x median depth of the frame's candidates with depth (cubem0.1, gap-agent ad_r0p1_a0)
   grid         ceil(sqrt K)^2 image cells over the strongest M = clip(4K, 80, 400) candidates; best per cell, fill by rank
   grid10x8     10 x 8 image cells, round robin
   fps          2D farthest point sampling over the same pool as grid, score-aware: next = argmax dist * (1 - rank/M)
@@ -71,12 +72,15 @@ def pick_sd(u, v, s, z, K):
     return np.flatnonzero(z < DEPTH_MAX)[:K]
 
 
-def pick_cube(size):
+def pick_cube(size, rel=False):
+    """cube<s>: round robin over s-metre cubes. rel (cubem<c>): cube edge = c x median depth of the frame's candidates with
+    depth (the gap-agent harness picker ad_r<c>_a0, e.g. cubem0.1 = ad_r0p1_a0: the cube size follows the scene)"""
     def f(u, v, s, z, K):
         ok = np.flatnonzero(z < DEPTH_MAX)
         if not len(ok):
             return np.arange(min(K, len(u)))
-        key = np.floor(to3d(u[ok], v[ok], z[ok]) / size).astype(int); g = {}
+        e = size * float(np.median(z[ok])) if rel else size
+        key = np.floor(to3d(u[ok], v[ok], z[ok]) / e).astype(int); g = {}
         for jj, j in enumerate(ok):
             g.setdefault(tuple(key[jj]), []).append(int(j))
         return fill(round_robin(list(g.values()), K), len(u), K)
@@ -769,6 +773,9 @@ def parse(name):
     m = re.fullmatch(r'hyb([0-9.]+)(?:c([0-9.]+))?', name)
     if m:
         return pick_hyb(float(m.group(1)), float(m.group(2) or 0.5))
+    m = re.fullmatch(r'cubem([0-9.]+)', name)
+    if m:
+        return pick_cube(float(m.group(1)), rel=True)
     if name.startswith('cube'):
         return pick_cube(float(name[4:]))
     m = re.fullmatch(r'far(2d|3d)(w?)(?:p(\d+))?', name)
