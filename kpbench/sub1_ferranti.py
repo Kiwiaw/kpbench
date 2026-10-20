@@ -28,6 +28,8 @@ def load(split, metric='hull', posed=False):
     for fn in sorted(glob.glob(os.path.join(REPO, 'results', 'eval', split, 'raco_*_K100_lg_m.json.gz'))):
         p = os.path.basename(fn)[len('raco_'):-len('_K100_lg_m.json.gz')]
         d = json.load(gzip.open(fn, 'rt')); c = d['cols']; rows = d['rows']
+        if metric not in c:                                      # older rows without the tested column: picker left out
+            continue
         if posed:
             rows = [r for r in rows if r[2] is not None]
         col = lambda m: np.array([np.nan if r[c.index(m)] is None else r[c.index(m)] for r in rows], float)
