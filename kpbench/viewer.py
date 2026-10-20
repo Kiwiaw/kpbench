@@ -255,7 +255,7 @@ def build(fid, f, det='raco', pickers=('sd', 'cube0.5', 'far2d', 'far3d'), kmax=
 def render(data, jpg):
     title = data.get('title') or '%s frame %d (%s)' % (data['flight'], data['frame'], data['det'])
     blob = json.dumps(data, separators=(',', ':'))
-    return (HTML.replace('__TITLE__', title).replace('__PLOTLY__', PLOTLY)
+    return (HTML.replace('__H1__', data.get('h1') or title).replace('__TITLE__', title).replace('__PLOTLY__', PLOTLY)
             .replace('__JPG__', jpg).replace('__DATA__', blob))
 
 
@@ -286,7 +286,8 @@ HTML = r'''<!doctype html>
 </style>
 </head>
 <body>
-<h1>__TITLE__</h1>
+<h1>__H1__</h1>
+<div id="source" style="color:#888;font-size:11px;margin:-4px 0 6px"></div>
 <div id="controls">
   <fieldset><legend>picker</legend><span id="pickers"></span></fieldset>
   <span>K <input id="kslider" type="range" min="1" step="1"> <input id="kbox" type="number" min="1" step="1"></span>
@@ -298,6 +299,7 @@ HTML = r'''<!doctype html>
 </div>
 <div id="note" style="color:#555;margin-bottom:6px;max-width:1200px"></div>
 <div id="readout"></div>
+<div id="foot" style="color:#888;font-size:11px;margin:-3px 0 6px"></div>
 <div id="panels">
   <div id="scene"></div>
   <div id="imgwrap"><canvas id="img" width="640" height="480"></canvas></div>
@@ -317,9 +319,10 @@ useSet(st.picker);
 const ORDER = D.mode === 'order', LAB = D.labels || {}, HL = D.colours || {};
 const lab = p => LAB[p] || p, hl = p => HL[p] || '#ffd400';
 document.getElementById('note').textContent = D.note || '';
+document.getElementById('source').textContent = D.source || '';
 if (ORDER) { document.getElementById('allc').checked = true;
-  document.getElementById('allcl').lastChild.textContent = ' show unpicked candidates';
-  document.getElementById('byrankl').lastChild.textContent = ' colour picks by pick order (default: one colour per picker)'; }
+  document.getElementById('allcl').lastChild.textContent = ' show unpicked';
+  document.getElementById('byrankl').lastChild.textContent = ' colour by pick order'; }
 // default view depth: twice the median candidate depth, between 4 and 30 m, so the near scene fills the view
 { const ys = C.y.slice().sort((a, b) => a - b); st.dmax = Math.round(Math.min(30, Math.max(4, 2 * ys[ys.length >> 1])) * 2) / 2; }
 
@@ -503,17 +506,18 @@ function update() {
     const cell = 20, gx = Math.ceil(D.W / cell), gy = Math.ceil(D.H / cell), cells = new Set();
     let rs = 0;
     for (const i of S) { cells.add(Math.floor(C.u[i] / cell) * gy + Math.floor(C.v[i] / cell)); rs += C.rank[i] + 1; }
-    const own = D.own[st.picker], dn = (D.detLabels || {})[CSET];
-    document.getElementById('readout').innerHTML =
-      '<b>' + lab(st.picker) + '</b> | k = ' + S.length + ' picked of ' + NC + (dn ? ' ' + dn : '') + ' candidates' +
-      ' | picks are on average the ' + (S.length ? ordinal(Math.round(rs / S.length)) : '-') + ' strongest point' +
-      (dn ? ' (of ' + dn + ')' : '') +
-      ' | image coverage ' + (100 * cells.size / (gx * gy)).toFixed(1) + '% (' + cells.size + ' of ' + gx * gy + ' image squares of ' + cell + ' px hold a pick)' +
-      ' | 0.5 m cubes covered ' + keys.size +
-      (D.zmed ? ' | median depth of the frame ' + D.zmed.toFixed(2) + ' m' : '') +
-      (own !== undefined && own < D.kmax ? '<br>' + lab(st.picker) + ' chooses the first ' + own +
-        ' picks itself; it then has nothing left to gain, so the benchmark picker adds the remaining points strongest first' +
-        (S.length > own ? ' (that is happening at this k)' : '') : '');
+    const own = D.own[st.picker], n = S.length, sp = (t, x) => '<span title="' + t + '">' + x + '</span>';
+    document.getElementById('readout').innerHTML = [
+      sp('number of picked points', 'k ' + n),
+      sp('mean position of the picks in the detector strength order (1 = strongest of its 3000 points)',
+         'avg strength rank ' + (n ? Math.round(rs / n) : '-')),
+      sp('share of the 20 px image squares that hold at least one pick (' + cells.size + ' of ' + gx * gy + ')',
+         'image coverage ' + Math.round(100 * cells.size / (gx * gy)) + ' %'),
+      sp('number of distinct 0.5 m cubes in 3D that hold at least one pick', '0.5 m cubes ' + keys.size),
+      sp('median depth of all pixels with depth in this frame', 'median depth ' + (D.zmed ? D.zmed.toFixed(1) + ' m' : '-'))
+    ].join(' \u00b7 ');
+    document.getElementById('foot').textContent = own !== undefined && own < D.kmax ?
+      lab(st.picker) + ' stops choosing at ' + own + '; rest = strongest' : '';
     draw2d();
     return;
   }
@@ -581,6 +585,9 @@ def main():
     ap.add_argument('--default', default='', help='picker shown first')
     ap.add_argument('--title', default='')
     ap.add_argument('--note', default='', help='one plain sentence under the title')
+    ap.add_argument('--h1', default='', help='page heading (default: the title)')
+    ap.add_argument('--source', default='', help='small grey line under the heading')
+    ap.add_argument('--labels', default='', help='button labels, key=label,key=label')
     ap.add_argument('--out', default='', help='file name in docs/frames (default <flight>_<frame>.html)')
     a = ap.parse_args()
     pickers = [p.strip() for p in a.pickers.split(',') if p.strip()]
@@ -598,6 +605,11 @@ def main():
         data['title'] = a.title
     if a.note:
         data['note'] = a.note
+    for k in ('h1', 'source'):
+        if getattr(a, k):
+            data[k] = getattr(a, k)
+    if a.labels:
+        data.setdefault('labels', {}).update(dict(x.split('=', 1) for x in a.labels.split(',')))
     os.makedirs(OUT_DIR, exist_ok=True)
     out = os.path.join(OUT_DIR, a.out or '%s_%d.html' % (data['flight'].replace('/', '_'), a.frame))
     with open(out, 'w', encoding='utf-8') as fh:

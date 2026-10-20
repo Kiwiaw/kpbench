@@ -13,9 +13,11 @@ import numpy as np
 
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 FRAMES = os.path.join(REPO, 'docs', 'frames')
-PICKERS = 'dpp0.5,dppmr0.256a0.5b1.02t0.9,cube0.5,cubem0.1,raco:sd,sp:sd,aliked:sd'
+PICKERS = 'dppmr0.256a0.5b1.02t0.9,cube0.5,raco:sd,sp:sd,aliked:sd'
+LABELS = 'dppmr0.256a0.5b1.02t0.9=DPP (depth),cube0.5=Cubes 0.5 m,raco:sd=RaCo,sp:sd=SuperPoint,aliked:sd=ALIKED'
 # folder, dataset, scene (as shown), frame, where it comes from
 PAGES = [
+    ('tartanair_oldtown_P001', 'TartanAir', 'old town P001', 334, 'kpbench DEV flight'),
     ('tartanair_hospital_P042', 'TartanAir', 'hospital P042', 163, 'kpbench DEV flight'),
     ('tartanair_factory_P000', 'TartanAir', 'abandoned factory P000', 363, 'kpbench DEV flight'),
     ('tartanair_japanesealley_P001', 'TartanAir', 'Japanese alley Easy P001', 1003, 'TartanAir, outside the kpbench flights'),
@@ -23,6 +25,7 @@ PAGES = [
     ('tartanair_seasidetown_P000', 'TartanAir', 'seaside town Easy P000', 403, 'TartanAir, outside the kpbench flights'),
     ('hypersim_ai_001_005', 'Hypersim', 'ai_001_005', 78, 'Hypersim, cam_00'),
     ('hypersim_ai_002_003', 'Hypersim', 'ai_002_003', 53, 'Hypersim, cam_00'),
+    ('hypersim_ai_001_001', 'Hypersim', 'ai_001_001', 87, 'Hypersim, cam_00'),
     ('tum_fr3_long_office_household', 'TUM RGB-D', 'fr3 long office household', 353, 'TUM RGB-D (kpbench conversion, every 3rd frame)'),
     ('spring_0010', 'Spring', '0010', 78, 'Spring, left camera, centre crop 4:3'),
     ('pointodyssey_ani', 'Point Odyssey', 'ani (train)', 853, 'Point Odyssey, centre crop 4:3'),
@@ -31,16 +34,10 @@ PAGES = [
 OLD = [
     ('oldtown_P001_334.html', 'TartanAir', 'old town P001', 334, 'strongest, cubes and farthest-point pickers, K 1..2000'),
     ('hospital_P041_200.html', 'TartanAir', 'hospital P041', 200, 'strongest, cubes and farthest-point pickers, K 1..2000'),
-    ('dpp_tartanair_oldtown_P001_334.html', 'TartanAir', 'old town P001', 334, 'DPP vs strongest vs cubes, K 1..2000 of 3000 RaCo points'),
-    ('dpp_hypersim_ai_001_001_87.html', 'Hypersim', 'ai_001_001', 87, 'DPP vs strongest vs cubes, K 1..2000 of 3000 RaCo points'),
 ]
-NEW_WHAT = '7 pickers (DPP, scaled DPP, cubes, scaled cubes, RaCo / SuperPoint / ALIKED strongest), K 0..400 of 3000 points'
-NOTE = ("Each picker puts its detector's 3000 strongest points with known depth in an order; the slider shows the first k. "
-        "The first four use RaCo's points. DPP 0.5 m prefers strong points but avoids points within about half a metre (in 3D) "
-        "of a point it already picked. The scaled DPP sets that spacing to 0.256 times the frame's median depth and favours "
-        "points that were found again in the previous 3 frames. Cubes take the strongest point of each cube in turn, cubes of "
-        "0.5 m or of 0.1 times the median depth. The last three simply take the strongest points of RaCo, SuperPoint and ALIKED. "
-        "Picked points are coloured, unpicked candidates are faint.")
+NEW_WHAT = 'DPP (depth), cubes 0.5 m, RaCo / SuperPoint / ALIKED strongest; K 0..400 of 3000 points'
+NOTE = ("Pick k of each detector's 3000 strongest points with depth. DPP (depth) spreads picks in 3D (spacing from "
+        "scene depth, favours points seen again); cubes keep the best point per 0.5 m cube.")
 
 
 def page_name(folder, frame):
@@ -51,10 +48,11 @@ def build(root, folder, dataset, scene, frame, src):
     d = os.path.join(root, folder)
     fx, fy, cx, cy = np.loadtxt(os.path.join(d, 'intrinsics.txt'))
     env = dict(os.environ, KPBENCH_INTR='%.6f %.6f %.6f %.6f' % (fx, fy, cx, cy))
-    title = 'Keypoint pickers, %s %s frame %d (RaCo, SuperPoint, ALIKED; 0\u2013400 of 3000 points)' % (dataset, scene, frame)
+    title = 'Keypoint pickers, %s %s frame %d' % (dataset, scene, frame)
     cmd = [sys.executable, '-m', 'kpbench.viewer', '--dir', d, '--frame', str(frame), '--ncand', '3000', '--kmin', '0',
-           '--kmax', '400', '--pickers', PICKERS, '--default', 'dpp0.5', '--out', page_name(folder, frame),
-           '--title', title, '--note', NOTE + ' Source: %s.' % src]
+           '--kmax', '400', '--pickers', PICKERS, '--labels', LABELS, '--default', PICKERS.split(',')[0],
+           '--out', page_name(folder, frame), '--title', title, '--h1', 'Keypoint pickers (0\u2013400 of 3000 points)',
+           '--source', '%s %s, frame %d' % (dataset, scene, frame), '--note', NOTE]
     subprocess.run(cmd, cwd=REPO, env=env, check=True)
 
 
