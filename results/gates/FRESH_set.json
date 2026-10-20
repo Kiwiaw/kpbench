@@ -1,0 +1,95 @@
+{
+ "kind": "fresh_set",
+ "set_id": "FRESH-1",
+ "manifest_sha256": "0b165c7cc83b6a9c184ea2390dba69121eb06c6c530b45887567cd8197c5198a",
+ "splits_fresh_sha256": "2ba540e1614cb7a5294e1341089c08fcc8672b8f98873d5cb63483ce1c741b20",
+ "created": "2026-10-19",
+ "fresh": [
+  "oldtown_easy/P002",
+  "oldtown_easy/P005",
+  "oldtown_easy/P001",
+  "oldtown_easy/P000",
+  "oldtown_easy/P007",
+  "oldtown_easy/P004",
+  "hospital_easy/P025",
+  "hospital_easy/P004",
+  "hospital_easy/P006",
+  "hospital_easy/P019",
+  "factory_hard/P011",
+  "factory_hard/P009",
+  "factory_hard/P010",
+  "factory_easy/P005"
+ ],
+ "flat_counts": {
+  "fresh": 2075
+ },
+ "n_queries": {
+  "fresh": 13440
+ },
+ "per_group_flat": {
+  "oldtown": 900,
+  "hospital": 693,
+  "factory": 482
+ },
+ "per_flight": {
+  "oldtown_easy/P002": {
+   "flat": 301,
+   "queries": 1543
+  },
+  "oldtown_easy/P005": {
+   "flat": 60,
+   "queries": 743
+  },
+  "oldtown_easy/P001": {
+   "flat": 338,
+   "queries": 1461
+  },
+  "oldtown_easy/P000": {
+   "flat": 121,
+   "queries": 1521
+  },
+  "oldtown_easy/P007": {
+   "flat": 80,
+   "queries": 1706
+  },
+  "oldtown_easy/P004": {
+   "flat": 0,
+   "queries": 580
+  },
+  "hospital_easy/P025": {
+   "flat": 221,
+   "queries": 307
+  },
+  "hospital_easy/P004": {
+   "flat": 124,
+   "queries": 305
+  },
+  "hospital_easy/P006": {
+   "flat": 237,
+   "queries": 561
+  },
+  "hospital_easy/P019": {
+   "flat": 111,
+   "queries": 342
+  },
+  "factory_hard/P011": {
+   "flat": 99,
+   "queries": 570
+  },
+  "factory_hard/P009": {
+   "flat": 177,
+   "queries": 1836
+  },
+  "factory_hard/P010": {
+   "flat": 20,
+   "queries": 996
+  },
+  "factory_easy/P005": {
+   "flat": 186,
+   "queries": 969
+  }
+ },
+ "rule": "(fixed in the order file before any picker runs on FRESH):\n    target = total flat queries wanted. 'take_all' groups enter whole. The rest R = target - their flat count is split over\n    the 'fill' groups by weight (ceil(R * w / sum w) each); each fill group takes flights in its listed order until it\n    reaches its share. Flat = plane_frac >= 0.85 from results/labels (the normal kpbench label pipeline).",
+ "reason": "FRESH = new non-HELD_OUT TartanAir trajectories for near-miss retests. target = 2 x the 936 DEV flat queries. Environments as in DEV (oldtown, hospital, factory): oldtown has DEV's largest flat share but the pool holds only its 6 Easy trajectories, so all 6 enter; the rest is split hospital : factory = 2 : 1 (DEV flat ratio 183 : 92). Factory takes its Hard trajectories first (Hard preferred), then Easy. Within a group the order is the depth-only flat-density estimate (share of grid plane_frac >= 0.85 on every 30th frame, no detector, no picker), densest first, so the flat target is met with fewer queries (gate cost scales with all queries). Stop when a group reaches its share by the real label (SuperPoint top-300 plane_frac >= 0.85).",
+ "order_file": "euler/fresh_order.json"
+}
