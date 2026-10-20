@@ -1,0 +1,154 @@
+{
+ "split": "micro",
+ "uniform": "cube0.5",
+ "strong": "sd",
+ "other": "grid",
+ "n": 393,
+ "n_flat": 393,
+ "results": {
+  "hull": {
+   "status": "scored",
+   "d_auroc": 0.0054,
+   "d_prauc": 0.0209,
+   "rule1": false,
+   "d_mean": 0.0265,
+   "z": 1.54,
+   "rule2": false,
+   "within": {
+    "sd": {
+     "n": 71,
+     "win": 52,
+     "tie": 0,
+     "share": 0.7324,
+     "p": 0.000112268646894988
+    },
+    "grid": {
+     "n": 54,
+     "win": 33,
+     "tie": 1,
+     "share": 0.6226,
+     "p": 0.09837064844049181
+    }
+   },
+   "rule3": false
+  },
+  "reproj_med": {
+   "status": "scored",
+   "d_auroc": 0.1053,
+   "d_prauc": 0.1411,
+   "rule1": true,
+   "d_mean": 1.1234,
+   "z": 2.56,
+   "rule2": true,
+   "within": {
+    "sd": {
+     "n": 71,
+     "win": 57,
+     "tie": 0,
+     "share": 0.8028,
+     "p": 2.6659171387086086e-07
+    },
+    "grid": {
+     "n": 54,
+     "win": 38,
+     "tie": 0,
+     "share": 0.7037,
+     "p": 0.003838265880326096
+    }
+   },
+   "rule3": true
+  },
+  "rep5": {
+   "status": "scored",
+   "d_auroc": 0.0149,
+   "d_prauc": 0.0041,
+   "rule1": false,
+   "d_mean": -0.0115,
+   "z": -0.51,
+   "rule2": false,
+   "within": {
+    "sd": {
+     "n": 71,
+     "win": 44,
+     "tie": 5,
+     "share": 0.6667,
+     "p": 0.00921048969455458
+    },
+    "grid": {
+     "n": 54,
+     "win": 24,
+     "tie": 10,
+     "share": 0.5455,
+     "p": 0.651587827208914
+    }
+   },
+   "rule3": false
+  },
+  "crlb": {
+   "status": "scored",
+   "d_auroc": -0.0318,
+   "d_prauc": -0.0246,
+   "rule1": false,
+   "d_mean": -0.0508,
+   "z": -1.25,
+   "rule2": false,
+   "within": {
+    "sd": {
+     "n": 71,
+     "win": 43,
+     "tie": 0,
+     "share": 0.6056,
+     "p": 0.09592363141082376
+    },
+    "grid": {
+     "n": 54,
+     "win": 28,
+     "tie": 0,
+     "share": 0.5185,
+     "p": 0.8919231511047488
+    }
+   },
+   "rule3": false
+  },
+  "inl_ratio": {
+   "status": "scored",
+   "d_auroc": 0.0058,
+   "d_prauc": 0.0029,
+   "rule1": false,
+   "d_mean": -0.06,
+   "z": -3.1,
+   "rule2": false,
+   "within": {
+    "sd": {
+     "n": 71,
+     "win": 43,
+     "tie": 0,
+     "share": 0.6056,
+     "p": 0.09592363141082376
+    },
+    "grid": {
+     "n": 54,
+     "win": 36,
+     "tie": 0,
+     "share": 0.6667,
+     "p": 0.01983432672806828
+    }
+   },
+   "rule3": false
+  },
+  "cells": {
+   "status": "missing"
+  },
+  "ent": {
+   "status": "missing"
+  },
+  "offplane": {
+   "status": "missing"
+  }
+ },
+ "passing": [
+  "reproj_med"
+ ],
+ "primary": null,
+ "verdict": "no candidate passes all three rules -> SUB1 stays query-level (prereg kill)"
+}

@@ -19,3 +19,4 @@ for p in $PICKERS; do
 done
 [ "$PICKERS" != "sd cube0.5 grid" ] || python -m kpbench.sub1 --split $SPLIT
 python -m kpbench.sub1_ferranti --split $SPLIT    # Ferranti baseline over every picker file present
+case " $PICKERS " in *" dpp0.5 "*) python -m kpbench.sub1_prereg --split $SPLIT ;; esac    # prereg v2 rules 1-3 (needs sd cube0.5 dpp0.5)

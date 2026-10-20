@@ -34,3 +34,10 @@ No candidate reaches hull's DEV AUROC 0.91 and none passes rule 3 -> SUB1 stays 
   0.014 -> 0.723, offplane 0.050 both (points on a 1 m depth slab): columns behave; MICRO rows predate them (need Euler).
 - rep5 on the stored MICRO metric rows (sd, cube0.5, grid): pooled dAUROC +0.015, dPR-AUC +0.004 (all); +0.020 / -0.022
   posed (results/sub1/micro_ferranti_rep5*.md). reproj_med posed on the same rows: +0.139 / +0.246.
+
+## Scorer (engineer 2026-10-20, dispatch 13:55 SUB1)
+kpbench.sub1_prereg applies rules 1-3 to every candidate in one table (results/sub1/<split>_prereg.md); euler/sub1.sbatch runs
+it when PICKERS contains dpp0.5 (Q187). Baselines reproj_med / rep5 are reported but never primary; missing columns = 'missing'.
+MICRO smoke (old rows: sd, cube0.5, grid; uniform = cube0.5 as stand-in, no dpp0.5 / cells / ent / offplane columns):
+hull dAUROC +0.0054, z 1.54, within vs sd 0.73 (p 1e-4) but vs grid 0.62 (p 0.10) -> fails; reproj_med passes 1-3 (baseline);
+rep5, crlb, inl_ratio fail. Verdict on MICRO: no candidate passes (results/sub1/micro_prereg.md). Smoke only, not a SUB1 result.
