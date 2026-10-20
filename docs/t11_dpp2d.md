@@ -34,3 +34,10 @@ from, so a shrinking gain at K 400 is expected from the pool size alone; report 
 ## Left (T11 step 2)
 Oracle floor gt_match_pnp: replace LightGlue matches by ground-truth correspondences (project picks into the keyframes with
 true pose + depth, 3 px), then the same PnP. Needs a bench.py match mode and flight data (Euler), not a picker.
+
+## Tune family dpp2d (engineer 2026-10-20, dispatch 13:55 MAIN)
+kpbench/tune.py family `dpp2d` (sigma 20-200 px log, alpha 0.2-5 log; seeds dpp2d74a1, dpp2d40a1, dpp2d120a1, dpp2d74a0.5).
+Cache-only smoke, 84 cached frames (14 per flight, 6 laptop flights), K 100: Jaccard vs dpp0.5 picks 0.40-0.59 over the
+4 seeds + 4 random-space samples, 0/84 identical frames -> kill (same picks as dpp0.5) not met. Caveat: the matched
+dpp2d74 DEV gate was +3.74 [+0.99, +6.72] 0/5 REVERT (18 Oct), so a tune only matters if it beats 12.97 % DEV flat.
+Queue when Euler is back: {"kind": "tune", "study": "dpp2d_dev1", "trials": 24}.
