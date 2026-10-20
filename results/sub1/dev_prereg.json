@@ -1,0 +1,230 @@
+{
+ "split": "dev",
+ "uniform": "dpp0.5",
+ "strong": "sd",
+ "other": "cube0.5",
+ "n": 8273,
+ "n_flat": 936,
+ "results": {
+  "hull": {
+   "status": "scored",
+   "d_auroc": -0.018,
+   "d_prauc": 0.0224,
+   "rule1": false,
+   "d_mean": 0.0372,
+   "z": 16.4,
+   "rule2": true,
+   "within": {
+    "sd": {
+     "n": 94,
+     "win": 67,
+     "tie": 0,
+     "share": 0.7128,
+     "p": 4.496432091968554e-05
+    },
+    "cube0.5": {
+     "n": 55,
+     "win": 37,
+     "tie": 0,
+     "share": 0.6727,
+     "p": 0.014453833533827728
+    }
+   },
+   "rule3": false
+  },
+  "reproj_med": {
+   "status": "scored",
+   "d_auroc": -0.0072,
+   "d_prauc": 0.0187,
+   "rule1": false,
+   "d_mean": 0.0478,
+   "z": 2.31,
+   "rule2": false,
+   "within": {
+    "sd": {
+     "n": 94,
+     "win": 66,
+     "tie": 0,
+     "share": 0.7021,
+     "p": 0.00011112062020663294
+    },
+    "cube0.5": {
+     "n": 55,
+     "win": 37,
+     "tie": 0,
+     "share": 0.6727,
+     "p": 0.014453833533827728
+    }
+   },
+   "rule3": false
+  },
+  "rep5": {
+   "status": "scored",
+   "d_auroc": 0.0064,
+   "d_prauc": -0.0023,
+   "rule1": false,
+   "d_mean": -0.013,
+   "z": -5.23,
+   "rule2": false,
+   "within": {
+    "sd": {
+     "n": 94,
+     "win": 66,
+     "tie": 5,
+     "share": 0.7416,
+     "p": 5.690249181613522e-06
+    },
+    "cube0.5": {
+     "n": 55,
+     "win": 27,
+     "tie": 4,
+     "share": 0.5294,
+     "p": 0.7797679305530743
+    }
+   },
+   "rule3": false
+  },
+  "crlb": {
+   "status": "scored",
+   "d_auroc": -0.0104,
+   "d_prauc": -0.0132,
+   "rule1": false,
+   "d_mean": 0.0018,
+   "z": 0.44,
+   "rule2": false,
+   "within": {
+    "sd": {
+     "n": 94,
+     "win": 60,
+     "tie": 0,
+     "share": 0.6383,
+     "p": 0.009547810466077417
+    },
+    "cube0.5": {
+     "n": 55,
+     "win": 38,
+     "tie": 0,
+     "share": 0.6909,
+     "p": 0.006455803109956635
+    }
+   },
+   "rule3": false
+  },
+  "inl_ratio": {
+   "status": "scored",
+   "d_auroc": 0.0001,
+   "d_prauc": -0.0062,
+   "rule1": false,
+   "d_mean": -0.0218,
+   "z": -10.9,
+   "rule2": false,
+   "within": {
+    "sd": {
+     "n": 94,
+     "win": 59,
+     "tie": 0,
+     "share": 0.6277,
+     "p": 0.017209595585930455
+    },
+    "cube0.5": {
+     "n": 55,
+     "win": 40,
+     "tie": 0,
+     "share": 0.7273,
+     "p": 0.0010158471941252854
+    }
+   },
+   "rule3": false
+  },
+  "cells": {
+   "status": "scored",
+   "d_auroc": -0.027,
+   "d_prauc": -0.0036,
+   "rule1": false,
+   "d_mean": 0.0491,
+   "z": 26.43,
+   "rule2": true,
+   "within": {
+    "sd": {
+     "n": 94,
+     "win": 63,
+     "tie": 2,
+     "share": 0.6848,
+     "p": 0.000509090224349734
+    },
+    "cube0.5": {
+     "n": 55,
+     "win": 36,
+     "tie": 4,
+     "share": 0.7059,
+     "p": 0.0046013097117665325
+    }
+   },
+   "rule3": false,
+   "beats_baselines": false
+  },
+  "ent": {
+   "status": "scored",
+   "d_auroc": -0.0228,
+   "d_prauc": 0.0087,
+   "rule1": false,
+   "d_mean": 0.0363,
+   "z": 19.95,
+   "rule2": true,
+   "within": {
+    "sd": {
+     "n": 94,
+     "win": 64,
+     "tie": 0,
+     "share": 0.6809,
+     "p": 0.0005879022254125642
+    },
+    "cube0.5": {
+     "n": 55,
+     "win": 38,
+     "tie": 0,
+     "share": 0.6909,
+     "p": 0.006455803109956635
+    }
+   },
+   "rule3": false,
+   "beats_baselines": false
+  },
+  "offplane": {
+   "status": "scored",
+   "d_auroc": 0.0265,
+   "d_prauc": 0.033,
+   "rule1": true,
+   "d_mean": -6.5388,
+   "z": -1.02,
+   "rule2": false,
+   "within": {
+    "sd": {
+     "n": 94,
+     "win": 68,
+     "tie": 3,
+     "share": 0.7473,
+     "p": 2.5221536534654515e-06
+    },
+    "cube0.5": {
+     "n": 55,
+     "win": 39,
+     "tie": 1,
+     "share": 0.7222,
+     "p": 0.0014962588853935084
+    }
+   },
+   "rule3": true,
+   "beats_baselines": true
+  },
+  "sel_logdet": {
+   "status": "missing"
+  },
+  "sel_hull": {
+   "status": "missing"
+  }
+ },
+ "passing": [],
+ "primary": null,
+ "verdict": "no candidate passes all three rules -> SUB1 stays query-level (prereg kill)"
+}
