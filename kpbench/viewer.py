@@ -508,13 +508,11 @@ function update() {
     for (const i of S) { cells.add(Math.floor(C.u[i] / cell) * gy + Math.floor(C.v[i] / cell)); rs += C.rank[i] + 1; }
     const own = D.own[st.picker], n = S.length, sp = (t, x) => '<span title="' + t + '">' + x + '</span>';
     document.getElementById('readout').innerHTML = [
-      sp('number of picked points', 'k ' + n),
       sp('mean position of the picks in the detector strength order (1 = strongest of its 3000 points)',
          'avg strength rank ' + (n ? Math.round(rs / n) : '-')),
       sp('share of the 20 px image squares that hold at least one pick (' + cells.size + ' of ' + gx * gy + ')',
          'image coverage ' + Math.round(100 * cells.size / (gx * gy)) + ' %'),
-      sp('number of distinct 0.5 m cubes in 3D that hold at least one pick', '0.5 m cubes ' + keys.size),
-      sp('median depth of all pixels with depth in this frame', 'median depth ' + (D.zmed ? D.zmed.toFixed(1) + ' m' : '-'))
+      sp('number of distinct 0.5 m cubes in 3D that hold at least one pick', '0.5 m cubes ' + keys.size)
     ].join(' \u00b7 ');
     document.getElementById('foot').textContent = own !== undefined && own < D.kmax ?
       lab(st.picker) + ' stops choosing at ' + own + '; rest = strongest' : '';
