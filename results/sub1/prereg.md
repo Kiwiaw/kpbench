@@ -41,3 +41,12 @@ it when PICKERS contains dpp0.5 (Q187). Baselines reproj_med / rep5 are reported
 MICRO smoke (old rows: sd, cube0.5, grid; uniform = cube0.5 as stand-in, no dpp0.5 / cells / ent / offplane columns):
 hull dAUROC +0.0054, z 1.54, within vs sd 0.73 (p 1e-4) but vs grid 0.62 (p 0.10) -> fails; reproj_med passes 1-3 (baseline);
 rep5, crlb, inl_ratio fail. Verdict on MICRO: no candidate passes (results/sub1/micro_prereg.md). Smoke only, not a SUB1 result.
+
+## Addendum 2026-10-20 (scout E3, dispatch 14:45; written before any DEV number of these columns exists)
+| # | name | role | dir | no pose |
+|---|---|---|---|---|
+| 9 | sel_logdet | NEW pre-solve: log10 det of the 2 x 2 covariance of the SELECTED query keypoints, image-normalised (u / W, v / H) | + | filled (needs no pose); < 3 points -> -6 |
+| 10 | sel_hull | NEW pre-solve: convex-hull area of the selected query keypoints / image area | + | filled; < 3 points -> 0 |
+Same rules 1-3 and baseline condition as 6-8; Bonferroni stays z >= 2.5 (10 candidates). Kill unchanged. Columns in
+kpbench.metrics (evaluate --metrics); synthetic check: 100 uniform points log10 det -2.16 (theory -2.158), hull 0.865; 100 points
+in an 80 x 80 px patch -5.47 / 0.019. Older _m rows lack them (reported 'missing'); Q187 rows will have them if it runs after this commit.

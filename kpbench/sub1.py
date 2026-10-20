@@ -29,7 +29,7 @@ def table(split, pickers=PICKERS):
         c = d['cols']; key = [(str(r[0]), r[1]) for r in d['rows']]; o = sorted(range(len(key)), key=key.__getitem__)
         R[p] = [d['rows'][i] for i in o]; Fl[p] = np.array(d['flat'], bool)[o]
         M[p] = {m: np.array([np.nan if R[p][i][c.index(m)] is None else R[p][i][c.index(m)] for i in range(len(o))], float)
-                for m in MCOLS + ['n_inl']}
+                for m in MCOLS + ['n_inl'] if m in c}
     keys = [[(str(r[0]), r[1]) for r in R[p]] for p in pickers]
     assert all(k == keys[0] for k in keys), 'pickers must share the query set'
     return R, M, Fl

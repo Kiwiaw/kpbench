@@ -14,12 +14,15 @@ analysis time, not here. n_inl is already a bench column, so it is not repeated.
   cells       share of the 8 x 6 image cells (80 px) holding >= 1 inlier (prereg v2, results/sub1/prereg.md)
   ent         entropy of the inlier counts over those 48 cells / log 48 (0 = one cell, 1 = even spread)
   offplane    RMS distance of the inliers (camera frame) to their total-least-squares plane / their median depth
+  sel_logdet  pre-solve (scout E3, dispatch 2026-10-20 14:45): log10 det of the 2 x 2 covariance of the SELECTED query keypoints
+              in image-normalised coordinates (u / W, v / H); needs no pose, so it is filled for no-pose queries too
+  sel_hull    pre-solve: convex-hull area of the selected query keypoints / image area (hull is the same on the inliers)
 """
 import numpy as np
 from scipy.spatial import ConvexHull
 from .data import FX, FY, CX, CY, W, H
 
-MCOLS = ['crlb', 'inl_ratio', 'hull', 'reproj_med', 'log_t', 'log_r', 'thr_score', 'depth_iqr', 'cells', 'ent', 'offplane']
+MCOLS = ['crlb', 'inl_ratio', 'hull', 'reproj_med', 'log_t', 'log_r', 'thr_score', 'depth_iqr', 'cells', 'ent', 'offplane', 'sel_logdet', 'sel_hull']
 TAUS = (1, 2, 5, 10, 25)
 
 
@@ -42,10 +45,25 @@ def crlb_cm(Xc, R):
     return float(100 * np.sqrt(tr)) if tr > 0 else None
 
 
-def query_metrics(obj, img, n_match, err, rot, sol):
-    """obj (n x 3 world), img (n x 2) = the PnP input; sol = (R, tvec, inlier indices) from bench.pnp(full=True) or None"""
+def presolve(sel_uv):
+    """[sel_logdet, sel_hull] of the selected query pixels (k x 2); None / 0 below 3 points or for a degenerate set"""
+    P = np.asarray(sel_uv, float).reshape(-1, 2) / (W, H)
+    if len(P) < 3:
+        return [None, 0.0]
+    dt = np.linalg.det(np.cov(P.T))
+    try:
+        hl = ConvexHull(P).volume
+    except Exception:
+        hl = 0.0
+    return [round(float(np.log10(dt)), 4) if dt > 0 else None, round(float(hl), 4)]
+
+
+def query_metrics(obj, img, n_match, err, rot, sol, sel_uv=None):
+    """obj (n x 3 world), img (n x 2) = the PnP input; sol = (R, tvec, inlier indices) from bench.pnp(full=True) or None;
+    sel_uv (k x 2) = the picked query keypoints (pre-solve columns, None -> None)"""
+    pre = presolve(sel_uv) if sel_uv is not None else [None, None]
     if sol is None or err is None:
-        return [None] * len(MCOLS)
+        return [None] * (len(MCOLS) - 2) + pre
     R, t, inl = sol
     X = np.asarray(obj, float).reshape(-1, 3)[inl]; uv = np.asarray(img, float).reshape(-1, 2)[inl]
     Xc = X @ R.T + t
@@ -62,4 +80,4 @@ def query_metrics(obj, img, n_match, err, rot, sol):
     off = float(np.sqrt(np.linalg.eigvalsh(D.T @ D / len(Xc))[0]) / max(np.median(Xc[:, 2]), 1e-6)) if len(Xc) >= 4 else None
     out = [np.log10(c) if c else None, len(inl) / max(n_match, 1), hull, float(np.median(np.linalg.norm(proj - uv, axis=1))),
            np.log10(max(err, 0.1)), np.log10(max(rot, 0.01)), thr, q75 - q25, (cnt > 0).mean(), float(-(pr * np.log(pr)).sum() / np.log(48)), off]
-    return [None if v is None else round(float(v), 4) for v in out]
+    return [None if v is None else round(float(v), 4) for v in out] + pre

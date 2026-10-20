@@ -97,7 +97,7 @@ def eval_flight(fid, qs, pk, K, det, matcher, allow_oracle, metrics=False):
         for f in [f for f in trees if f < q]:
             del trees[f]
         rows.append([fid, q, err, rot, int(len(i)), int(len(mq)), ninl] + rep +
-                    (query_metrics(obj, img, len(mq), err, rot, sol) if metrics else []))
+                    (query_metrics(obj, img, len(mq), err, rot, sol, np.stack([u[i], v[i]], 1)) if metrics else []))
         pf = lab[str(q)].get('plane_frac'); flat.append(pf is not None and pf >= FLAT)
     return rows, flat
 

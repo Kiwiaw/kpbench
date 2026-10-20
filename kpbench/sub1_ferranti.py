@@ -19,7 +19,7 @@ from .stats import fail_flags
 from .sub1 import auroc, OUT, NOPOSE
 
 MODELS = {'count': ('n_inl',), 'hull': ('hull',), 'count+hull': ('n_inl', 'hull')}
-FILL = dict(NOPOSE, depth_iqr=0.0, cells=0.0, ent=0.0, offplane=0.0, rep5=0.0)   # prereg v2 fills (results/sub1/prereg.md)
+FILL = dict(NOPOSE, depth_iqr=0.0, cells=0.0, ent=0.0, offplane=0.0, rep5=0.0, sel_logdet=-6.0, sel_hull=0.0)   # prereg v2 fills (results/sub1/prereg.md)
 
 
 def load(split, metric='hull', posed=False):
@@ -113,7 +113,7 @@ def write(out):
 def main(argv=None):
     import argparse
     ap = argparse.ArgumentParser(); ap.add_argument('--split', default='dev')
-    ap.add_argument('--metric', default='hull', choices=['hull', 'crlb', 'inl_ratio', 'reproj_med', 'depth_iqr', 'rep5', 'cells', 'ent', 'offplane'])
+    ap.add_argument('--metric', default='hull', choices=['hull', 'crlb', 'inl_ratio', 'reproj_med', 'depth_iqr', 'rep5', 'cells', 'ent', 'offplane', 'sel_logdet', 'sel_hull'])
     ap.add_argument('--posed', action='store_true'); a = ap.parse_args(argv)
     out = analyse(a.split, a.metric, a.posed); print(write(out)); print(out['verdict'])
 

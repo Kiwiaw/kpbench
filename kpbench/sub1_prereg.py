@@ -7,7 +7,7 @@ Rule 2 uniform lowers error: d_q = dir x (m(uniform) - m(strong)) per query, no-
   bootstrap z >= 2.5.
 Rule 3 picker-level link: flat frames where exactly one of uniform / strong fails (and uniform / other): the posed picker
   has the better oriented value in >= 70 % (ties dropped), sign-test p < 0.05, in both pairs.
-A new metric (cells, ent, offplane) must also beat reproj_med and rep5 on rule-1 dAUROC. Primary = largest rule-2 z among
+A new metric (cells, ent, offplane, sel_logdet, sel_hull) must also beat reproj_med and rep5 on rule-1 dAUROC. Primary = largest rule-2 z among
 the non-baseline metrics passing all rules (reproj_med and rep5 are baselines: reported, never primary). Columns missing from the rows are reported as 'missing', never as a pass or a kill.
 """
 import os, json, gzip
@@ -18,8 +18,8 @@ from .stats import fail_flags
 from .sub1 import OUT, blocks, boot_se
 from . import sub1_ferranti as fe
 
-DIR = dict(hull=1, reproj_med=-1, rep5=1, crlb=-1, inl_ratio=1, cells=1, ent=1, offplane=1)   # prereg v2 table, '+' = higher is better
-NEW = ('cells', 'ent', 'offplane')
+DIR = dict(hull=1, reproj_med=-1, rep5=1, crlb=-1, inl_ratio=1, cells=1, ent=1, offplane=1, sel_logdet=1, sel_hull=1)   # prereg v2 table, '+' = higher is better
+NEW = ('cells', 'ent', 'offplane', 'sel_logdet', 'sel_hull')   # sel_*: pre-solve, scout E3 (prereg addendum 2026-10-20)
 BASE = ('reproj_med', 'rep5')
 
 
