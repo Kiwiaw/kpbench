@@ -1,6 +1,8 @@
 """SUB4: failure-prediction table for the flat queries of one picker: AUROC + AURC / risk-coverage (Darabi-style protocol).
 
   python -m kpbench.sub4_aurc [--split dev] [--picker dpp0.5]   -> results/sub4/aurc_<split>.md + .json
+  python -m kpbench.sub4_aurc --split fresh --run <gate run id>   -> results/sub4/aurc_fresh.md: rows of a gate run (no metric
+      columns, e.g. FRESH-1), so only rep5, inlier count and the LOFO count+rep5 combination (T16 repeat, 2026-10-21)
 
 Rows: results/eval/<split>/raco_<picker>_K100_lg_m.json.gz (metric columns), flat queries (plane_frac >= 0.85).
 Confidence scores (higher = trusted): rep5 (needs the true pose: a measurement, upper reference), inlier count (test time),
@@ -39,10 +41,24 @@ def load(split, picker):
     return rows, X, fail_flags(rows).astype(float)
 
 
-def analyse(split='dev', picker='dpp0.5', n_boot=1000, seed=0):
-    rows, X, y = load(split, picker); fid = np.array([str(r[0]) for r in rows]); inv = blocks(rows)
+def load_gate_run(split, rid):
+    """flat rows of a gate run (results/runs/<rid>, all flights of the split), flat by the repo labels; no metric columns"""
+    from .gate import load_run, labels, split_info
+    from .bench import COLS
+    from .splits import FLAT
+    flights = split_info(split)[0]; _, R = load_run(rid, flights); rows = []
+    for f in flights:
+        lab = labels(f)
+        rows += [[f] + list(r[1:]) for r in R[f][0] if (lab[str(r[1])].get('plane_frac') or -1) >= FLAT]   # run rows carry no flight name
+    col = lambda m: np.array([FILL.get(m, 0.0) if r[COLS.index(m)] is None else r[COLS.index(m)] for r in rows], float)
+    return rows, dict(rep5=col('rep5'), count=np.log1p(col('n_inl'))), fail_flags(rows).astype(float)
+
+
+def analyse(split='dev', picker='dpp0.5', n_boot=1000, seed=0, run=None):
+    rows, X, y = load_gate_run(split, run) if run else load(split, picker); fid = np.array([str(r[0]) for r in rows]); inv = blocks(rows)
     S = dict(rep5=X['rep5'], count=X['count'])
-    for name, cols in (('geom2d', GEOM), ('count+geom2d', ('count',) + GEOM), ('count+geom2d+rep5', ('count',) + GEOM + ('rep5',))):
+    models = (('count+rep5', ('count', 'rep5')),) if run else (('geom2d', GEOM), ('count+geom2d', ('count',) + GEOM), ('count+geom2d+rep5', ('count',) + GEOM + ('rep5',)))
+    for name, cols in models:
         S[name] = -lofo(fid, np.stack([X[k] for k in cols], 1), y)          # confidence = -predicted fail probability
     opt = aurc(-y, y); m = inv.max() + 1; groups = [np.where(inv == g)[0] for g in range(m)]
     rng = np.random.default_rng(seed); B = [np.concatenate([groups[g] for g in rng.integers(0, m, m)]) for _ in range(n_boot)]
@@ -57,7 +73,7 @@ def analyse(split='dev', picker='dpp0.5', n_boot=1000, seed=0):
     best = min(combos, key=lambda k: res[k]['aurc']); lo, hi = res[best]['vs_count'][1:]
     verdict = ('KILL: best combination %s AURC %+.2f [%+.2f, %+.2f] pt vs inlier count, no better' % (best, *res[best]['vs_count'])
                if hi >= 0 else 'best combination %s beats inlier count: AURC %+.2f [%+.2f, %+.2f] pt' % (best, *res[best]['vs_count']))
-    return dict(split=split, picker=picker, n_flat=len(y), fails=int(y.sum()), fail_pct=round(100 * y.mean(), 2), aurc_opt=round(100 * opt, 2),
+    return dict(split=split, picker=run or picker, n_flat=len(y), fails=int(y.sum()), fail_pct=round(100 * y.mean(), 2), aurc_opt=round(100 * opt, 2),
                 scores=res, verdict=verdict)
 
 
@@ -78,7 +94,8 @@ def write(out):
 
 def main(argv=None):
     ap = argparse.ArgumentParser(); ap.add_argument('--split', default='dev'); ap.add_argument('--picker', default='dpp0.5')
-    a = ap.parse_args(argv); out = analyse(a.split, a.picker); print(write(out)); print(out['verdict'])
+    ap.add_argument('--run', default=None, help='gate run id under results/runs (rows without metric columns)')
+    a = ap.parse_args(argv); out = analyse(a.split, a.picker, run=a.run); print(write(out)); print(out['verdict'])
 
 
 if __name__ == '__main__':

@@ -1,0 +1,52 @@
+{
+ "split": "fresh",
+ "picker": "raco_dpp0.5_K100_same_lg_g-dppr0.486a0.453b1.02t0.9-fresh",
+ "n_flat": 2075,
+ "fails": 62,
+ "fail_pct": 2.99,
+ "aurc_opt": 0.05,
+ "scores": {
+  "rep5": {
+   "auroc": 0.864,
+   "aurc": 0.8,
+   "e_aurc": 0.75,
+   "risk": {
+    "0.5": 0.48,
+    "0.8": 0.6,
+    "0.9": 1.28
+   },
+   "vs_count": [
+    0.43,
+    0.11,
+    0.95
+   ]
+  },
+  "count": {
+   "auroc": 0.9376,
+   "aurc": 0.37,
+   "e_aurc": 0.32,
+   "risk": {
+    "0.5": 0.39,
+    "0.8": 0.24,
+    "0.9": 0.32
+   },
+   "vs_count": null
+  },
+  "count+rep5": {
+   "auroc": 0.9135,
+   "aurc": 0.69,
+   "e_aurc": 0.64,
+   "risk": {
+    "0.5": 0.39,
+    "0.8": 0.24,
+    "0.9": 0.48
+   },
+   "vs_count": [
+    0.32,
+    0.01,
+    1.0
+   ]
+  }
+ },
+ "verdict": "KILL: best combination count+rep5 AURC +0.32 [+0.01, +1.00] pt vs inlier count, no better"
+}
