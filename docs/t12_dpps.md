@@ -44,3 +44,16 @@ span < 2 m, so slicing may change little.
 80 MICRO flat queries (seed 0), RaCo K 100, Jaccard vs dpp0.5 picks: dpps4q mean 0.634 (median 0.646, min 0.325,
 0/80 identical); dpps4l 0.686; dpps8q 0.623. Median p5-p95 depth span of the top-400 candidates 1.44 m.
 Script: scratchpad t12_step0.py (not in repo).
+
+### Step 1 (Euler job 17840534, one node, 21 Oct): KILL
+DEV flat, 936 queries, LightGlue, RaCo K 100, paired block bootstrap (20-frame blocks) vs dpp0.5 rerun in the same job:
+
+| picker | flat fail % | rep5 | diff vs dpp0.5 (pt) | flights better / worse / tied |
+|---|---|---|---|---|
+| dpp0.5 | 14.42 | 0.452 | - | - |
+| dpps4q (primary) | 17.41 | 0.415 | +2.99 [+0.60, +5.73] | 1 / 4 / 7 |
+| dpps4l | 15.71 | 0.425 | +1.28 [-0.37, +2.98] | 3 / 4 / 5 |
+| dpps8q | 17.84 | 0.418 | +3.42 [+0.70, +6.63] | 1 / 5 / 6 |
+
+dpps4q diff +2.99 > -0.5 pt -> KILL per the pre-registered rule. Step 2 not run. Forcing a share of picks into far
+slices costs strong near points (as with dband).
