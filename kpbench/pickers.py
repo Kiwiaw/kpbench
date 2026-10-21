@@ -32,6 +32,7 @@ Names:
   dppr<sigma>a<alpha>b<beta>t<tau> dpp whose quality also rewards past-frame track count r^beta (T4, docs/t4_dppr_design.md)
   dppm<c>[a<alpha>] dpp with a per-frame scale sigma = c x median depth of the frame's candidates with depth (scene-scale dpp)
   dppmr<c>a<alpha>b<beta>t<tau> dppm's per-frame sigma = c x median depth + dppr's past-frame track bonus r^beta
+  dpps<n>[q|l|e] dpp0.5 with a per-depth-slice cap ceil(K/n) (T12, docs/t12_dpps.md): q quantile, l log, e equal-width slices
   dppl<c>[a<alpha>] dpp with a per-point scale l_i = c x z_i (Gibbs kernel): spread measured relative to depth (~ angle c rad)
 A picker returns candidate indices (at most K; fewer only when the frame has too few candidates).
 To add a picker: write a function (u, v, s, z, K) -> indices and register it in PICKERS or in parse().
@@ -509,15 +510,23 @@ def pick_poisson_disk(r0, theta):
     return f
 
 
-def dpp_greedy(P, q, K, sigma, ell=None):
+def dpp_greedy(P, q, K, sigma, ell=None, slc=None, cap=None):
     """greedy MAP of L = diag(q) K diag(q), K_ij = exp(-|P_i - P_j|^2 / (2 sigma^2)) (fast greedy of Chen, Zhang, Zhou 2018).
     ell (per-point length scales, dppl): Gibbs kernel K_ij = (2 l_i l_j / (l_i^2 + l_j^2))^(D/2) exp(-|P_i - P_j|^2 / (l_i^2 + l_j^2)),
-    positive semi-definite for any l > 0 (Gibbs 1997, Paciorek 2003); equal l_i = l_j = sigma gives the fixed kernel."""
+    positive semi-definite for any l > 0 (Gibbs 1997, Paciorek 2003); equal l_i = l_j = sigma gives the fixed kernel.
+    slc, cap (dpps, docs/t12_dpps.md): slice id per point; each pick takes the argmax gain among points whose slice holds < cap
+    picks; once no non-full slice has a point left (gain > 1e-12), the cap is dropped (phase 2, same objective)."""
     n = len(P); d2 = q ** 2; c = np.zeros((0, n)); sel = []
     if ell is not None:
         l2 = ell ** 2; hd = P.shape[1] / 2.0
+    if slc is not None:
+        cnt = np.zeros(int(slc.max()) + 1 if n else 1, int)
     for _ in range(min(K, n)):
-        j = int(np.argmax(d2))
+        if slc is not None:
+            el = (cnt[slc] < cap) & (d2 > 1e-12)
+            if not el.any():
+                slc = None                                   # phase 2: uncapped
+        j = int(np.argmax(d2 if slc is None else np.where(el, d2, -np.inf)))
         if d2[j] <= 1e-12:
             break
         if ell is None:
@@ -526,7 +535,28 @@ def dpp_greedy(P, q, K, sigma, ell=None):
             s2 = l2 + l2[j]; dj = np.sqrt(d2[j])
             Lj = q[j] * q * (2 * ell * ell[j] / s2) ** hd * np.exp(-np.sum((P - P[j]) ** 2, 1) / s2)
         e = (Lj - (c[:, j] @ c if len(c) else 0.0)) / dj; c = np.vstack([c, e]); d2 = d2 - e ** 2; d2[j] = -np.inf; sel.append(j)
+        if slc is not None:
+            cnt[slc[j]] += 1
     return np.array(sel, int)
+
+
+def pick_dpp_slices(n, mode, sigma=0.5, alpha=1.0, pool=400):
+    """dpps<n>[q|l|e] (T12, docs/t12_dpps.md): dpp0.5 (alpha 1) with a per-depth-slice cap ceil(K/n) in the greedy loop.
+    Slice edges from the depths of the strongest `pool` candidates with depth: q equal-count quantiles, l log-spaced and
+    e equal-width between their 5th and 95th percentile (outer slices open-ended). dpps1 = dpp0.5 exactly."""
+    def f(u, v, s, z, K):
+        ok = np.flatnonzero(z < DEPTH_MAX)
+        if not len(ok):
+            return np.arange(min(K, len(u)))
+        zz = z[ok]; P = to3d(u[ok], v[ok], zz); q = np.exp(-alpha * np.arange(len(ok)) / 100.0); zp = zz[:pool]
+        if mode == 'q':
+            edges = np.quantile(zp, np.arange(1, n) / n)
+        else:
+            lo, hi = np.percentile(zp, [5, 95])
+            edges = (np.geomspace(max(lo, 1e-6), max(hi, 1e-6), n + 1) if mode == 'l' else np.linspace(lo, hi, n + 1))[1:-1]
+        slc = np.searchsorted(edges, zz, side='right')
+        return fill(ok[dpp_greedy(P, q, K, sigma, slc=slc, cap=int(np.ceil(K / n)))], len(u), K)
+    return f
 
 
 def pick_dpp(sigma, alpha, space='3d'):
@@ -737,6 +767,9 @@ def parse(name):
     m = re.fullmatch(r'dppmr([0-9.]+)a([0-9.]+)b([0-9.]+)t([0-9.]+)', name)
     if m:
         return pick_dppr(*map(float, m.groups()), depth_scaled=True)
+    m = re.fullmatch(r'dpps([0-9]+)([qle]?)', name)
+    if m:
+        return pick_dpp_slices(int(m.group(1)), m.group(2) or 'q')
     m = re.fullmatch(r'dpp([ml])([0-9.]+)(?:a([0-9.]+))?', name)
     if m:
         return pick_dpp_depth(float(m.group(2)), float(m.group(3) or 1.0), m.group(1))

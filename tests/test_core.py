@@ -89,6 +89,25 @@ def test_dpp_depth_adaptive():
     assert np.linalg.eigvalsh(Kg).min() > -1e-9
 
 
+def test_dpps_slices():
+    # T12 (docs/t12_dpps.md): one slice = dpp0.5 exactly; n slices cap each slice at ceil(K/n) while candidates remain
+    for seed in (0, 3, 5):
+        u, v, s, z = toy_frame(600, seed=seed)
+        for K in (30, 100):
+            ref = pickers.parse('dpp0.5')(u, v, s, z, K).tolist()
+            for name in ('dpps1', 'dpps1q', 'dpps1l', 'dpps1e'):
+                assert pickers.parse(name)(u, v, s, z, K).tolist() == ref, (name, seed, K)
+    u, v, s, z = toy_frame(600, seed=3); ok = np.flatnonzero(z < 1000); zp = z[ok][:400]
+    edges = np.quantile(zp, [0.25, 0.5, 0.75])
+    for name in ('dpps4q', 'dpps4l', 'dpps4e', 'dpps8q'):
+        idx = pickers.parse(name)(u, v, s, z, 100)
+        assert len(set(idx.tolist())) == 100 and (z[idx] < 1000).all(), name
+    idx = pickers.parse('dpps4q')(u, v, s, z, 100)
+    assert np.bincount(np.searchsorted(edges, z[idx], side='right'), minlength=4).max() <= 25
+    zn = np.full_like(z, 1e9)
+    assert pickers.parse('dpps4q')(u, v, s, zn, 30).tolist() == list(range(30))
+
+
 def test_dppmr_combines_dppm_and_dppr():
     """dppmr<c>a<alpha>b<beta>t<tau> = dppm's depth-scaled sigma + dppr's past-frame track bonus."""
     u, v, s, z = toy_frame(600, seed=4)
