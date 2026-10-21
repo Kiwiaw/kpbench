@@ -17,18 +17,21 @@ analysis time, not here. n_inl is already a bench column, so it is not repeated.
   sel_logdet  pre-solve (scout E3, dispatch 2026-10-20 14:45): log10 det of the 2 x 2 covariance of the SELECTED query keypoints
               in image-normalised coordinates (u / W, v / H); needs no pose, so it is filled for no-pose queries too
   sel_hull    pre-solve: convex-hull area of the selected query keypoints / image area (hull is the same on the inliers)
+  pcov        prereg v3 (dispatch 2026-10-21 13:10, T10): log10 sqrt(trace) of the full 6 x 6 pose covariance at 1 px noise,
+              scale-free: rotation in rad, camera centre divided by the inliers' median depth (so a 2x bigger scene gives the
+              same value); crlb is its centre-only part in cm
 """
 import numpy as np
 from scipy.spatial import ConvexHull
 from .data import FX, FY, CX, CY, W, H
 
-MCOLS = ['crlb', 'inl_ratio', 'hull', 'reproj_med', 'log_t', 'log_r', 'thr_score', 'depth_iqr', 'cells', 'ent', 'offplane', 'sel_logdet', 'sel_hull']
+MCOLS = ['crlb', 'inl_ratio', 'hull', 'reproj_med', 'log_t', 'log_r', 'thr_score', 'depth_iqr', 'cells', 'ent', 'offplane', 'sel_logdet', 'sel_hull', 'pcov']
 TAUS = (1, 2, 5, 10, 25)
 
 
-def crlb_cm(Xc, R):
-    """camera-centre std in cm at 1 px noise. Xc = inlier points in the camera frame (n x 3); parametrisation
-    Xc = exp(w) R (X - c): dXc/dw = -[Xc]x, dXc/dc = -R"""
+def pose_cov(Xc, R):
+    """6 x 6 pose covariance (rotation rad, centre m) at 1 px iid noise, None if singular. Xc = inlier points in the camera
+    frame (n x 3); parametrisation Xc = exp(w) R (X - c): dXc/dw = -[Xc]x, dXc/dc = -R"""
     x, y, z = Xc.T
     dpu = np.stack([FX / z, 0 * z, -FX * x / z ** 2], 1); dpv = np.stack([0 * z, FY / z, -FY * y / z ** 2], 1)
     J = []
@@ -38,11 +41,26 @@ def crlb_cm(Xc, R):
         J.append(np.concatenate([dw, dc], 1))
     J = np.concatenate(J)
     try:
-        S = np.linalg.inv(J.T @ J)
+        return np.linalg.inv(J.T @ J)
     except np.linalg.LinAlgError:
         return None
-    tr = np.trace(S[3:, 3:])
+
+
+def crlb_cm(Xc, R):
+    """camera-centre std in cm at 1 px noise"""
+    S = pose_cov(Xc, R)
+    tr = np.trace(S[3:, 3:]) if S is not None else 0
     return float(100 * np.sqrt(tr)) if tr > 0 else None
+
+
+def pcov(Xc, R):
+    """log10 sqrt(trace) of the pose covariance with the centre in units of the median inlier depth (scale-free)"""
+    S = pose_cov(Xc, R)
+    if S is None:
+        return None
+    zm2 = max(float(np.median(Xc[:, 2])), 1e-6) ** 2
+    tr = np.trace(S[:3, :3]) + np.trace(S[3:, 3:]) / zm2
+    return round(float(0.5 * np.log10(tr)), 4) if tr > 0 else None
 
 
 def presolve(sel_uv):
@@ -63,7 +81,7 @@ def query_metrics(obj, img, n_match, err, rot, sol, sel_uv=None):
     sel_uv (k x 2) = the picked query keypoints (pre-solve columns, None -> None)"""
     pre = presolve(sel_uv) if sel_uv is not None else [None, None]
     if sol is None or err is None:
-        return [None] * (len(MCOLS) - 2) + pre
+        return [None] * (len(MCOLS) - 3) + pre + [None]
     R, t, inl = sol
     X = np.asarray(obj, float).reshape(-1, 3)[inl]; uv = np.asarray(img, float).reshape(-1, 2)[inl]
     Xc = X @ R.T + t
@@ -80,4 +98,4 @@ def query_metrics(obj, img, n_match, err, rot, sol, sel_uv=None):
     off = float(np.sqrt(np.linalg.eigvalsh(D.T @ D / len(Xc))[0]) / max(np.median(Xc[:, 2]), 1e-6)) if len(Xc) >= 4 else None
     out = [np.log10(c) if c else None, len(inl) / max(n_match, 1), hull, float(np.median(np.linalg.norm(proj - uv, axis=1))),
            np.log10(max(err, 0.1)), np.log10(max(rot, 0.01)), thr, q75 - q25, (cnt > 0).mean(), float(-(pr * np.log(pr)).sum() / np.log(48)), off]
-    return [None if v is None else round(float(v), 4) for v in out] + pre
+    return [None if v is None else round(float(v), 4) for v in out] + pre + [pcov(Xc, R)]

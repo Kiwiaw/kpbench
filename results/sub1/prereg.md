@@ -50,3 +50,12 @@ rep5, crlb, inl_ratio fail. Verdict on MICRO: no candidate passes (results/sub1/
 Same rules 1-3 and baseline condition as 6-8; Bonferroni stays z >= 2.5 (10 candidates). Kill unchanged. Columns in
 kpbench.metrics (evaluate --metrics); synthetic check: 100 uniform points log10 det -2.16 (theory -2.158), hull 0.865; 100 points
 in an 80 x 80 px patch -5.47 / 0.019. Older _m rows lack them (reported 'missing'); Q187 rows will have them if it runs after this commit.
+
+## Addendum 2026-10-21 (prereg v3 item, dispatch 13:10 T10; written before any DEV number of this column exists)
+| # | name | role | dir | no pose |
+|---|---|---|---|---|
+| 11 | pcov | NEW post-solve: log10 sqrt(trace) of the full 6 x 6 pose covariance at 1 px noise over the inliers, rotation in rad, camera centre / median inlier depth (scale-free; crlb = its centre-only part in cm) | - | 99th percentile cap (as crlb) |
+Same rules 1-3 and baseline condition as 6-10; z >= 2.5 kept (11 candidates). Extra kill (dispatch): Spearman rho(pcov, hull) > 0.9
+on the DEV rows -> redundant with hull, dropped before scoring. Synthetic check (60 points, depth 4-6 m): -2.5646 at scene scale 1
+and 2 (scale-free; crlb 1.08 -> 2.16 cm), keypoints in the central 30 % of the image -2.1407 (2.6x larger std). Needs a new
+evaluate --metrics run (sub1.sbatch); older _m rows report it 'missing'.

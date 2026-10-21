@@ -35,7 +35,7 @@ def load(split, metric='hull', posed=False):
         col = lambda m: np.array([np.nan if r[c.index(m)] is None else r[c.index(m)] for r in rows], float)
         X = dict(n_inl=np.log1p(np.nan_to_num(col('n_inl'))), hull=col(metric))
         T[p] = (np.array([str(r[0]) for r in rows]), X, fail_flags(rows))
-    cap = np.nanpercentile(np.concatenate([X['hull'] for _, X, _ in T.values()]), 99) if metric == 'crlb' else FILL[metric]
+    cap = np.nanpercentile(np.concatenate([X['hull'] for _, X, _ in T.values()]), 99) if metric in ('crlb', 'pcov') else FILL[metric]
     for _, X, _ in T.values():
         X['hull'][np.isnan(X['hull'])] = cap
     return T
@@ -115,7 +115,7 @@ def write(out):
 def main(argv=None):
     import argparse
     ap = argparse.ArgumentParser(); ap.add_argument('--split', default='dev')
-    ap.add_argument('--metric', default='hull', choices=['hull', 'crlb', 'inl_ratio', 'reproj_med', 'depth_iqr', 'rep5', 'cells', 'ent', 'offplane', 'sel_logdet', 'sel_hull'])
+    ap.add_argument('--metric', default='hull', choices=['hull', 'crlb', 'inl_ratio', 'reproj_med', 'depth_iqr', 'rep5', 'cells', 'ent', 'offplane', 'sel_logdet', 'sel_hull', 'pcov'])
     ap.add_argument('--posed', action='store_true'); a = ap.parse_args(argv)
     out = analyse(a.split, a.metric, a.posed); print(write(out)); print(out['verdict'])
 

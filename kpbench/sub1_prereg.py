@@ -18,8 +18,8 @@ from .stats import fail_flags
 from .sub1 import OUT, blocks, boot_se
 from . import sub1_ferranti as fe
 
-DIR = dict(hull=1, reproj_med=-1, rep5=1, crlb=-1, inl_ratio=1, cells=1, ent=1, offplane=1, sel_logdet=1, sel_hull=1)   # prereg v2 table, '+' = higher is better
-NEW = ('cells', 'ent', 'offplane', 'sel_logdet', 'sel_hull')   # sel_*: pre-solve, scout E3 (prereg addendum 2026-10-20)
+DIR = dict(hull=1, reproj_med=-1, rep5=1, crlb=-1, inl_ratio=1, cells=1, ent=1, offplane=1, sel_logdet=1, sel_hull=1, pcov=-1)   # prereg v2 table (+ pcov, v3), '+' = higher is better
+NEW = ('cells', 'ent', 'offplane', 'sel_logdet', 'sel_hull', 'pcov')   # sel_*: pre-solve, scout E3 (prereg addendum 2026-10-20); pcov v3
 BASE = ('reproj_med', 'rep5')
 
 
@@ -54,7 +54,7 @@ def analyse(split, uniform='dpp0.5', strong='sd', other='cube0.5'):
             res[m] = dict(status='missing'); continue
         r1 = fe.analyse(split, m)['results']['pooled'].get('delta', {})
         allx = np.concatenate([col(D[p][0], D[p][1], m, np.nan) for p in D])
-        fill = float(np.nanpercentile(allx, 99)) if m == 'crlb' else fe.FILL[m]
+        fill = float(np.nanpercentile(allx, 99)) if m in ('crlb', 'pcov') else fe.FILL[m]
         X = {p: DIR[m] * col(D[p][0], D[p][1], m, fill) for p in D}
         d = X[uniform] - X[strong]; z = float(d.mean() / boot_se(d, inv))
         w = {q: within(F[uniform], F[q], X[uniform], X[q], flat) for q in (strong, other)}
