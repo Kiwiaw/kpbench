@@ -105,7 +105,7 @@ def compare(cand, inc, split, runs='runs', allow_mismatch=''):
     g.update(cand=cand, inc=inc, split=split, n=len(fl), n_flat=int(np.sum(flat)),
              device_check='same' if all(v == 'same' for v in dev.values()) else
              'unknown on %d flights' % sum(v == 'unknown' for v in dev.values()),
-             date=datetime.datetime.now().isoformat(timespec='seconds'), picker=mc.get('picker'))
+             date=datetime.datetime.now().isoformat(timespec='seconds'), picker=mc.get('picker'), K=mc.get('K'))
     return g
 
 
