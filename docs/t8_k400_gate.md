@@ -38,7 +38,9 @@ All frames at K 400: cube0.5 better by 0.37 pt (8273 queries).
 - kpbench.gate writes "K" into each gate json.
 
 ### Open for Kinga (not decided here)
-- Held-out discipline is per picker name (kpbench.gate.held_out_allowed). cube0.5 already has held-out history at K 100, so a
-  K 400 held-out exam would be refused. Options: (a) key the one-shot rule by (picker, K); (b) use FRESH-1 (2075 flat) as the
-  K 400 confirmation; (c) no K 400 confirmation, DEV-only result in the paper. Nothing in the rule changes until she picks.
+- Held-out discipline is per picker name (kpbench.gate.held_out_allowed), not per K. cube0.5 has no logged held-out verdict
+  (log.jsonl on laptop and Euler: only dpp0.5, 13 Oct), so a logged K 400 DEV pass would unlock its one held-out exam, and that
+  exam would then use up cube0.5's held-out shot at every K. Options: (a) key the one-shot rule by (picker, K); (b) use FRESH-1
+  (2075 flat) as the K 400 confirmation and keep held-out untouched; (c) DEV-only result in the paper. Nothing changes until
+  she picks; until then run the DEV gate without --log.
 - Whether the MAIN target becomes "best picker per budget" (a K-indexed leaderboard) rather than one K 100 incumbent.

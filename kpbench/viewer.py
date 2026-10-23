@@ -298,6 +298,7 @@ HTML = r'''<!doctype html>
   <span title="points farther forward than this are outside the 3D view (they stay in the statistics)">view depth <input id="dmax" type="range" min="2" step="0.5"> <span id="dmaxv"></span> m</span>
 </div>
 <div id="note" style="color:#555;margin-bottom:6px;max-width:1200px"></div>
+<div id="pose" style="color:#333;margin-bottom:6px;max-width:1200px"></div>
 <div id="readout"></div>
 <div id="foot" style="color:#888;font-size:11px;margin:-3px 0 6px"></div>
 <div id="panels">
@@ -313,18 +314,19 @@ const SETS = D.cands.u ? { _: D.cands } : D.cands;
 const setOf = p => (D.setOf && SETS[D.setOf[p]]) ? D.setOf[p] : Object.keys(SETS)[0];
 let C, NC, CSET;
 function useSet(p) { CSET = setOf(p); C = SETS[CSET]; NC = C.u.length; }
-const st = { picker: D.default || (D.pickers.includes('sd') ? 'sd' : D.pickers[0]), K: Math.min(100, D.kmax), dmax: 0 };
+const st = { picker: D.default || (D.pickers.includes('sd') ? 'sd' : D.pickers[0]), K: Math.min(D.kdefault || 100, D.kmax), dmax: 0 };
 useSet(st.picker);
 // 'order' pages (one fresh candidate set, pickers compared at the same k): faint unpicked candidates, one colour per picker
 const ORDER = D.mode === 'order', LAB = D.labels || {}, HL = D.colours || {};
 const lab = p => LAB[p] || p, hl = p => HL[p] || '#ffd400';
 document.getElementById('note').textContent = D.note || '';
 document.getElementById('source').textContent = D.source || '';
-if (ORDER) { document.getElementById('allc').checked = true;
+{ const pe = document.getElementById('pose'); pe.textContent = D.pose || ''; if (D.poseTitle) { pe.title = D.poseTitle; pe.style.cursor = 'help'; } if (!D.pose) pe.style.display = 'none'; }
+if (ORDER) { document.getElementById('allc').checked = false;
   document.getElementById('allcl').lastChild.textContent = ' show unpicked';
   document.getElementById('byrankl').lastChild.textContent = ' colour by pick order'; }
-// default view depth: twice the median candidate depth, between 4 and 30 m, so the near scene fills the view
-{ const ys = C.y.slice().sort((a, b) => a - b); st.dmax = Math.round(Math.min(30, Math.max(4, 2 * ys[ys.length >> 1])) * 2) / 2; }
+// default view depth: the farthest point, so the whole scene is in view
+st.dmax = Math.ceil(Math.max(...C.y, ...D.cloud.y));
 
 // trace order in the 3D scene
 const T_CLOUD = 0, T_ALL = 1, T_CUBES = 2, T_CAM = 3, T_SEL = 4;
@@ -587,6 +589,10 @@ def main():
     ap.add_argument('--source', default='', help='small grey line under the heading')
     ap.add_argument('--labels', default='', help='button labels, key=label,key=label')
     ap.add_argument('--out', default='', help='file name in docs/frames (default <flight>_<frame>.html)')
+    ap.add_argument('--outdir', default=OUT_DIR, help='folder for the page (default docs/frames)')
+    ap.add_argument('--pose', default='', help='one extra line under the note (e.g. per-picker pose errors)')
+    ap.add_argument('--pose-title', default='', help='hover text of the --pose line')
+    ap.add_argument('--k-default', type=int, default=100, help='K shown first')
     a = ap.parse_args()
     pickers = [p.strip() for p in a.pickers.split(',') if p.strip()]
     assert a.flight or a.dir, 'need --flight or --dir'
@@ -603,13 +609,18 @@ def main():
         data['title'] = a.title
     if a.note:
         data['note'] = a.note
+    data['kdefault'] = a.k_default
+    if a.pose:
+        data['pose'] = a.pose
+    if a.pose_title:
+        data['poseTitle'] = a.pose_title
     for k in ('h1', 'source'):
         if getattr(a, k):
             data[k] = getattr(a, k)
     if a.labels:
         data.setdefault('labels', {}).update(dict(x.split('=', 1) for x in a.labels.split(',')))
-    os.makedirs(OUT_DIR, exist_ok=True)
-    out = os.path.join(OUT_DIR, a.out or '%s_%d.html' % (data['flight'].replace('/', '_'), a.frame))
+    os.makedirs(a.outdir, exist_ok=True)
+    out = os.path.join(a.outdir, a.out or '%s_%d.html' % (data['flight'].replace('/', '_'), a.frame))
     with open(out, 'w', encoding='utf-8') as fh:
         fh.write(render(data, jpg))
     print('%s  %.2f MB  cloud %d  picks %s  own %s' % (out, os.path.getsize(out) / 1e6, len(data['cloud']['x']),
