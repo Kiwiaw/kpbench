@@ -668,6 +668,15 @@ def nms_order(u, v, r):
     return keep
 
 
+def pick_nms(r):
+    """nms<r>: score-ranked top K after greedy NMS of radius r px over the candidates with depth (the plain NMS baseline of
+    the spread class; nms0 = sd); fill by score from the rest with depth"""
+    def f(u, v, s, z, K):
+        ok = np.flatnonzero(z < DEPTH_MAX)
+        return fill(ok[nms_order(u[ok], v[ok], r)][:K], len(u), K, ok)
+    return f
+
+
 def pick_ssc(o, M):
     """ssc<o>[p<M>]: suppression via square covering (Bailo et al. 2018, the ANMS baseline of the spread class): among the
     strongest M candidates with depth, binary search on the square side w px so that greedy covering in score order (a kept
@@ -758,6 +767,9 @@ def parse(name):
     m = re.fullmatch(r'win([0-9]+)(?:\+(dpp[0-9.]+(?:a[0-9.]+)?))?', name)
     if m:
         return pick_window(int(m.group(1)), parse(m.group(2)) if m.group(2) else None)
+    m = re.fullmatch(r'nms([0-9.]+)', name)
+    if m:
+        return pick_nms(float(m.group(1)))
     m = re.fullmatch(r'ssc([0-9.]+)?(?:p([0-9]+))?', name)
     if m:
         return pick_ssc(float(m.group(1) or 1.0), int(m.group(2) or 2000))

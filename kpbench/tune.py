@@ -48,6 +48,7 @@ SPACES = {'dpp': lambda t: 'dpp%.3ga%.3g' % (t.suggest_float('sigma', 0.1, 2.0, 
           'ssc': lambda t: 'ssc%.3gp%d' % (t.suggest_float('o', 1.0, 2.0), t.suggest_int('M', 200, 2000, log=True)),
           'dppm': lambda t: 'dppm%.3ga%.3g' % (t.suggest_float('c', 0.05, 1.0, log=True), t.suggest_float('alpha', 0.5, 2.0, log=True)),
           'dppl': lambda t: 'dppl%.3ga%.3g' % (t.suggest_float('c', 0.08, 1.5, log=True), t.suggest_float('alpha', 0.5, 2.0, log=True)),
+          'nms': lambda t: 'nms%d' % t.suggest_int('r', 0, 16),
           'dpp2d': lambda t: 'dpp2d%.3ga%.3g' % (t.suggest_float('sigma', 20.0, 200.0, log=True), t.suggest_float('alpha', 0.2, 5.0, log=True))}
 REP5_CAP = float(os.environ.get('KPBENCH_REP5_CAP', 14.41))
 REP5_FLOOR = float(os.environ.get('KPBENCH_REP5_FLOOR', 0.4527))
@@ -61,6 +62,7 @@ SEEDS = {'dpp': [dict(sigma=0.5, alpha=1.0), dict(sigma=0.5, alpha=0.5), dict(si
          'ssc': [dict(o=1.0, M=2000), dict(o=1.0, M=400), dict(o=1.5, M=2000)],
          'dppm': [dict(c=0.256, alpha=1.0), dict(c=0.15, alpha=1.0), dict(c=0.4, alpha=1.0), dict(c=0.6, alpha=1.0), dict(c=0.256, alpha=0.5)],
          'dppl': [dict(c=0.43, alpha=1.0), dict(c=0.256, alpha=1.0), dict(c=0.7, alpha=1.0), dict(c=1.0, alpha=1.0), dict(c=0.43, alpha=0.5)],
+         'nms': [dict(r=0), dict(r=2), dict(r=4), dict(r=8), dict(r=16)],
          'dpp2d': [dict(sigma=74.0, alpha=1.0), dict(sigma=40.0, alpha=1.0), dict(sigma=120.0, alpha=1.0), dict(sigma=74.0, alpha=0.5)]}   # known points enqueued first
 
 
