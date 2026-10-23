@@ -95,6 +95,8 @@ def extract(flights, dets):
         if not want:
             continue
         frames = {d: [] for d in want}; t0 = time.time()
+        if F.n_img < F.N:
+            raise RuntimeError('%s: %d images for %d frames (image_left purged?)' % (fid, F.n_img, F.N))
         for f in range(F.N):
             img = F.img(f); dp = F.depth(f); dm = sp_dense(img)
             for d in want:

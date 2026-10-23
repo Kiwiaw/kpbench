@@ -87,7 +87,8 @@ class Flight:
             raise RuntimeError('flight %s has intrinsics %s, process uses %s: set KPBENCH_INTR' % (fid, intr, (FX, FY, CX, CY)))
         n_img = len([f for f in os.listdir(os.path.join(self.dir, 'image_left')) if f.endswith('.png')])
         n_dep = len([f for f in os.listdir(os.path.join(self.dir, 'depth_left')) if f.endswith('.npy')])
-        self.N = min(len(self.poses), n_img, n_dep)
+        self.n_img = n_img                              # images are read only by extract/thumbs/viewer: a scratch purge of
+        self.N = min(len(self.poses), n_dep)            # image_left must not block cached runs (cache N == flight N still checked)
         self.keyframes = list(range(0, self.N, KF))
         self.queries = [q for q in range(self.N) if q % KF]
 
