@@ -31,6 +31,12 @@ something else: that the picker is *better* for pose. This sheet fixes the test 
 
 No non-inferiority verdict is drawn from this table; it is why row 1 is the pre-registered held-out candidate.
 
+## R6: does the repeatability term earn a place in the paper (pre-registered, scout ed. 11)
+
+Q211 (beta = 0 control dpp0.317a1.6, same alpha, no track term) decides it on the 12 DEV flights:
+- rep5(beta = 0) < 0.4519 + 0.0209 = 0.4728 -> the track term causes the gain: the rep5 variant goes in the paper.
+- else (beta = 0 keeps the gain) -> the gain comes from alpha alone: the variant is cut to an appendix note.
+
 ## Not decided here
 
 Running the held-out shot goes against the program rule "no held-out gate without a DEV KEEP" (MAIN gate), so it needs
