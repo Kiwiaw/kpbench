@@ -85,7 +85,8 @@ class Flight:
         intr = np.loadtxt(ip) if os.path.isfile(ip) else np.array([320.0, 320.0, 320.0, 240.0])
         if not np.allclose(intr, [FX, FY, CX, CY], atol=1e-3):
             raise RuntimeError('flight %s has intrinsics %s, process uses %s: set KPBENCH_INTR' % (fid, intr, (FX, FY, CX, CY)))
-        n_img = len([f for f in os.listdir(os.path.join(self.dir, 'image_left')) if f.endswith('.png')])
+        di = os.path.join(self.dir, 'image_left')     # the purge may remove the folder itself, not only its files
+        n_img = len([f for f in os.listdir(di) if f.endswith('.png')]) if os.path.isdir(di) else 0
         n_dep = len([f for f in os.listdir(os.path.join(self.dir, 'depth_left')) if f.endswith('.npy')])
         self.n_img = n_img                              # images are read only by extract/thumbs/viewer: a scratch purge of
         self.N = min(len(self.poses), n_dep)            # image_left must not block cached runs (cache N == flight N still checked)
