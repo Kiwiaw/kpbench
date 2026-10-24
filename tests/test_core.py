@@ -33,6 +33,15 @@ def test_grid_spreads():
     assert cells(g) > cells(d)
 
 
+def test_nms0_is_sd_and_nms_spreads():
+    u, v, s, z = toy_frame(2000)
+    assert pickers.parse('nms0')(u, v, s, z, 100).tolist() == pickers.parse('sd')(u, v, s, z, 100).tolist()
+    i = pickers.parse('nms16')(u, v, s, z, 100)
+    assert len(set(i.tolist())) == 100 and (z[i] < 1000).all()
+    d = (u[i, None] - u[None, i]) ** 2 + (v[i, None] - v[None, i]) ** 2; d[np.diag_indices(100)] = np.inf
+    assert d.min() >= 16 ** 2
+
+
 def test_fps_first_is_strongest_and_far_apart():
     P = np.array([[0, 0], [1, 1], [100, 100], [50, 50.]])
     assert pickers.fps_2d(P, 3, False).tolist() == [0, 2, 3]

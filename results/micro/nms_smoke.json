@@ -1,0 +1,31 @@
+{
+ "det": "raco",
+ "K": 100,
+ "radii": [
+  0,
+  4,
+  8,
+  16
+ ],
+ "flights": {
+  "oldtown/P001": 240,
+  "hospital/P041": 153
+ },
+ "frames": 393,
+ "identity_fail": 0,
+ "fill_fail": 0,
+ "spread_fail": 0,
+ "nofill": {
+  "0": 1.0,
+  "4": 1.0,
+  "8": 1.0,
+  "16": 1.0
+ },
+ "mindist": {
+  "0": 3.1,
+  "4": 4.88,
+  "8": 8.73,
+  "16": 16.26
+ },
+ "pass": true
+}
