@@ -4,6 +4,7 @@
 # Workers share results/tune/<study>.journal; a final job writes results/tune/<study>.json/.md (mirrored by the agent executor).
 set -euo pipefail
 STUDY=$1; TRIALS=${2:-30}; W=${3:-6}
+case $STUDY in *_grid*) W=$TRIALS;; esac   # fixed grid: one arm per worker, no TPE arm (kpbench.tune GRIDS)
 if [ -z "${SLURM_CLUSTER_NAME:-}" ] && ! hostname | grep -q '^eu-'; then
   ssh -o ConnectTimeout=5 -o BatchMode=yes euler true || { echo "VPN off: tune $STUDY not submitted"; exit 2; }
   exec ssh euler "cd ~/kpbench && bash euler/tune.sh $STUDY $TRIALS $W"

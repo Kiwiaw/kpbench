@@ -25,8 +25,11 @@ Objective fcap (SUB3, T4, dispatch 2026-10-20): a study name containing '_fcap' 
 broken (fail_flat <= 100, so every feasible trial ranks first). Family dpp2d (T11 (b): pixel-kernel DPP, sigma 20-200 px log,
 alpha 0.2-5 log; dpp2d<sigma>a<alpha>; seed dpp2d74 = 0.5 m at the 2.15 m median pick depth, its DEV gate was +3.74 REVERT).
 Summaries mark the Pareto front (lower fail_flat, higher rep5) of all complete trials.
+Budget: a study name containing '_K<k>' (e.g. dpp_K200_dev1) evaluates at K = k keypoints (default 100). Fixed grid: a study
+name containing '_grid' runs exactly the GRIDS[family] arms (enqueued by --seed-only, no TPE trial; workers stop when none
+waits), e.g. nms_grid_dev1 = 8 NMS radii (T20 R1).
 """
-import os, json
+import os, re, json
 import numpy as np
 import optuna
 from .evaluate import evaluate
@@ -48,7 +51,7 @@ SPACES = {'dpp': lambda t: 'dpp%.3ga%.3g' % (t.suggest_float('sigma', 0.1, 2.0, 
           'ssc': lambda t: 'ssc%.3gp%d' % (t.suggest_float('o', 1.0, 2.0), t.suggest_int('M', 200, 2000, log=True)),
           'dppm': lambda t: 'dppm%.3ga%.3g' % (t.suggest_float('c', 0.05, 1.0, log=True), t.suggest_float('alpha', 0.5, 2.0, log=True)),
           'dppl': lambda t: 'dppl%.3ga%.3g' % (t.suggest_float('c', 0.08, 1.5, log=True), t.suggest_float('alpha', 0.5, 2.0, log=True)),
-          'nms': lambda t: 'nms%d' % t.suggest_int('r', 0, 16),
+          'nms': lambda t: 'nms%d' % t.suggest_int('r', 0, 64),
           'dpp2d': lambda t: 'dpp2d%.3ga%.3g' % (t.suggest_float('sigma', 20.0, 200.0, log=True), t.suggest_float('alpha', 0.2, 5.0, log=True))}
 REP5_CAP = float(os.environ.get('KPBENCH_REP5_CAP', 14.41))
 REP5_FLOOR = float(os.environ.get('KPBENCH_REP5_FLOOR', 0.4527))
@@ -64,6 +67,7 @@ SEEDS = {'dpp': [dict(sigma=0.5, alpha=1.0), dict(sigma=0.5, alpha=0.5), dict(si
          'dppl': [dict(c=0.43, alpha=1.0), dict(c=0.256, alpha=1.0), dict(c=0.7, alpha=1.0), dict(c=1.0, alpha=1.0), dict(c=0.43, alpha=0.5)],
          'nms': [dict(r=0), dict(r=2), dict(r=4), dict(r=8), dict(r=16)],
          'dpp2d': [dict(sigma=74.0, alpha=1.0), dict(sigma=40.0, alpha=1.0), dict(sigma=120.0, alpha=1.0), dict(sigma=74.0, alpha=0.5)]}   # known points enqueued first
+GRIDS = {'nms': [dict(r=r) for r in (0, 2, 4, 8, 16, 24, 32, 48)]}   # '_grid' studies: these arms only (nms: ~55 px = K100 uniform spacing at 640x480)
 
 
 def study(name):
@@ -76,6 +80,15 @@ def study(name):
 
 def family(name):
     return name.split('_')[0]
+
+
+def kval(name):
+    m = re.search(r'_K(\d+)', name)
+    return int(m.group(1)) if m else 100
+
+
+def grid(name):
+    return '_grid' in name
 
 
 def rep5c(name):
@@ -105,15 +118,15 @@ def pareto(rows):
     return rows
 
 
-def objective(trial, fam, rc=False, fc=False):
+def objective(trial, fam, rc=False, fc=False, K=100):
     pk = SPACES[fam](trial)
     try:
-        out, rows, flat = evaluate(pk, split='dev_flat', metrics=True)
+        out, rows, flat = evaluate(pk, split='dev_flat', K=K, metrics=True)
         h = np.array([np.nan if r[len(COLS) + MCOLS.index('hull')] is None else r[len(COLS) + MCOLS.index('hull')] for r in rows], float)
         hull = round(float(np.nan_to_num(h)[flat].mean()), 4) if flat.any() else None
     except Exception:
-        (out, _, _), hull = evaluate(pk, split='dev_flat'), None
-    for k in ('fail_flat', 'rep5', 'n_flat', 'secs'):
+        (out, _, _), hull = evaluate(pk, split='dev_flat', K=K), None
+    for k in ('fail_flat', 'rep5', 'n_flat', 'secs', 'K'):
         trial.set_user_attr(k, out[k])
     trial.set_user_attr('hull', hull)
     trial.set_user_attr('picker', pk); trial.set_user_attr('host', os.uname().nodename.split('.')[0] if hasattr(os, 'uname') else '')
@@ -122,10 +135,10 @@ def objective(trial, fam, rc=False, fc=False):
     return score(out['fail_flat'], out['rep5']) if rc else out['fail_flat']
 
 
-def enqueue_seeds(s, fam):
+def enqueue_seeds(s, fam, g=False):
     if s.trials:
         return
-    for params in SEEDS.get(fam, []):
+    for params in (GRIDS if g else SEEDS).get(fam, []):
         s.enqueue_trial(params)
 
 
@@ -135,11 +148,11 @@ def summary(name):
     rows = [dict(n=t.number, picker=t.user_attrs.get('picker'), fail_flat=t.user_attrs.get('fail_flat', t.value), rep5=t.user_attrs.get('rep5'),
                  hull=t.user_attrs.get('hull'), params=t.params, host=t.user_attrs.get('host')) for t in done]
     pareto(rows)
-    out = dict(study=name, split='dev_flat', n_complete=len(done), n_total=len(s.trials), best=rows[:1], trials=rows,
+    out = dict(study=name, split='dev_flat', K=kval(name), n_complete=len(done), n_total=len(s.trials), best=rows[:1], trials=rows,
                objective=('rep5 s.t. fail_flat <= %.2f' % REP5_CAP) if rep5c(name) else
                ('fail_flat s.t. rep5 >= %.4g' % REP5_FLOOR) if fcap(name) else 'fail_flat')
     json.dump(out, open(os.path.join(TUNE, name + '.json'), 'w'), indent=1)
-    md = ['# Tuning %s (DEV flat queries, %d of %d trials done, objective %s)' % (name, len(done), len(s.trials), out['objective']), '',
+    md = ['# Tuning %s (DEV flat queries, K %d, %d of %d trials done, objective %s)' % (name, kval(name), len(done), len(s.trials), out['objective']), '',
           '| rank | picker | flat fail % | rep5 | hull | Pareto | trial |', '|---|---|---|---|---|---|---|']
     md += ['| %d | %s | %.2f | %s | %s | %s | %d |' % (i + 1, r['picker'], r['fail_flat'], r['rep5'], r['hull'], 'yes' if r['pareto'] else '', r['n'])
            for i, r in enumerate(rows[:15])]
@@ -160,9 +173,14 @@ def main(argv=None):
         return summary(a.study)
     s = study(a.study)
     if a.seed_only:
-        return enqueue_seeds(s, fam)
+        return enqueue_seeds(s, fam, grid(a.study))
     assert not (rep5c(a.study) and fcap(a.study)), 'one objective per study: _rep5c or _fcap'
-    s.optimize(lambda t: objective(t, fam, rep5c(a.study), fcap(a.study)), n_trials=a.trials, catch=(Exception,))
+    assert not grid(a.study) or fam in GRIDS, 'no grid for family %s' % fam
+    f = lambda t: objective(t, fam, rep5c(a.study), fcap(a.study), kval(a.study))
+    for _ in range(a.trials):
+        if grid(a.study) and not s.get_trials(deepcopy=False, states=(optuna.trial.TrialState.WAITING,)):
+            break   # grid exhausted: never let TPE add an arm
+        s.optimize(f, n_trials=1, catch=(Exception,))
     summary(a.study)
 
 

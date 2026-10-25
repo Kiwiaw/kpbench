@@ -1,0 +1,8 @@
+{
+ "what": "kpbench.tune _K and _grid smoke, laptop 2026-10-25 (study nms_K200_grid_smoke, throwaway KPBENCH_RESULTS)",
+ "grid_arms_enqueued": [0, 2, 4, 8, 16, 24, 32, 48],
+ "run": "--seed-only, then --trials 2 (real evaluate, failed: no MICRO flight images under local_data), then --trials 20 with a stub evaluate",
+ "trials_total": 8, "tpe_trials_added": 0, "waiting_left": 0, "K_stored": 200,
+ "note": "failed grid arms are not re-run by later workers (no WAITING left); rerun = new study name",
+ "picker_level": "tools/nms_smoke.py --K 200 PASS on 393 cached MICRO frames (results/micro/nms_smoke_K200.json)"
+}
