@@ -145,7 +145,7 @@ def enqueue_seeds(s, fam, g=False):
 def summary(name):
     s = study(name); done = [t for t in s.trials if t.state == optuna.trial.TrialState.COMPLETE]
     done.sort(key=lambda t: t.value)
-    rows = [dict(n=t.number, picker=t.user_attrs.get('picker'), fail_flat=t.user_attrs.get('fail_flat', t.value), rep5=t.user_attrs.get('rep5'),
+    rows = [dict(n=t.number, picker=t.user_attrs.get('picker'), K=t.user_attrs.get('K', kval(name)), fail_flat=t.user_attrs.get('fail_flat', t.value), rep5=t.user_attrs.get('rep5'),
                  hull=t.user_attrs.get('hull'), params=t.params, host=t.user_attrs.get('host')) for t in done]
     pareto(rows)
     out = dict(study=name, split='dev_flat', K=kval(name), n_complete=len(done), n_total=len(s.trials), best=rows[:1], trials=rows,
