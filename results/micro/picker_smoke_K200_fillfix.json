@@ -1,0 +1,39 @@
+{
+ "det": "raco",
+ "K": 200,
+ "frames": 393,
+ "pickers": {
+  "dpp2d120a1": {
+   "fill_fail": 0,
+   "error": 0,
+   "mindist": 2.56,
+   "spread": 228.4,
+   "ms": 92.5,
+   "pass": true
+  },
+  "dpp2d179a0.218": {
+   "fill_fail": 0,
+   "error": 0,
+   "mindist": 2.62,
+   "spread": 242.1,
+   "ms": 60.5,
+   "pass": true
+  },
+  "dpp2d183a4.57": {
+   "fill_fail": 0,
+   "error": 0,
+   "mindist": 2.19,
+   "spread": 200.6,
+   "ms": 13.6,
+   "pass": true
+  },
+  "dpp0.5": {
+   "fill_fail": 0,
+   "error": 0,
+   "mindist": 2.43,
+   "spread": 218.8,
+   "ms": 159.3,
+   "pass": true
+  }
+ }
+}

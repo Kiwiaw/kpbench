@@ -555,7 +555,7 @@ def pick_dpp_slices(n, mode, sigma=0.5, alpha=1.0, pool=400):
             lo, hi = np.percentile(zp, [5, 95])
             edges = (np.geomspace(max(lo, 1e-6), max(hi, 1e-6), n + 1) if mode == 'l' else np.linspace(lo, hi, n + 1))[1:-1]
         slc = np.searchsorted(edges, zz, side='right')
-        return fill(ok[dpp_greedy(P, q, K, sigma, slc=slc, cap=int(np.ceil(K / n)))], len(u), K)
+        return fill(ok[dpp_greedy(P, q, K, sigma, slc=slc, cap=int(np.ceil(K / n)))], len(u), K, ok)   # top up with depth only (as nms)
     return f
 
 
@@ -569,7 +569,7 @@ def pick_dpp(sigma, alpha, space='3d'):
         if not len(ok):
             return np.arange(min(K, len(u)))
         P = to3d(u[ok], v[ok], z[ok]) if space == '3d' else np.stack([u[ok], v[ok]], 1); q = np.exp(-alpha * np.arange(len(ok)) / 100.0)
-        return fill(ok[dpp_greedy(P, q, K, sigma)], len(u), K)
+        return fill(ok[dpp_greedy(P, q, K, sigma)], len(u), K, ok)   # top up with depth only (as nms)
     return f
 
 
@@ -590,7 +590,7 @@ def pick_dpp_depth(c, alpha, mode):
         else:
             sel = dpp_greedy(P, q, K, None, ell=c * zz); sig = c * float(np.median(zz[sel])) if len(sel) else None
         f.sig.append(sig)
-        return fill(ok[sel], len(u), K)
+        return fill(ok[sel], len(u), K, ok)   # top up with depth only (as nms)
     f.sig = []
     return f
 
@@ -644,7 +644,7 @@ def pick_dppr(sigma, alpha, beta, tau, depth_scaled=False):
         sig = sigma * float(np.median(z[ok])) if depth_scaled else sigma
         if depth_scaled:
             f.sig.append(sig)
-        return fill(ok[dpp_greedy(to3d(u[ok], v[ok], z[ok]), w, K, sig)], len(u), K)
+        return fill(ok[dpp_greedy(to3d(u[ok], v[ok], z[ok]), w, K, sig)], len(u), K, ok)   # top up with depth only (as nms)
     f.needs_past = True; f.needs_desc = True; f.rstd = []; f.sig = []
     return f
 
