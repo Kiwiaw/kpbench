@@ -1,0 +1,49 @@
+{
+ "det": "raco",
+ "K": 200,
+ "runs": "A, B default BLAS threads; C 1 thread; each a fresh process",
+ "pickers": {
+  "dpp1a2": {
+   "same_setup": {
+    "frames": 393,
+    "differ": 0,
+    "mean_changed": 0,
+    "first": []
+   },
+   "one_thread": {
+    "frames": 393,
+    "differ": 0,
+    "mean_changed": 0,
+    "first": []
+   }
+  },
+  "dpp0.601a0.283": {
+   "same_setup": {
+    "frames": 393,
+    "differ": 0,
+    "mean_changed": 0,
+    "first": []
+   },
+   "one_thread": {
+    "frames": 393,
+    "differ": 0,
+    "mean_changed": 0,
+    "first": []
+   }
+  },
+  "dpp0.5": {
+   "same_setup": {
+    "frames": 393,
+    "differ": 0,
+    "mean_changed": 0,
+    "first": []
+   },
+   "one_thread": {
+    "frames": 393,
+    "differ": 0,
+    "mean_changed": 0,
+    "first": []
+   }
+  }
+ }
+}

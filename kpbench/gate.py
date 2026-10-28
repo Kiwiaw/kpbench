@@ -12,6 +12,7 @@ Label guard (audit C15 at run time): before any verdict, every flight's label fi
 --allow-label-mismatch "<reason>" overrides, kept in the verdict. Rebuild the manifest only after an audit: --write-manifest.
 Split fresh (near-miss retests, kpbench.fresh): flights and flat count from splits_fresh.json, label hashes from
 results/labels_manifest_fresh.json (written once by --write-manifest --split fresh); held-out discipline does not apply.
+The verdict json also carries 'rep5' (paired rep5 on flat and all queries, kpbench.rep5_paired): information, not rule.
 """
 import os, json, gzip, hashlib, datetime
 import numpy as np
@@ -106,6 +107,11 @@ def compare(cand, inc, split, runs='runs', allow_mismatch=''):
              device_check='same' if all(v == 'same' for v in dev.values()) else
              'unknown on %d flights' % sum(v == 'unknown' for v in dev.values()),
              date=datetime.datetime.now().isoformat(timespec='seconds'), picker=mc.get('picker'), K=mc.get('K'))
+    try:                                   # SUB3 info beside the verdict (never part of the rule): paired rep5, kpbench.rep5_paired
+        from .rep5_paired import compare as rep5_compare
+        g['rep5'] = rep5_compare(cand, inc, split, runs=runs)['pooled']
+    except Exception as e:
+        g['rep5'] = dict(error=repr(e)[:200])
     return g
 
 
@@ -127,6 +133,9 @@ def fmt(g):
              g['flights_better'], g['flights_worse'], g['flights_tied'], g['sign_p'], 'PASS' if g['route_B'] else 'no'),
          '  guard rel>=10%% %s; guard all-frames hi %+.2f <= +0.2 %s' % (g['guard_rel'], a[2], g['guard_all']),
          '  per env flat   ' + ', '.join('%s %.1f vs %.1f' % (e, c, i) for e, (c, i) in g.get('per_env', {}).items()),
+         *['  rep5 (info)    %s %.4f vs %.4f, diff %+.4f [%+.4f, %+.4f], flights better/worse/tied %d/%d/%d, p %.3f' % (
+             k, r['cand'], r['inc'], *r['diff'], r['better'], r['worse'], r['tied'], r['sign_p'])
+           for k, r in g.get('rep5', {}).items() if isinstance(r, dict) and 'diff' in r],
          '  VERDICT        %s' % ('KEEP candidate' if g['win'] else 'REVERT (incumbent stays)')]
     return '\n'.join(s)
 
