@@ -697,7 +697,7 @@ function renderSummary(el) {
       const d = { auc: 3, med: 1, n_match: 1, n_inl: 1, rep1: 3, rep5: 3, rep10: 3 }[col.id] ?? 0;
       return `<td>${fmt(c[col.id], d)}</td>`;
     }).join('');
-    return `<tr>${cells}</tr>`;
+    return `<tr class="${c.run === S.base ? 'baserow' : ''}">${cells}</tr>`;
   }).join('');
 
   const mbtn = (m, label) => `<button class="seg ${S.matcher === m ? 'on' : ''}" data-sm="${m}">${label}</button>`;

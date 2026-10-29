@@ -127,6 +127,7 @@ table.data tr.grp td { border-top: 2px solid #d3d8e0; }
 .rid { font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size: 12px; }
 .tag { display: inline-block; padding: 0 5px; border-radius: 3px; font-size: 10px; font-weight: 600; letter-spacing: 0.02em; vertical-align: 1px; }
 .tag.base { background: #e3ecf8; color: var(--accent); }
+tr.baserow td { background: #e3ecf8; }
 .tag.warn { background: var(--warnbg); color: var(--warn); }
 
 /* Charts */
