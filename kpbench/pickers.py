@@ -30,6 +30,7 @@ Names:
                greedy NMS radius r px in score order, first N survivors; padded back to K from the dropped points
   ssc[<o>][p<M>] suppression via square covering (ANMS, Bailo 2018) over the strongest M with depth, ~o*K kept, K strongest
   dppr<sigma>a<alpha>b<beta>t<tau> dpp whose quality also rewards past-frame track count r^beta (T4, docs/t4_dppr_design.md)
+  deco[b<beta>][t<tau>] DECO-style ranker, no spread: top K by score x past-frame co-visibility r^beta (E4b, docs/e4_deco.md)
   dppm<c>[a<alpha>] dpp with a per-frame scale sigma = c x median depth of the frame's candidates with depth (scene-scale dpp)
   dppmr<c>a<alpha>b<beta>t<tau> dppm's per-frame sigma = c x median depth + dppr's past-frame track bonus r^beta
   dpps<n>[q|l|e] dpp0.5 with a per-depth-slice cap ceil(K/n) (T12, docs/t12_dpps.md): q quantile, l log, e equal-width slices
@@ -649,6 +650,26 @@ def pick_dppr(sigma, alpha, beta, tau, depth_scaled=False):
     return f
 
 
+def pick_deco(beta, tau):
+    """deco[b<beta>][t<tau>] (E4b, MAIN/SUB4 control, docs/e4_deco.md): DECO-style ranker, saliency x co-visibility, NO spread.
+    q_i = (s_i / s_max) * c_i^beta over the candidates with depth, top K by q, fill by rank (depth only). c_i = co-visibility
+    estimate = track_count over the past frames q-1..q-3 (as dppr; no pose, no future frames, so not an oracle). beta = 0 is
+    sd up to score ties. Defaults b1 t0.9."""
+    caches = {}
+    def f(u, v, s, z, K, ctx=None, de=None):
+        F, C, q = ctx
+        ok = np.flatnonzero(z < DEPTH_MAX)
+        if not len(ok):
+            return np.arange(min(K, len(u)))
+        w = s[ok] / max(float(s[ok].max()), 1e-9)
+        if beta > 0:
+            r = track_count(C, q, de, ok, tau, caches.setdefault(F.slug, {})); w = w * r ** beta
+            f.rstd.append(float(r.std()))
+        return fill(ok[np.argsort(-w, kind='stable')[:K]], len(u), K, ok)
+    f.needs_past = True; f.needs_desc = True; f.rstd = []
+    return f
+
+
 def nms_order(u, v, r):
     """greedy NMS in score order: keep a point if no kept point lies within r px (grid hash, cell r)"""
     if r <= 0:
@@ -776,6 +797,9 @@ def parse(name):
     m = re.fullmatch(r'dppr([0-9.]+)a([0-9.]+)b([0-9.]+)t([0-9.]+)', name)
     if m:
         return pick_dppr(*map(float, m.groups()))
+    m = re.fullmatch(r'deco(?:b([0-9.]+))?(?:t([0-9.]+))?', name)
+    if m:
+        return pick_deco(float(m.group(1) or 1.0), float(m.group(2) or 0.9))
     m = re.fullmatch(r'dppmr([0-9.]+)a([0-9.]+)b([0-9.]+)t([0-9.]+)', name)
     if m:
         return pick_dppr(*map(float, m.groups()), depth_scaled=True)
