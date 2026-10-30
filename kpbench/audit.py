@@ -25,6 +25,9 @@ WARN = correct but fragile or misleading. Checks:
                    are stale): repo labels match the manifest and give the splits.json DEV flat count; every provisional file
                    names that count; no provisional picker or number in leaderboard.json / page data; dpp2d / ssc rows say
                    'baseline' (dispatch 2026-10-18)
+  C37 rep5        every gate file with a 'rep5' block recomputed from its rows with an independent paired mean, flight sign count
+                   and block bootstrap (the gate code path is not used); rows on Euler, the laptop has the held-out dpp0.5 pair only;
+                   per-query rep5 must be whole counts / K, and files with rows absent are listed, not passed
   C36 nms0 = sd  nms0 picks = sd picks on the MICRO candidates (results/micro/nms_smoke.json, tools/nms_smoke.py), nms16 fills K
                    with no pair closer than 16 px; any stored nms0 run equals the sd run flight by flight
   C23 fresh        FRESH-1 (results/gates/FRESH_set.json) shares no trajectory with the 31 flights (DEV + HELD_OUT): no
@@ -452,6 +455,64 @@ def c25_gates():
     report('C25', st, 'DEV gate verdicts recomputed from rows', '%d recomputed: %s%s' % (len(rows), '; '.join(rows), ('; problems: ' + '; '.join(bad)) if bad else ''))
 
 
+REP5_PINNED = {'dppr0.388a1.91b2.85t0.9': (0.0229, 0.0200, 0.0259, 11, 1), 'dppr0.317a1.6b2.01t0.9': (0.0236, 0.0209, 0.0263, 12, 0)}
+
+
+def rep5_pair(cand, inc, flights, runs, flat_only, K=100):
+    """independent rep5 recompute: pairs where both have rep5 -> dict(n, cand, inc, diff, lo, hi, better, worse) (seed 0, 1000 boots)"""
+    from .bench import COLS
+    from .gate import load_run, labels as gate_labels
+    from .splits import FLAT
+    j = COLS.index('rep5'); _, rc = load_run(cand, flights, runs); _, ri = load_run(inc, flights, runs); A, B, bl = [], [], []; better = worse = 0
+    for f in flights:
+        lab = gate_labels(f); a, b = [], []
+        for x, y in zip(rc[f][0], ri[f][0]):
+            assert x[1] == y[1], f
+            pf = lab[str(x[1])].get('plane_frac')
+            if (flat_only and not (pf is not None and pf >= FLAT)) or x[j] is None or y[j] is None:
+                continue
+            a.append(x[j]); b.append(y[j]); bl.append('%s:%d' % (f, x[1] // 20))
+        if a:
+            better += np.mean(a) > np.mean(b); worse += np.mean(a) < np.mean(b)
+        A += a; B += b
+    A, B = np.array(A), np.array(B); blocks = np.unique(bl, return_inverse=True)[1]; m = blocks.max() + 1
+    s = np.bincount(blocks, A - B, m); c = np.bincount(blocks, None, m); pick = np.random.default_rng(0).integers(0, m, (1000, m))
+    bs = s[pick].sum(1) / c[pick].sum(1)
+    return dict(n=len(A), cand=float(A.mean()), inc=float(B.mean()), diff=float((A - B).mean()), lo=float(np.percentile(bs, 2.5)),
+                hi=float(np.percentile(bs, 97.5)), better=int(better), worse=int(worse),
+                whole=bool(np.all(np.abs(A * K - np.round(A * K)) < 1e-6) and np.all(np.abs(B * K - np.round(B * K)) < 1e-6)))
+
+
+def c37_rep5():
+    """gate rep5 blocks = recompute from rows; the stored CI has to come back within 0.001 (same seed, same scheme: normally equal)"""
+    from .gate import GATES, RESULTS, split_info, GateError
+    ok = []; bad = []; absent = []
+    for fn in sorted(glob.glob(os.path.join(GATES, '*.json'))):
+        g0 = json.load(open(fn))
+        if 'rep5' not in g0 or not isinstance(g0.get('rep5'), dict) or 'flat' not in g0['rep5']:
+            continue
+        rs = [r for r in ('runs', 'runs_gate') if os.path.isdir(os.path.join(RESULTS, r, g0['cand'])) and os.path.isdir(os.path.join(RESULTS, r, g0['inc']))]
+        if not rs:
+            absent.append(os.path.basename(fn)[:40]); continue
+        try:
+            flights = split_info(g0['split'])[0]
+            for name, fo in (('flat', True), ('all', False)):
+                e = g0['rep5'][name]; r = rep5_pair(g0['cand'], g0['inc'], flights, rs[0], fo, g0.get('K', 100))
+                same = r['n'] == e['n'] and abs(r['diff'] - e['diff'][0]) < 1e-6 and abs(r['lo'] - e['diff'][1]) < 1e-3 and abs(r['hi'] - e['diff'][2]) < 1e-3 and (r['better'], r['worse']) == (e['better'], e['worse']) and r['whole']
+                (ok if same else bad).append('%s %s %+.4f [%+.4f,%+.4f] %d/%d n %d' % (g0.get('picker'), name, r['diff'], r['lo'], r['hi'], r['better'], r['worse'], r['n']))
+        except (GateError, OSError, KeyError) as e:
+            bad.append('%s: %s' % (g0.get('picker'), str(e)[:80]))
+    for picker, exp in REP5_PINNED.items():   # gates older than the rep5 block (28 Oct): values quoted in NIGHT_2026-10-21_r7 / 22_r1
+        cand, inc = 'raco_%s_K100_same_lg_g-%s' % (picker, picker), 'raco_dpp0.5_K100_same_lg_g-%s' % picker
+        if not os.path.isdir(os.path.join(RESULTS, 'runs', cand)) or not os.path.isdir(os.path.join(RESULTS, 'runs', inc)):
+            absent.append(picker); continue
+        r = rep5_pair(cand, inc, split_info('dev')[0], 'runs', True)
+        same = abs(r['diff'] - exp[0]) < 5e-5 and abs(r['lo'] - exp[1]) < 1e-3 and abs(r['hi'] - exp[2]) < 1e-3 and (r['better'], r['worse']) == exp[3:]
+        (ok if same else bad).append('%s pinned %+.4f [%+.4f,%+.4f] %d/%d' % (picker, r['diff'], r['lo'], r['hi'], r['better'], r['worse']))
+    st = 'FAIL' if bad else ('WARN' if absent or not ok else 'PASS')
+    report('C37', st, 'gate rep5 recomputed from rows', '%d match: %s; mismatch %s; rows absent (Euler) %d' % (len(ok), '; '.join(ok), bad, len(absent)))
+
+
 def c36_nms_identity():
     """nms0 = sd: picks on the MICRO candidates (tools/nms_smoke.py) and, where stored, nms0 run rows = sd run rows"""
     fn = os.path.join(REPO, 'results', 'micro', 'nms_smoke.json'); bad = []; det = []
@@ -487,7 +548,7 @@ def main(argv=None):
     lab = labels(); R = {rid: run_rows(rid) for rid in RUNS31}
     C = dict(C1=lambda: c1_counts(lab, R), C2=lambda: c2_k(R), C3=lambda: c3_keyframes(lab), C6=lambda: c6_fail_rule(R),
              C7=lambda: c7_page(R), C8=lambda: c8_bootstrap(R, lab), C9=lambda: c9_paired_test(R, lab),
-             C10=lambda: c10_block_length(R, lab), C11=lambda: c11_headline(R, lab), C14=c14_texts, C15=lambda: c15_incumbent(lab), C23=c23_fresh, C24=c24_provisional, C25=c25_gates, C36=c36_nms_identity,
+             C10=lambda: c10_block_length(R, lab), C11=lambda: c11_headline(R, lab), C14=c14_texts, C15=lambda: c15_incumbent(lab), C23=c23_fresh, C24=c24_provisional, C25=c25_gates, C36=c36_nms_identity, C37=c37_rep5,
              C4=c4_reproduce, C5=c5_ground_truth, C12=lambda: c12_planarity(lab), C13=c13_canaries)
     only = [c.strip() for c in a.only.split(',') if c.strip()]
     for cid in only or [c for c in C if not (a.quick and c in ('C4', 'C5', 'C12', 'C13'))]:
