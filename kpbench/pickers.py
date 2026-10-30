@@ -89,6 +89,40 @@ def pick_cube(size, rel=False):
     return f
 
 
+def pick_gridz(size, zmin, rect=False):
+    """gridz<s>m<zmin>: round robin over a pixel grid whose cell side is s * f / max(z, zmin) px, i.e. s-metre squares on any
+    plane at the point's own depth (3D cube with the depth axis dropped). rect (gridzr): squares in the plane fitted to the
+    frame's candidates, for oblique views. 2D control for the question 'is 3D spread needed or only a rectified grid'."""
+    def f(u, v, s, z, K):
+        ok = np.flatnonzero(z < DEPTH_MAX)
+        if not len(ok):
+            return np.arange(min(K, len(u)))
+        P = to3d(u[ok], v[ok], np.maximum(z[ok], zmin))
+        Q = plane_coords(P) if rect else P[:, :2]
+        key = np.floor(Q / size).astype(int); g = {}
+        for jj, j in enumerate(ok):
+            g.setdefault(tuple(key[jj]), []).append(int(j))
+        return fill(round_robin(list(g.values()), K), len(u), K)
+    return f
+
+
+def plane_coords(P):
+    """N x 3 -> N x 2 metric coordinates in the least-squares plane (fit, drop the worst 20 %, refit); first axis = camera x
+    projected on the plane, so the result does not depend on the SVD's sign. Fewer than 3 points or a plane holding the camera
+    x axis: camera x, y."""
+    if len(P) < 3:
+        return P[:, :2]
+    c = P.mean(0); n = np.linalg.svd(P - c, full_matrices=False)[2][2]
+    keep = np.abs((P - c) @ n) <= np.quantile(np.abs((P - c) @ n), 0.8)
+    if keep.sum() >= 3:
+        c = P[keep].mean(0); n = np.linalg.svd(P[keep] - c, full_matrices=False)[2][2]
+    e1 = np.array([1.0, 0, 0]) - n[0] * n; nn = np.linalg.norm(e1)
+    if nn < 1e-6:
+        return P[:, :2]
+    e1 /= nn; e2 = np.cross(n, e1); e2 = e2 if e2[1] >= 0 else -e2
+    return np.stack([P @ e1, P @ e2], 1)
+
+
 def pool_of(z, K):
     M = int(np.clip(4 * K, 80, 400))
     return np.flatnonzero(z < DEPTH_MAX)[:M]
@@ -776,6 +810,9 @@ def parse(name):
     if re.fullmatch(r'evo_[A-Za-z0-9_]+', name):                       # code-search result: kpbench/evolved/<name>.py
         import importlib
         return importlib.import_module('kpbench.evolved.' + name).pick
+    m = re.fullmatch(r'gridz(r?)([0-9.]+)m([0-9.]+)', name)
+    if m:
+        return pick_gridz(float(m.group(2)), float(m.group(3)), m.group(1) == 'r')
     m = re.fullmatch(r'cube([0-9.]+)p([0-9]+)', name)
     if m:
         return pick_cube_pool(float(m.group(1)), int(m.group(2)))

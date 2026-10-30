@@ -1,0 +1,75 @@
+{
+ "ok": true,
+ "rows": [
+  {
+   "tilt": 0,
+   "family": "gridz",
+   "cells": 660,
+   "mean": 27.5,
+   "area_cv": 0.0042,
+   "picks": 100,
+   "distinct": 100,
+   "pass": true
+  },
+  {
+   "tilt": 0,
+   "family": "gridzr",
+   "cells": 660,
+   "mean": 27.5,
+   "area_cv": 0.0042,
+   "picks": 100,
+   "distinct": 100,
+   "pass": true
+  },
+  {
+   "tilt": 30,
+   "family": "gridz",
+   "cells": 1087,
+   "mean": 32.1,
+   "area_cv": 0.0,
+   "picks": 100,
+   "distinct": 100,
+   "pass": true
+  },
+  {
+   "tilt": 30,
+   "family": "gridzr",
+   "cells": 1238,
+   "mean": 27.8,
+   "area_cv": 0.0,
+   "picks": 100,
+   "distinct": 100,
+   "pass": true
+  },
+  {
+   "tilt": 60,
+   "family": "gridz",
+   "cells": 2374,
+   "mean": 55.7,
+   "area_cv": 0.0,
+   "picks": 100,
+   "distinct": 100,
+   "pass": true
+  },
+  {
+   "tilt": 60,
+   "family": "gridzr",
+   "cells": 4934,
+   "mean": 27.8,
+   "area_cv": 0.0,
+   "picks": 100,
+   "distinct": 100,
+   "pass": true
+  },
+  {
+   "clamp": "gridz0.5m1",
+   "picks": 100,
+   "pass": true
+  },
+  {
+   "clamp": "gridzr0.5m1",
+   "picks": 100,
+   "pass": true
+  }
+ ]
+}
