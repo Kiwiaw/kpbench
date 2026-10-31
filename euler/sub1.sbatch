@@ -7,15 +7,15 @@
 #SBATCH --job-name=kpb_sub1
 #SBATCH --output=/cluster/home/kkaczmarzyk/kpbench/logs/sub1_%j.log
 # SUB1 (docs/sub1_metrics.md): DEV rows with the candidate metric columns for sd, cube0.5 and grid, all three on one node
-# (same LightGlue device), then the pre-registered selection -> results/sub1/. usage: [SPLIT=held_out] [PICKERS='dpp0.5'] sbatch euler/sub1.sbatch
+# (same LightGlue device), then the pre-registered selection -> results/sub1/. usage: [SPLIT=held_out|fresh] [PICKERS='dpp0.5'] sbatch euler/sub1.sbatch
 # PICKERS other than the default triple only writes the eval rows (no selection rerun, sd/cube0.5/grid rows untouched).
-# Every picker file is checked for NFLAT flat rows (DEV 936); any failed or short picker -> exit 1 after all pickers ran.
+# Every picker file is checked for NFLAT flat rows (DEV 936, FRESH-1 2075); any failed or short picker -> exit 1 after all pickers ran.
 set -euo pipefail
 source ~/kpbench/euler/env.sh
 export DEV=cuda
 SPLIT=${SPLIT:-dev}
 PICKERS=${PICKERS:-sd cube0.5 grid}
-NFLAT=${NFLAT:-$([ "$SPLIT" = dev ] && echo 936 || echo 0)}   # expected flat rows per picker file (0 = no check)
+NFLAT=${NFLAT:-$(case $SPLIT in dev) echo 936 ;; fresh) echo 2075 ;; *) echo 0 ;; esac)}   # expected flat rows per picker file (0 = no check)
 BAD=""
 for p in $PICKERS; do    # one failing picker no longer kills the rest; every step is stamped in the log
   echo "[sub1] $(date +%T) start $p ($SPLIT)"

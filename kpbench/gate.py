@@ -106,7 +106,8 @@ def compare(cand, inc, split, runs='runs', allow_mismatch=''):
     g.update(cand=cand, inc=inc, split=split, n=len(fl), n_flat=int(np.sum(flat)),
              device_check='same' if all(v == 'same' for v in dev.values()) else
              'unknown on %d flights' % sum(v == 'unknown' for v in dev.values()),
-             date=datetime.datetime.now().isoformat(timespec='seconds'), picker=mc.get('picker'), K=mc.get('K'))
+             date=datetime.datetime.now().isoformat(timespec='seconds'), picker=mc.get('picker'), K=mc.get('K'),
+             solver=mc.get('solver', 'ap3p'), solver_inc=mi.get('solver', 'ap3p'))
     try:                                   # SUB3 info beside the verdict (never part of the rule): paired rep5, kpbench.rep5_paired
         from .rep5_paired import compare as rep5_compare
         g['rep5'] = rep5_compare(cand, inc, split, runs=runs)['pooled']

@@ -12,6 +12,7 @@ Protocol (the C23 protocol, unchanged):
                  'lg': LightGlue (SuperPoint weights) between the query picks and each keyframe's map points in turn;
                        a query point keeps its highest-scoring match over the keyframes
   solver         cv2.solvePnPRansac, 3 px, 2000 iterations, confidence 0.9999, >= 6 inliers
+                 'ippe' (R19, off by default): also a planar hypothesis (homography RANSAC + IPPE), the pose with more inliers is refined
   errors         rotation (deg) and camera position (cm) against the true pose; fail thresholds are applied later (export/page)
   repeatability  share of kept points (with depth) re-found at +1/+5/+10 frames: lifted with true depth and pose, projected into
                  the later frame, within 3 px of one of its strongest 300 candidates whose depth agrees within 5 %
@@ -76,12 +77,36 @@ def match_lightglue(uvq, dq, kfs):
     return qi, [(best[a][1], best[a][2]) for a in qi]
 
 
-def pnp(obj, img, Rq, tq, full=False):
+def planar_hypothesis(obj, img):
+    """R19: pose from the dominant plane of the matches -> (rvec, tvec, inlier indices) or None. Plane = SVD of the map points,
+    homography RANSAC (3 px) on the in-plane coordinates, plane refit on its inliers, IPPE (two poses); the pose with more inliers
+    over ALL matches at 3 px with the true 3D points wins. Uses matches only: no true pose, no labels."""
+    def axes(P):
+        c = np.median(P, 0); V = np.linalg.svd(P - c, full_matrices=False)[2]
+        return c, V * np.array([[1.], [1.], [np.sign(np.linalg.det(V)) or 1.]])     # rows = plane x, y, normal; a rotation
+    c, V = axes(obj.reshape(-1, 3)); o = obj.reshape(-1, 3); uv = img.reshape(-1, 2)
+    _, mask = cv2.findHomography((o - c) @ V[:2].T, uv, cv2.RANSAC, 3.0, maxIters=2000, confidence=0.9999)
+    if mask is None or mask.sum() < 6:
+        return None
+    h = mask.ravel() > 0; c, V = axes(o[h]); pl = (o[h] - c) @ V.T; pl[:, 2] = 0
+    n, rs, ts, _ = cv2.solvePnPGeneric(pl.reshape(-1, 1, 3), uv[h].reshape(-1, 1, 2), KMAT, None, flags=cv2.SOLVEPNP_IPPE)
+    best = None
+    for rp, tp in zip(rs, ts):
+        Rp = cv2.Rodrigues(rp)[0]; R = Rp @ V; t = tp.ravel() - R @ c
+        pr = cv2.projectPoints(o.reshape(-1, 1, 3), cv2.Rodrigues(R)[0], t, KMAT, None)[0].reshape(-1, 2)
+        inl = np.flatnonzero((np.linalg.norm(pr - uv, axis=1) < 3.0) & ((o @ R[2] + t[2]) > 0))
+        if best is None or len(inl) > len(best[2]):
+            best = (cv2.Rodrigues(R)[0], t.reshape(3, 1), inl)
+    return best if best is not None and len(best[2]) >= 6 else None
+
+
+def pnp(obj, img, Rq, tq, full=False, solver='ap3p'):
     """-> (err_cm, rot_deg, n_inl); err/rot None when no pose. full=True appends (R, tvec, inlier indices) or None.
     RANSAC with the AP3P minimal solver (3 px, 2000 it, conf 0.9999), then Levenberg-Marquardt refinement on all inliers,
     as in hloc / visuallocalization.net. The OpenCV RNG is seeded per query, so a run is reproducible exactly.
     Errors as in the visual localisation benchmarks: position = distance between the estimated and true camera CENTRES
-    in metres (c = -R^T t), rotation = angle of R_est R_true^T in degrees."""
+    in metres (c = -R^T t), rotation = angle of R_est R_true^T in degrees.
+    solver='ippe' adds planar_hypothesis and keeps it when it has more inliers than AP3P (ties: AP3P), same LM refinement."""
     none = (None, None, 0) + ((None,) if full else ())
     if len(obj) < 6:
         return none
@@ -90,6 +115,10 @@ def pnp(obj, img, Rq, tq, full=False):
         cv2.setRNGSeed(0)
         ok, rvec, tvec, inl = cv2.solvePnPRansac(obj, img, KMAT, None, reprojectionError=3.0, iterationsCount=2000,
                                                  confidence=0.9999, flags=cv2.SOLVEPNP_AP3P)
+        if solver == 'ippe':
+            alt = planar_hypothesis(obj, img)
+            if alt is not None and (not ok or inl is None or len(alt[2]) > len(inl)):
+                ok, rvec, tvec, inl = True, alt[0], alt[1], alt[2]
         if not ok or inl is None or len(inl) < 6:
             return none
         inl = inl.ravel()
@@ -138,8 +167,8 @@ def retrieval(C, F, mapmode):
 
 
 def _worker(job):
-    q, obj, img, Rq, tq = job
-    return q, pnp(obj, img, Rq, tq)
+    q, obj, img, Rq, tq, solver = job
+    return q, pnp(obj, img, Rq, tq, solver=solver)
 
 
 def repeat(F, C, q, idx, trees):
@@ -169,7 +198,7 @@ def repeat(F, C, q, idx, trees):
     return out
 
 
-def run_flight(fid, det, picker, K, mapmode, workers=None, save_picks=False, flight_index=0, verbose=True, matcher='nn'):
+def run_flight(fid, det, picker, K, mapmode, workers=None, save_picks=False, flight_index=0, verbose=True, matcher='nn', solver='ap3p'):
     F = Flight(fid); C = Cands(F.slug, det); pk = parse_picker(picker); t0 = time.time()
     if C.N != F.N:
         raise RuntimeError('cache has %d frames, flight has %d' % (C.N, F.N))
@@ -196,7 +225,7 @@ def run_flight(fid, det, picker, K, mapmode, workers=None, save_picks=False, fli
             obj = np.array([MAP[near[ki]][0][pi] for ki, pi in pairs]).reshape(-1, 3)
         else:
             mq, mm = match_mutual(de[i], DM); obj = P3[mm]
-        jobs.append((q, obj, np.stack([u[i][mq], v[i][mq]], 1), Rq, tq))
+        jobs.append((q, obj, np.stack([u[i][mq], v[i][mq]], 1), Rq, tq, solver))
         meta[q] = dict(n_sel=int(len(i)), n_match=int(len(mq)))
         if save_picks:
             picks[str(q)] = [[round(float(a), 1), round(float(b), 1)] for a, b in zip(u[i], v[i])]

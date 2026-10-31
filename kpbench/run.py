@@ -2,7 +2,7 @@
 
   python -m kpbench.run --det raco --picker sd --K 100 --map same --flights all [--save-picks] [--tag x] [--force]
 
-Run id = <det>_<picker>_K<K>_<map>_<matcher>[_<tag>]  (matcher nn | lg). Output per flight: results/runs/<run_id>/<flight_slug>.json.gz
+Run id = <det>_<picker>_K<K>_<map>_<matcher>[_<tag>]  (matcher nn | lg; --solver ippe appends -ippe to the tag, so it never shares files with the AP3P run). Output per flight: results/runs/<run_id>/<flight_slug>.json.gz
 with {"rows": [...], "picks": {...}} and results/runs/<run_id>/meta.json (config, date, git commit).
 Flights already done are skipped unless --force. Export (kpbench.export) merges flights for the page.
 """
@@ -52,15 +52,18 @@ def main(argv=None):
     ap.add_argument('--tag', default=''); ap.add_argument('--save-picks', action='store_true'); ap.add_argument('--force', action='store_true')
     ap.add_argument('--workers', type=int, default=0); ap.add_argument('--notes', default='')
     ap.add_argument('--matcher', default='nn', choices=['nn', 'lg'], help='nn = mutual nearest neighbour, lg = LightGlue')
+    ap.add_argument('--solver', default='ap3p', choices=['ap3p', 'ippe'], help='ippe = AP3P + planar hypothesis (R19)')
     a = ap.parse_args(argv)
+    if a.solver != 'ap3p':
+        a.tag = (a.tag + '-' if a.tag else '') + a.solver
     assert a.map in ('same', 'dense') or re.fullmatch(r'ret[0-9]+', a.map), 'map must be same, dense or ret<k>'
     rid = run_id(a.det, a.picker, a.K, a.map, a.tag, a.matcher); out = os.path.join(RESULTS, 'runs', rid); os.makedirs(out, exist_ok=True)
     meta_fn = os.path.join(out, 'meta.json')
     meta = json.load(open(meta_fn)) if os.path.isfile(meta_fn) else {}
-    meta.update(id=rid, det=a.det, picker=a.picker, K=a.K, map=a.map, matcher=a.matcher, tag=a.tag, cols=COLS,
-                protocol='C23: keyframes every %d, %s, %s, PnP AP3P-RANSAC 3 px 2000 it >= 6 inliers + LM refinement, camera-centre error' % (
+    meta.update(id=rid, det=a.det, picker=a.picker, K=a.K, map=a.map, matcher=a.matcher, tag=a.tag, cols=COLS, solver=a.solver,
+                protocol='C23: keyframes every %d, %s, %s, PnP AP3P-RANSAC%s 3 px 2000 it >= 6 inliers + LM refinement, camera-centre error' % (
                     KF, 'map = top-%s keyframes by VLAD retrieval over the whole flight' % a.map[3:] if a.map.startswith('ret') else 'map = keyframes within +-%d frames' % WIN,
-                    'LightGlue per keyframe' if a.matcher == 'lg' else 'mutual NN'),
+                    'LightGlue per keyframe' if a.matcher == 'lg' else 'mutual NN', ' + IPPE planar hypothesis' if a.solver == 'ippe' else ''),
                 has_picks=bool(a.save_picks) or meta.get('has_picks', False), device=device_name(a.matcher))
     dev = meta['device']
     if a.notes:
@@ -70,7 +73,7 @@ def main(argv=None):
         if os.path.isfile(fn) and not a.force:
             print('exists', fn); continue
         try:
-            rows, picks = run_flight(fid, a.det, a.picker, a.K, a.map, workers=a.workers or None, save_picks=a.save_picks, matcher=a.matcher)
+            rows, picks = run_flight(fid, a.det, a.picker, a.K, a.map, workers=a.workers or None, save_picks=a.save_picks, matcher=a.matcher, solver=a.solver)
         except FileNotFoundError as e:
             print('skip', fid, e); continue
         json.dump(dict(flight=fid, rows=rows, picks=picks, device=dev), gzip.open(fn, 'wt'))

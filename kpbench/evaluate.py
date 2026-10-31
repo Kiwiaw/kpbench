@@ -1,6 +1,6 @@
 """Score one picker on a frozen split (splits.json) under the kpbench protocol, with the search rules enforced.
 
-  python -m kpbench.evaluate --picker cube0.5 [--split micro|dev_flat|dev] [--matcher lg] [--save] [--metrics]
+  python -m kpbench.evaluate --picker cube0.5 [--split micro|dev_flat|dev|fresh] [--matcher lg] [--solver ap3p|ippe] [--save] [--metrics]
 
 evaluate(picker) is the scoring function for code search (ShinkaEvolve / OpenEvolve) and tuning (Optuna).
 picker = a name for kpbench.pickers.parse or a function f(u, v, s, z, K) -> indices into the candidates.
@@ -62,12 +62,14 @@ def query_sets(split):
     if split == 'dev_flat':                          # flat queries of every DEV flight: the tuning objective (Optuna)
         from .splits import flat_queries
         return {f: flat_queries(f) for f in sp['dev']}
+    if split == 'fresh':                             # FRESH-1 flights, the committed frozen record (needs the fresh labels: Euler)
+        return {f: None for f in json.load(open(os.path.join(REPO, 'results', 'gates', 'FRESH_set.json')))['fresh']}
     if split in ('dev', 'held_out'):
         return {f: None for f in sp[split]}          # None = every query of the flight
     raise ValueError(split)
 
 
-def eval_flight(fid, qs, pk, K, det, matcher, allow_oracle, metrics=False):
+def eval_flight(fid, qs, pk, K, det, matcher, allow_oracle, metrics=False, solver='ap3p'):
     F = Flight(fid); C = Cands(F.slug, det)
     if C.N != F.N:
         raise RuntimeError('%s: cache has %d frames, flight has %d' % (fid, C.N, F.N))
@@ -92,7 +94,7 @@ def eval_flight(fid, qs, pk, K, det, matcher, allow_oracle, metrics=False):
             mq, mm = match_mutual(de[i], np.concatenate([MAP[k][1] for k in near]))
             obj = np.concatenate([MAP[k][0] for k in near])[mm]
         img = np.stack([u[i][mq], v[i][mq]], 1)
-        err, rot, ninl, sol = pnp(obj, img, Rq, tq, full=True)
+        err, rot, ninl, sol = pnp(obj, img, Rq, tq, full=True, solver=solver)
         rep = repeat(F, C, q, i, trees)
         for f in [f for f in trees if f < q]:
             del trees[f]
@@ -102,11 +104,11 @@ def eval_flight(fid, qs, pk, K, det, matcher, allow_oracle, metrics=False):
     return rows, flat
 
 
-def evaluate(picker, split='micro', K=100, det='raco', matcher='lg', allow_oracle=False, save=False, name=None, metrics=False):
+def evaluate(picker, split='micro', K=100, det='raco', matcher='lg', allow_oracle=False, save=False, name=None, metrics=False, solver='ap3p'):
     pk = parse_picker(picker) if isinstance(picker, str) else picker
     t0 = time.time(); rows, flat = [], []
     for fid, qs in query_sets(split).items():
-        r, fl = eval_flight(fid, qs, pk, K, det, matcher, allow_oracle, metrics); rows += r; flat += fl
+        r, fl = eval_flight(fid, qs, pk, K, det, matcher, allow_oracle, metrics, solver); rows += r; flat += fl
     fails = fail_flags(rows); flat = np.array(flat, bool)
     rep5 = [r[COLS.index('rep5')] for r in rows if r[COLS.index('rep5')] is not None]
     out = dict(picker=name or (picker if isinstance(picker, str) else getattr(picker, '__name__', 'fn')), split=split, K=K,
@@ -124,12 +126,12 @@ def evaluate(picker, split='micro', K=100, det='raco', matcher='lg', allow_oracl
 def main(argv=None):
     import argparse
     ap = argparse.ArgumentParser()
-    ap.add_argument('--picker', required=True); ap.add_argument('--split', default='micro', choices=['micro', 'dev_flat', 'dev', 'held_out'])
+    ap.add_argument('--picker', required=True); ap.add_argument('--split', default='micro', choices=['micro', 'dev_flat', 'dev', 'held_out', 'fresh'])
     ap.add_argument('--K', type=int, default=100); ap.add_argument('--det', default='raco')
     ap.add_argument('--matcher', default='lg', choices=['lg', 'nn']); ap.add_argument('--save', action='store_true')
-    ap.add_argument('--metrics', action='store_true')
+    ap.add_argument('--metrics', action='store_true'); ap.add_argument('--solver', default='ap3p', choices=['ap3p', 'ippe'])
     a = ap.parse_args(argv)
-    out, _, _ = evaluate(a.picker, a.split, a.K, a.det, a.matcher, save=a.save, metrics=a.metrics)
+    out, _, _ = evaluate(a.picker, a.split, a.K, a.det, a.matcher, save=a.save, metrics=a.metrics, solver=a.solver)
     print(json.dumps(out))
 
 
