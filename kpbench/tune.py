@@ -133,9 +133,21 @@ def objective(trial, fam, rc=False, fc=False, K=100):
         trial.set_user_attr(k, out[k])
     trial.set_user_attr('hull', hull)
     trial.set_user_attr('picker', pk); trial.set_user_attr('host', os.uname().nodename.split('.')[0] if hasattr(os, 'uname') else '')
+    trial.set_user_attr('commit', git_commit())      # SUB2: the kpbench commit that produced the trial (audit C-check of tune rows)
     if fc:
         return score_fcap(out['fail_flat'], out['rep5'])
     return score(out['fail_flat'], out['rep5']) if rc else out['fail_flat']
+
+
+def git_commit(_c=[]):
+    """Short kpbench commit of the checkout running this process, 'unknown' outside git."""
+    if not _c:
+        try:
+            import subprocess
+            _c.append(subprocess.run(['git', '-C', REPO, 'rev-parse', '--short', 'HEAD'], capture_output=True, text=True, timeout=10).stdout.strip() or 'unknown')
+        except Exception:
+            _c.append('unknown')
+    return _c[0]
 
 
 def enqueue_seeds(s, fam, g=False):
@@ -149,9 +161,10 @@ def summary(name):
     s = study(name); done = [t for t in s.trials if t.state == optuna.trial.TrialState.COMPLETE]
     done.sort(key=lambda t: t.value)
     rows = [dict(n=t.number, picker=t.user_attrs.get('picker'), K=t.user_attrs.get('K', kval(name)), fail_flat=t.user_attrs.get('fail_flat', t.value), rep5=t.user_attrs.get('rep5'),
-                 hull=t.user_attrs.get('hull'), params=t.params, host=t.user_attrs.get('host')) for t in done]
+                 hull=t.user_attrs.get('hull'), params=t.params, host=t.user_attrs.get('host'),
+                 commit=t.user_attrs.get('commit', 'unknown')) for t in done]     # trials before 2026-11-01 stored no commit: 'unknown'
     pareto(rows)
-    out = dict(study=name, split='dev_flat', K=kval(name), n_complete=len(done), n_total=len(s.trials), best=rows[:1], trials=rows,
+    out = dict(study=name, split='dev_flat', K=kval(name), n_complete=len(done), n_total=len(s.trials), commit=git_commit(), best=rows[:1], trials=rows,
                objective=('rep5 s.t. fail_flat <= %.2f' % REP5_CAP) if rep5c(name) else
                ('fail_flat s.t. rep5 >= %.4g' % REP5_FLOOR) if fcap(name) else 'fail_flat')
     json.dump(out, open(os.path.join(TUNE, name + '.json'), 'w'), indent=1)
