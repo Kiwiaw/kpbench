@@ -20,7 +20,7 @@ import numpy as np
 from .data import Flight, to3d, DEPTH_MAX, slug
 from .cache import Cands, REPO
 from .pickers import parse as parse_picker
-from .bench import match_lightglue, match_mutual, pnp, repeat, COLS
+from .bench import match_lightglue, match_mutual, pnp, repeat, onplane, COLS
 from .splits import load as load_splits, FLAT
 from .stats import fail_flags
 from .metrics import query_metrics, MCOLS
@@ -84,7 +84,7 @@ def eval_flight(fid, qs, pk, K, det, matcher, allow_oracle, metrics=False, solve
         if k % 10 == 0:
             u, v, s, z, de = C.frame(k); i = sel[k]; i = i[z[i] < DEPTH_MAX]; Rk, tk = F.cam_pose(k)
             MAP[k] = (to3d(u[i], v[i], z[i]) @ Rk.T + tk, de[i], np.stack([u[i], v[i]], 1))
-    rows, flat, trees = [], [], {}
+    rows, flat, trees, plane = [], [], {}, {}
     for q in qs:
         near = F.near(q); Rq, tq = F.cam_pose(q); u, v, s, z, de = C.frame(q); i = sel[q]
         if matcher == 'lg':
@@ -101,24 +101,28 @@ def eval_flight(fid, qs, pk, K, det, matcher, allow_oracle, metrics=False, solve
         rows.append([fid, q, err, rot, int(len(i)), int(len(mq)), ninl] + rep +
                     (query_metrics(obj, img, len(mq), err, rot, sol, np.stack([u[i], v[i]], 1)) if metrics else []))
         pf = lab[str(q)].get('plane_frac'); flat.append(pf is not None and pf >= FLAT)
-    return rows, flat
+        plane[str(q)] = onplane(u, v, z, i)[0]       # R20: [on-plane share of the picks, picks with depth, plane share of the fit set]
+    return rows, flat, plane
 
 
 def evaluate(picker, split='micro', K=100, det='raco', matcher='lg', allow_oracle=False, save=False, name=None, metrics=False, solver='ap3p'):
     pk = parse_picker(picker) if isinstance(picker, str) else picker
-    t0 = time.time(); rows, flat = [], []
+    t0 = time.time(); rows, flat, plane = [], [], {}
     for fid, qs in query_sets(split).items():
-        r, fl = eval_flight(fid, qs, pk, K, det, matcher, allow_oracle, metrics, solver); rows += r; flat += fl
+        r, fl, pl = eval_flight(fid, qs, pk, K, det, matcher, allow_oracle, metrics, solver); rows += r; flat += fl; plane[fid] = pl
     fails = fail_flags(rows); flat = np.array(flat, bool)
     rep5 = [r[COLS.index('rep5')] for r in rows if r[COLS.index('rep5')] is not None]
+    op = np.array([(plane[r[0]][str(r[1])][0] or np.nan) if plane[r[0]][str(r[1])][0] is not None else np.nan for r in rows], float)
     out = dict(picker=name or (picker if isinstance(picker, str) else getattr(picker, '__name__', 'fn')), split=split, K=K,
                det=det, matcher=matcher, n=len(rows), n_flat=int(flat.sum()),
                fail_flat=round(100 * fails[flat].mean(), 3) if flat.any() else None, fail_all=round(100 * fails.mean(), 3),
-               rep5=round(float(np.mean(rep5)), 4) if rep5 else None, secs=round(time.time() - t0, 1))
+               rep5=round(float(np.mean(rep5)), 4) if rep5 else None, secs=round(time.time() - t0, 1),
+               onplane_all=round(float(np.nanmean(op)), 4) if np.isfinite(op).any() else None,
+               onplane_flat=round(float(np.nanmean(op[flat])), 4) if flat.any() and np.isfinite(op[flat]).any() else None)
     if save:
         d = os.path.join(EVAL_DIR, split); os.makedirs(d, exist_ok=True)
         fn = os.path.join(d, '%s_%s_K%d_%s%s.json.gz' % (det, out['picker'], K, matcher, '_m' if metrics else ''))
-        json.dump(dict(summary=out, cols=COLS + (MCOLS if metrics else []), rows=rows, flat=flat.tolist()), gzip.open(fn, 'wt'))
+        json.dump(dict(summary=out, cols=COLS + (MCOLS if metrics else []), rows=rows, flat=flat.tolist(), onplane=plane), gzip.open(fn, 'wt'))
         out['saved'] = os.path.relpath(fn, REPO)
     return out, rows, flat
 

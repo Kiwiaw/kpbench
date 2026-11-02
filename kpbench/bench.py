@@ -171,6 +171,20 @@ def _worker(job):
     return q, pnp(obj, img, Rq, tq, solver=solver)
 
 
+def onplane(u, v, z, idx, tol=0.3, n_fit=300):
+    """R20: plane labels of the picked candidates idx. Dominant plane of the frame = RANSAC over the strongest n_fit candidates
+    with depth (the labels.plane_frac fit: 300 trials, 30 cm, seed 0); a pick is on-plane when it has depth and lies within tol.
+    -> [share of picks with depth that are on-plane, picks with depth, plane share of the fit set], per-pick labels (1/0, None = no depth)"""
+    from .pickers import dominant_plane
+    ok = np.flatnonzero(z < DEPTH_MAX)[:n_fit]
+    idx = np.asarray(idx, int); has = z[idx] < DEPTH_MAX
+    a, n, cnt = dominant_plane(to3d(u[ok], v[ok], z[ok]), tol) if len(ok) else (None, None, 0)
+    if a is None or not has.any():
+        return [None, int(has.sum()), None], [None] * len(idx)
+    on = np.abs((to3d(u[idx], v[idx], z[idx]) - a) @ n) < tol
+    return [round(float(on[has].mean()), 4), int(has.sum()), round(cnt / len(ok), 4)], [int(x) if h else None for x, h in zip(on, has)]
+
+
 def repeat(F, C, q, idx, trees):
     """repeatability of candidates idx of frame q at the REP_LAGS; trees caches (xy KD-tree, z) of the strongest 300 per frame"""
     u, v, s, z, _ = C.frame(q)
@@ -215,7 +229,7 @@ def run_flight(fid, det, picker, K, mapmode, workers=None, save_picks=False, fli
         i = sel[k] if mapmode != 'dense' else np.flatnonzero(z < DEPTH_MAX)[:300]
         i = i[z[i] < DEPTH_MAX]; Rk, tk = F.cam_pose(k)
         MAP[k] = (to3d(u[i], v[i], z[i]) @ Rk.T + tk, de[i], np.stack([u[i], v[i]], 1))
-    jobs, meta, picks = [], {}, {}; near_of = retrieval(C, F, mapmode)
+    jobs, meta, picks, plane = [], {}, {}, {}; near_of = retrieval(C, F, mapmode)
     for q in F.queries:
         near = near_of(q); Rq, tq = F.cam_pose(q)
         P3 = np.concatenate([MAP[k][0] for k in near]); DM = np.concatenate([MAP[k][1] for k in near])
@@ -227,8 +241,10 @@ def run_flight(fid, det, picker, K, mapmode, workers=None, save_picks=False, fli
             mq, mm = match_mutual(de[i], DM); obj = P3[mm]
         jobs.append((q, obj, np.stack([u[i][mq], v[i][mq]], 1), Rq, tq, solver))
         meta[q] = dict(n_sel=int(len(i)), n_match=int(len(mq)))
+        plane[str(q)], pl = onplane(u, v, z, i)        # R20: on-plane share of the picks, per query (rows untouched)
         if save_picks:
             picks[str(q)] = [[round(float(a), 1), round(float(b), 1)] for a, b in zip(u[i], v[i])]
+            plane[str(q)] = plane[str(q)] + [pl]      # 4th entry: per-pick labels in pick order
     if verbose:
         print(fid, det, picker, K, mapmode, matcher, 'matching done, %d queries, %.0fs' % (len(jobs), time.time() - t0), flush=True)
     nw = workers or int(os.environ.get('SLURM_CPUS_PER_TASK', 0)) or max(1, (os.cpu_count() or 2) - 1)
@@ -247,4 +263,4 @@ def run_flight(fid, det, picker, K, mapmode, workers=None, save_picks=False, fli
     if verbose:
         fails = np.mean([r[2] is None or r[2] > 25 or r[3] > 2 for r in rows])
         print(fid, det, picker, K, mapmode, matcher, 'fail@25cm/2deg %.2f %%  %.0fs' % (100 * fails, time.time() - t0), flush=True)
-    return rows, picks
+    return rows, picks, plane

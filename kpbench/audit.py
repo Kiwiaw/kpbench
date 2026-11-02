@@ -35,6 +35,8 @@ WARN = correct but fragile or misleading. Checks:
                    splits_fresh.json / fresh manifest hashes = FRESH_set.json; flat count >= 2 x DEV flat (needs flight data)
   C25 gates        every DEV gate file results/gates/*__dev.json recomputed from its rows with gate.compare (flat diff + CI,
                    flights better/worse, verdict); needs the gate runs (Euler) (dispatch 2026-10-19 13:10)
+  C38 fresh gates  the same recompute for every FRESH and HELD_OUT gate file (*__fresh.json, *__held_out.json): E1 and the
+                   other out-of-sample tables leave the repo only after their rows reproduce the json (T26, 2 Nov)
 """
 import os, re, json, gzip, glob, subprocess, tempfile, datetime
 import numpy as np
@@ -434,13 +436,15 @@ def flat_queries_(f):
     return flat_queries(f)
 
 
-def c25_gates():
-    from .gate import compare, GATES, GateError
+def c25_gates(splits=('dev',), cid='C25', what='DEV gate verdicts recomputed from rows'):
+    from .gate import compare, GATES, GateError, RESULTS
     rows = []; bad = []
-    for fn in sorted(glob.glob(os.path.join(GATES, '*__dev.json'))):
+    files = [(sp, fn) for sp in splits for fn in sorted(glob.glob(os.path.join(GATES, '*__%s.json' % sp)))]
+    for split, fn in files:
         g0 = json.load(open(fn))
+        rs = [r for r in ('runs', 'runs_gate') if os.path.isdir(os.path.join(RESULTS, r, g0['cand']))] or ['runs']
         try:
-            g = compare(g0['cand'], g0['inc'], 'dev')
+            g = compare(g0['cand'], g0['inc'], split, runs=rs[0])
         except (GateError, OSError) as e:
             bad.append('%s: %s' % (g0.get('picker'), str(e)[:80])); continue
         d0, d1 = g0['flat_diff'], g['flat_diff']
@@ -452,10 +456,16 @@ def c25_gates():
             bad.append('%s %s' % (g['picker'], 'pre-sync file (n_flat %d), same verdict' % g0['n_flat']
                                   if g0['n_flat'] != g['n_flat'] and g0['win'] == g['win'] else 'differs from its file'))
     st = 'FAIL' if any('differs' in b for b in bad) else ('WARN' if bad else 'PASS')
-    report('C25', st, 'DEV gate verdicts recomputed from rows', '%d recomputed: %s%s' % (len(rows), '; '.join(rows), ('; problems: ' + '; '.join(bad)) if bad else ''))
+    report(cid, st, what, '%d recomputed: %s%s' % (len(rows), '; '.join(rows), ('; problems: ' + '; '.join(bad)) if bad else ''))
 
 
-REP5_PINNED = {'dppr0.388a1.91b2.85t0.9': (0.0229, 0.0200, 0.0259, 11, 1), 'dppr0.317a1.6b2.01t0.9': (0.0236, 0.0209, 0.0263, 12, 0)}
+def c38_fresh_gates():
+    c25_gates(('fresh', 'held_out'), 'C38', 'FRESH / HELD_OUT gate verdicts recomputed from rows')
+
+
+# 2 Nov 2026 (T26, Euler rows): the block-bootstrap CIs are [+0.0154,+0.0307] and [+0.0161,+0.0308]; the intervals quoted on 21/22 Oct
+# ([+0.0200,+0.0259], [+0.0209,+0.0263]) were per-query bootstraps, means and flight counts identical. Pinned = the block values.
+REP5_PINNED = {'dppr0.388a1.91b2.85t0.9': (0.0229, 0.0154, 0.0307, 11, 1), 'dppr0.317a1.6b2.01t0.9': (0.0236, 0.0161, 0.0308, 12, 0)}
 
 
 def rep5_pair(cand, inc, flights, runs, flat_only, K=100):
@@ -548,7 +558,7 @@ def main(argv=None):
     lab = labels(); R = {rid: run_rows(rid) for rid in RUNS31}
     C = dict(C1=lambda: c1_counts(lab, R), C2=lambda: c2_k(R), C3=lambda: c3_keyframes(lab), C6=lambda: c6_fail_rule(R),
              C7=lambda: c7_page(R), C8=lambda: c8_bootstrap(R, lab), C9=lambda: c9_paired_test(R, lab),
-             C10=lambda: c10_block_length(R, lab), C11=lambda: c11_headline(R, lab), C14=c14_texts, C15=lambda: c15_incumbent(lab), C23=c23_fresh, C24=c24_provisional, C25=c25_gates, C36=c36_nms_identity, C37=c37_rep5,
+             C10=lambda: c10_block_length(R, lab), C11=lambda: c11_headline(R, lab), C14=c14_texts, C15=lambda: c15_incumbent(lab), C23=c23_fresh, C24=c24_provisional, C25=c25_gates, C36=c36_nms_identity, C37=c37_rep5, C38=c38_fresh_gates,
              C4=c4_reproduce, C5=c5_ground_truth, C12=lambda: c12_planarity(lab), C13=c13_canaries)
     only = [c.strip() for c in a.only.split(',') if c.strip()]
     for cid in only or [c for c in C if not (a.quick and c in ('C4', 'C5', 'C12', 'C13'))]:

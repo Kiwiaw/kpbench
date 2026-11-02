@@ -3,7 +3,8 @@
   python -m kpbench.run --det raco --picker sd --K 100 --map same --flights all [--save-picks] [--tag x] [--force]
 
 Run id = <det>_<picker>_K<K>_<map>_<matcher>[_<tag>]  (matcher nn | lg; --solver ippe appends -ippe to the tag, so it never shares files with the AP3P run). Output per flight: results/runs/<run_id>/<flight_slug>.json.gz
-with {"rows": [...], "picks": {...}} and results/runs/<run_id>/meta.json (config, date, git commit).
+with {"rows": [...], "picks": {...}, "onplane": {q: [on-plane share of the picks, picks with depth, plane share of the fit set]}}
+(R20, bench.onplane; with --save-picks a 4th entry holds the per-pick labels) and results/runs/<run_id>/meta.json (config, date, git commit).
 Flights already done are skipped unless --force. Export (kpbench.export) merges flights for the page.
 """
 import re
@@ -73,10 +74,10 @@ def main(argv=None):
         if os.path.isfile(fn) and not a.force:
             print('exists', fn); continue
         try:
-            rows, picks = run_flight(fid, a.det, a.picker, a.K, a.map, workers=a.workers or None, save_picks=a.save_picks, matcher=a.matcher, solver=a.solver)
+            rows, picks, plane = run_flight(fid, a.det, a.picker, a.K, a.map, workers=a.workers or None, save_picks=a.save_picks, matcher=a.matcher, solver=a.solver)
         except FileNotFoundError as e:
             print('skip', fid, e); continue
-        json.dump(dict(flight=fid, rows=rows, picks=picks, device=dev), gzip.open(fn, 'wt'))
+        json.dump(dict(flight=fid, rows=rows, picks=picks, device=dev, onplane=plane), gzip.open(fn, 'wt'))
         meta['date'] = datetime.datetime.now().isoformat(timespec='seconds'); meta['commit'] = git_commit()
         json.dump(meta, open(meta_fn, 'w'), indent=1)
     json.dump(meta, open(meta_fn, 'w'), indent=1)
