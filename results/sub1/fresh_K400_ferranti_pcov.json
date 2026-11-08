@@ -1,0 +1,73 @@
+{
+ "split": "fresh",
+ "metric": "pcov",
+ "posed": false,
+ "K": 400,
+ "pickers": [
+  "cube0.5",
+  "dpp0.5"
+ ],
+ "results": {
+  "cube0.5": {
+   "n": 13440,
+   "fails": 69,
+   "count": {
+    "auroc": 0.9738,
+    "prauc": 0.3814
+   },
+   "hull": {
+    "auroc": 0.938,
+    "prauc": 0.2368
+   },
+   "count+hull": {
+    "auroc": 0.9699,
+    "prauc": 0.3687
+   },
+   "delta": {
+    "auroc": -0.0039,
+    "prauc": -0.0127
+   }
+  },
+  "dpp0.5": {
+   "n": 13440,
+   "fails": 76,
+   "count": {
+    "auroc": 0.9271,
+    "prauc": 0.3607
+   },
+   "hull": {
+    "auroc": 0.9493,
+    "prauc": 0.2566
+   },
+   "count+hull": {
+    "auroc": 0.9418,
+    "prauc": 0.3434
+   },
+   "delta": {
+    "auroc": 0.0147,
+    "prauc": -0.0173
+   }
+  },
+  "pooled": {
+   "n": 26880,
+   "fails": 145,
+   "count": {
+    "auroc": 0.9489,
+    "prauc": 0.3694
+   },
+   "hull": {
+    "auroc": 0.945,
+    "prauc": 0.2491
+   },
+   "count+hull": {
+    "auroc": 0.9487,
+    "prauc": 0.3533
+   },
+   "delta": {
+    "auroc": -0.0002,
+    "prauc": -0.0161
+   }
+  }
+ },
+ "verdict": "KILL: pcov adds < 0.01 AUROC and PR-AUC over inlier count"
+}

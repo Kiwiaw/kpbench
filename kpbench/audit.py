@@ -37,6 +37,11 @@ WARN = correct but fragile or misleading. Checks:
                    flights better/worse, verdict); needs the gate runs (Euler) (dispatch 2026-10-19 13:10)
   C38 fresh gates  the same recompute for every FRESH and HELD_OUT gate file (*__fresh.json, *__held_out.json): E1 and the
                    other out-of-sample tables leave the repo only after their rows reproduce the json (T26, 2 Nov)
+  C39 fresh labels the FRESH-1 label source is the repo: 14 label files = results/labels_manifest_fresh.json hashes, the manifest
+                   and splits_fresh.json hash to FRESH_set.json, totals 13440 queries / 2075 flat (r28, 4 Nov); every *__fresh.json
+                   gate has n_flat 2075 and every mirrored FRESH run 13440 rows; runs whose meta says has_picks carry picks
+                   (gate.require_picks; a run with a pick-less flight file = WARN, refused) and runs without picks are counted,
+                   so no per-pick table starts on them (T31, 8 Nov)
 """
 import os, re, json, gzip, glob, subprocess, tempfile, datetime
 import numpy as np
@@ -541,6 +546,55 @@ def c36_nms_identity():
     report('C36', 'FAIL' if bad else 'PASS', 'nms0 = sd (nms family)', '; '.join(det))
 
 
+FRESH_N = dict(queries=13440, flat=2075, flights=14)   # FRESH-1 (r28 audit 4 Nov): the only flat-label counts a FRESH table may use
+
+
+def c39_fresh_labels():
+    import hashlib
+    from .gate import SPLITS_FRESH, MANIFEST_FRESH, GATES, RESULTS, label_hash, require_picks, GateError
+    bad = []; info = []
+    if not (os.path.isfile(SPLITS_FRESH) and os.path.isfile(MANIFEST_FRESH)):
+        return report('C39', 'FAIL', 'FRESH-1 labels in the repo', 'splits_fresh.json or results/labels_manifest_fresh.json missing')
+    s = json.load(open(SPLITS_FRESH)); man = json.load(open(MANIFEST_FRESH)); flights = s['fresh']
+    fs = json.load(open(os.path.join(REPO, 'results', 'gates', 'FRESH_set.json')))
+    for fn, key in ((SPLITS_FRESH, 'splits_fresh_sha256'), (MANIFEST_FRESH, 'manifest_sha256')):
+        hs = (hashlib.sha256(open(fn, 'rb').read()).hexdigest(), hashlib.sha256(json.dumps(json.load(open(fn)), sort_keys=True).encode()).hexdigest())
+        if fs[key] not in hs: bad.append('%s sha != FRESH_set' % os.path.basename(fn))
+    tot = flat = 0; miss = []
+    for f in flights:
+        fn = os.path.join(REPO, 'results', 'labels', slug(f) + '.json')
+        if not os.path.isfile(fn): miss.append(f); continue
+        if label_hash(f) != man.get(f): bad.append('%s label hash != manifest' % f)
+        d = json.load(open(fn)); tot += len(d); flat += sum(1 for v in d.values() if (v.get('plane_frac') or -1) >= 0.85)
+    if miss: bad.append('label files missing: %s' % miss)
+    if (len(flights), tot, flat) != (FRESH_N['flights'], FRESH_N['queries'], FRESH_N['flat']) or (s['n_queries']['fresh'], s['flat_counts']['fresh']) != (tot, flat):
+        bad.append('counts %d flights / %d queries / %d flat (splits_fresh %s / %s) != %s' % (len(flights), tot, flat, s['n_queries']['fresh'], s['flat_counts']['fresh'], FRESH_N))
+    info.append('%d flights, %d queries, %d flat from repo labels' % (len(flights), tot, flat))
+    gates = sorted(glob.glob(os.path.join(GATES, '*__fresh.json'))); nf = [json.load(open(g)).get('n_flat') for g in gates]
+    if any(n != FRESH_N['flat'] for n in nf): bad.append('fresh gate n_flat %s != %d' % (nf, FRESH_N['flat']))
+    info.append('%d FRESH gate files, n_flat %s' % (len(gates), sorted(set(nf))))
+    runs = sorted(d for d in glob.glob(os.path.join(RESULTS, 'runs', '*-fresh*')) if os.path.isdir(d)); short = []
+    for d in runs:
+        n = sum(len(json.load(gzip.open(os.path.join(d, slug(f) + '.json.gz'), 'rt'))['rows']) for f in flights if os.path.isfile(os.path.join(d, slug(f) + '.json.gz')))
+        if n != FRESH_N['queries']: short.append('%s %d' % (os.path.basename(d)[:45], n))
+    if short: bad.append('FRESH runs without %d rows: %s' % (FRESH_N['queries'], short))
+    info.append('%d mirrored FRESH runs%s' % (len(runs), '' if short else ' all %d rows' % FRESH_N['queries']))
+    withp = nop = 0; partial = []
+    for d in sorted(glob.glob(os.path.join(RESULTS, 'runs', 'raco_*'))):
+        mf = os.path.join(d, 'meta.json')
+        if not os.path.isfile(mf): continue
+        rid = os.path.basename(d); fl = [f for f in (flights if '-fresh' in rid else FLIGHTS) if os.path.isfile(os.path.join(d, slug(f) + '.json.gz'))]
+        if not fl: continue
+        try:
+            require_picks(rid, fl[:1]); withp += 1
+        except GateError as e:
+            nop += 1
+            if json.load(open(mf)).get('has_picks'): partial.append(rid)   # meta says picks, a flight file has none: refused, not published
+    info.append('runs with picks %d, without %d (per-pick tables refused on those by gate.require_picks)' % (withp, nop))
+    if partial: info.append('WARN meta has_picks but a flight without picks (refused): %s' % partial)
+    report('C39', 'FAIL' if bad else ('WARN' if partial else 'PASS'), 'FRESH-1 labels in the repo', '; '.join(info + bad))
+
+
 def write_report(path):
     lines = ['# kpbench audit %s' % datetime.date.today().isoformat(), '',
              'Generated by `python -m kpbench.audit`. FAIL = a published number or text is wrong; WARN = correct but misleading or fragile.', '',
@@ -558,7 +612,7 @@ def main(argv=None):
     lab = labels(); R = {rid: run_rows(rid) for rid in RUNS31}
     C = dict(C1=lambda: c1_counts(lab, R), C2=lambda: c2_k(R), C3=lambda: c3_keyframes(lab), C6=lambda: c6_fail_rule(R),
              C7=lambda: c7_page(R), C8=lambda: c8_bootstrap(R, lab), C9=lambda: c9_paired_test(R, lab),
-             C10=lambda: c10_block_length(R, lab), C11=lambda: c11_headline(R, lab), C14=c14_texts, C15=lambda: c15_incumbent(lab), C23=c23_fresh, C24=c24_provisional, C25=c25_gates, C36=c36_nms_identity, C37=c37_rep5, C38=c38_fresh_gates,
+             C10=lambda: c10_block_length(R, lab), C11=lambda: c11_headline(R, lab), C14=c14_texts, C15=lambda: c15_incumbent(lab), C23=c23_fresh, C24=c24_provisional, C25=c25_gates, C36=c36_nms_identity, C37=c37_rep5, C38=c38_fresh_gates, C39=c39_fresh_labels,
              C4=c4_reproduce, C5=c5_ground_truth, C12=lambda: c12_planarity(lab), C13=c13_canaries)
     only = [c.strip() for c in a.only.split(',') if c.strip()]
     for cid in only or [c for c in C if not (a.quick and c in ('C4', 'C5', 'C12', 'C13'))]:

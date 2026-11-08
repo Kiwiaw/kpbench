@@ -28,6 +28,8 @@ Summaries mark the Pareto front (lower fail_flat, higher rep5) of all complete t
 Budget: a study name containing '_K<k>' (e.g. dpp_K200_dev1) evaluates at K = k keypoints (default 100). Fixed grid: a study
 name containing '_grid' runs exactly the GRIDS[family] arms (enqueued by --seed-only, no TPE trial; workers stop when none
 waits), e.g. nms_grid_dev1 = 8 NMS radii (T20 R1).
+--dry-run (laptop, no GPU, nothing stored): prints family, K, objective, the seeds and the pickers an in-memory copy of the
+study would ask for over --trials trials (TPE, fixed sampler seed), so a staged queue item can be checked before release.
 """
 import os, re, json
 import numpy as np
@@ -178,15 +180,34 @@ def summary(name):
     print('\n'.join(md))
 
 
+def dry_run(name, trials):
+    """in-memory study: seeds + the pickers TPE would propose (random startup, then TPE on fake values); nothing evaluated or stored"""
+    fam = family(name); assert not (rep5c(name) and fcap(name)), 'one objective per study: _rep5c or _fcap'
+    assert not grid(name) or fam in GRIDS, 'no grid for family %s' % fam
+    obj = ('rep5 s.t. fail_flat <= %.2f' % REP5_CAP) if rep5c(name) else ('fail_flat s.t. rep5 >= %.4f' % REP5_FLOOR) if fcap(name) else 'fail_flat'
+    print('study %s: family %s, K %d, objective %s, grid %s' % (name, fam, kval(name), obj, grid(name)))
+    s = optuna.create_study(sampler=optuna.samplers.TPESampler(seed=0)); enqueue_seeds(s, fam, grid(name))
+    names = []
+    for i in range(trials):
+        if grid(name) and not s.get_trials(deepcopy=False, states=(optuna.trial.TrialState.WAITING,)):
+            break
+        t = s.ask(); p = SPACES[fam](t); names.append(p); s.tell(t, float(i % 7))   # fake value, keeps TPE moving
+    print('%d trials: %s' % (len(names), ' '.join(names)))
+    return names
+
+
 def main(argv=None):
     import argparse
     ap = argparse.ArgumentParser()
     ap.add_argument('--study', required=True); ap.add_argument('--trials', type=int, default=5)
     ap.add_argument('--summary', action='store_true'); ap.add_argument('--seed-only', action='store_true')
+    ap.add_argument('--dry-run', action='store_true', help='print the trial list of an in-memory study, evaluate nothing')
     a = ap.parse_args(argv)
     fam = family(a.study); assert fam in SPACES, 'study name must start with a family: %s' % list(SPACES)
     if a.summary:
         return summary(a.study)
+    if a.dry_run:
+        return dry_run(a.study, a.trials)
     s = study(a.study)
     if a.seed_only:
         return enqueue_seeds(s, fam, grid(a.study))

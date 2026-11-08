@@ -1,0 +1,73 @@
+{
+ "split": "fresh",
+ "metric": "hull",
+ "posed": false,
+ "K": 400,
+ "pickers": [
+  "cube0.5",
+  "dpp0.5"
+ ],
+ "results": {
+  "cube0.5": {
+   "n": 13440,
+   "fails": 69,
+   "count": {
+    "auroc": 0.9738,
+    "prauc": 0.3814
+   },
+   "hull": {
+    "auroc": 0.9044,
+    "prauc": 0.3419
+   },
+   "count+hull": {
+    "auroc": 0.9549,
+    "prauc": 0.4134
+   },
+   "delta": {
+    "auroc": -0.0189,
+    "prauc": 0.032
+   }
+  },
+  "dpp0.5": {
+   "n": 13440,
+   "fails": 76,
+   "count": {
+    "auroc": 0.9271,
+    "prauc": 0.3607
+   },
+   "hull": {
+    "auroc": 0.8601,
+    "prauc": 0.2869
+   },
+   "count+hull": {
+    "auroc": 0.9234,
+    "prauc": 0.3453
+   },
+   "delta": {
+    "auroc": -0.0037,
+    "prauc": -0.0154
+   }
+  },
+  "pooled": {
+   "n": 26880,
+   "fails": 145,
+   "count": {
+    "auroc": 0.9489,
+    "prauc": 0.3694
+   },
+   "hull": {
+    "auroc": 0.8801,
+    "prauc": 0.3222
+   },
+   "count+hull": {
+    "auroc": 0.9375,
+    "prauc": 0.3866
+   },
+   "delta": {
+    "auroc": -0.0114,
+    "prauc": 0.0172
+   }
+  }
+ },
+ "verdict": "hull adds over inlier count: dAUROC -0.0114, dPR-AUC +0.0172"
+}

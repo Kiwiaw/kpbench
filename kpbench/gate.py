@@ -55,6 +55,22 @@ def labels(f):
     return json.load(open(os.path.join(REPO, 'results', 'labels', slug(f) + '.json')))
 
 
+def require_picks(rid, flights, runs='runs'):
+    """load_run that fails loudly when the rows carry no picks (meta has_picks False or empty 'picks' in a flight file):
+    every picks-based analysis (on-plane share per pick, pick-change, dumps) calls this instead of load_run, so a run without
+    --save-picks is refused at load time, not discovered at read-out (SUB3 r7/r8, 4 Nov; T29)"""
+    meta, out = load_run(rid, flights, runs); d = os.path.join(RESULTS, runs, rid); bad = []
+    if not meta.get('has_picks', False):
+        bad.append('meta.has_picks False')
+    for f in flights:
+        j = json.load(gzip.open(os.path.join(d, slug(f) + '.json.gz'), 'rt'))
+        if not j.get('picks'):
+            bad.append('%s: no picks' % f); break
+    if bad:
+        raise GateError('%s has no picks (%s): rerun with kpbench.run --save-picks before any per-pick analysis' % (rid, '; '.join(bad)))
+    return meta, out
+
+
 def label_hash(f, d=None):
     """sha256 of the label file as canonical JSON (sorted keys), so CRLF/LF checkouts hash the same"""
     fn = os.path.join(d or os.path.join(REPO, 'results', 'labels'), slug(f) + '.json')

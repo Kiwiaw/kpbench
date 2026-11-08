@@ -1,0 +1,26 @@
+{
+ "id": "raco_dppr0.317a1.6b2.01t0.9_K100_same_lg_g-dppr0.317a1.6b2.01t0.9-fresh",
+ "det": "raco",
+ "picker": "dppr0.317a1.6b2.01t0.9",
+ "K": 100,
+ "map": "same",
+ "matcher": "lg",
+ "tag": "g-dppr0.317a1.6b2.01t0.9-fresh",
+ "cols": [
+  "flight",
+  "q",
+  "err_cm",
+  "rot_deg",
+  "n_sel",
+  "n_match",
+  "n_inl",
+  "rep1",
+  "rep5",
+  "rep10"
+ ],
+ "protocol": "C23: keyframes every 10, map = keyframes within +-20 frames, LightGlue per keyframe, PnP AP3P-RANSAC 3 px 2000 it >= 6 inliers + LM refinement, camera-centre error",
+ "has_picks": false,
+ "device": "eu-a2p-213/AMD EPYC 7H12 64-Core Processor",
+ "date": "2026-10-29T03:32:27",
+ "commit": ""
+}

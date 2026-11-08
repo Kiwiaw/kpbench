@@ -1,0 +1,27 @@
+{
+ "id": "raco_sd_K100_same_lg_g-cube0.5-fresh",
+ "det": "raco",
+ "picker": "sd",
+ "K": 100,
+ "map": "same",
+ "matcher": "lg",
+ "tag": "g-cube0.5-fresh",
+ "cols": [
+  "flight",
+  "q",
+  "err_cm",
+  "rot_deg",
+  "n_sel",
+  "n_match",
+  "n_inl",
+  "rep1",
+  "rep5",
+  "rep10"
+ ],
+ "solver": "ap3p",
+ "protocol": "C23: keyframes every 10, map = keyframes within +-20 frames, LightGlue per keyframe, PnP AP3P-RANSAC 3 px 2000 it >= 6 inliers + LM refinement, camera-centre error",
+ "has_picks": false,
+ "device": "eu-a2p-526/AMD EPYC 7763 64-Core Processor",
+ "date": "2026-11-01T06:42:12",
+ "commit": ""
+}

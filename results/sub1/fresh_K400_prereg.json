@@ -1,0 +1,229 @@
+{
+ "split": "fresh",
+ "uniform": "dpp0.5",
+ "strong": "cube0.5",
+ "other": null,
+ "K": 400,
+ "n": 13440,
+ "n_flat": 2075,
+ "results": {
+  "hull": {
+   "status": "scored",
+   "d_auroc": -0.0114,
+   "d_prauc": 0.0172,
+   "rule1": false,
+   "d_mean": 0.0191,
+   "z": 11.82,
+   "rule2": true,
+   "within": {
+    "cube0.5": {
+     "n": 31,
+     "win": 13,
+     "tie": 0,
+     "share": 0.4194,
+     "p": 0.47312965989112854
+    }
+   },
+   "rule3": false
+  },
+  "reproj_med": {
+   "status": "scored",
+   "d_auroc": -0.0392,
+   "d_prauc": 0.035,
+   "rule1": false,
+   "d_mean": -0.0008,
+   "z": -0.03,
+   "rule2": false,
+   "within": {
+    "cube0.5": {
+     "n": 31,
+     "win": 19,
+     "tie": 0,
+     "share": 0.6129,
+     "p": 0.28104151505976915
+    }
+   },
+   "rule3": false
+  },
+  "rep5": {
+   "status": "scored",
+   "d_auroc": -0.0065,
+   "d_prauc": -0.042,
+   "rule1": false,
+   "d_mean": 0.0778,
+   "z": 37.88,
+   "rule2": true,
+   "within": {
+    "cube0.5": {
+     "n": 31,
+     "win": 12,
+     "tie": 4,
+     "share": 0.4444,
+     "p": 0.7011080384254456
+    }
+   },
+   "rule3": false
+  },
+  "crlb": {
+   "status": "scored",
+   "d_auroc": -0.0162,
+   "d_prauc": -0.0349,
+   "rule1": false,
+   "d_mean": 0.0672,
+   "z": 24.24,
+   "rule2": true,
+   "within": {
+    "cube0.5": {
+     "n": 31,
+     "win": 10,
+     "tie": 0,
+     "share": 0.3226,
+     "p": 0.07075554598122835
+    }
+   },
+   "rule3": false
+  },
+  "inl_ratio": {
+   "status": "scored",
+   "d_auroc": 0.0055,
+   "d_prauc": 0.0571,
+   "rule1": false,
+   "d_mean": 0.0286,
+   "z": 24.83,
+   "rule2": true,
+   "within": {
+    "cube0.5": {
+     "n": 31,
+     "win": 22,
+     "tie": 0,
+     "share": 0.7097,
+     "p": 0.029449373483657837
+    }
+   },
+   "rule3": true
+  },
+  "cells": {
+   "status": "scored",
+   "d_auroc": -0.051,
+   "d_prauc": 0.019,
+   "rule1": false,
+   "d_mean": 0.0133,
+   "z": 7.85,
+   "rule2": true,
+   "within": {
+    "cube0.5": {
+     "n": 31,
+     "win": 12,
+     "tie": 2,
+     "share": 0.4138,
+     "p": 0.45825831964612007
+    }
+   },
+   "rule3": false,
+   "beats_baselines": false
+  },
+  "ent": {
+   "status": "scored",
+   "d_auroc": -0.0316,
+   "d_prauc": 0.0304,
+   "rule1": false,
+   "d_mean": 0.0109,
+   "z": 10.36,
+   "rule2": true,
+   "within": {
+    "cube0.5": {
+     "n": 31,
+     "win": 12,
+     "tie": 0,
+     "share": 0.3871,
+     "p": 0.28104151505976915
+    }
+   },
+   "rule3": false,
+   "beats_baselines": false
+  },
+  "offplane": {
+   "status": "scored",
+   "d_auroc": 0.0163,
+   "d_prauc": 0.1564,
+   "rule1": true,
+   "d_mean": 0.0175,
+   "z": 14.93,
+   "rule2": true,
+   "within": {
+    "cube0.5": {
+     "n": 31,
+     "win": 20,
+     "tie": 0,
+     "share": 0.6452,
+     "p": 0.14961278438568115
+    }
+   },
+   "rule3": false,
+   "beats_baselines": true
+  },
+  "sel_logdet": {
+   "status": "scored",
+   "d_auroc": -0.0045,
+   "d_prauc": -0.0087,
+   "rule1": false,
+   "d_mean": 0.0405,
+   "z": 11.05,
+   "rule2": true,
+   "within": {
+    "cube0.5": {
+     "n": 31,
+     "win": 12,
+     "tie": 0,
+     "share": 0.3871,
+     "p": 0.28104151505976915
+    }
+   },
+   "rule3": false,
+   "beats_baselines": true
+  },
+  "sel_hull": {
+   "status": "scored",
+   "d_auroc": -0.0061,
+   "d_prauc": -0.0132,
+   "rule1": false,
+   "d_mean": -0.0091,
+   "z": -10.1,
+   "rule2": false,
+   "within": {
+    "cube0.5": {
+     "n": 31,
+     "win": 12,
+     "tie": 0,
+     "share": 0.3871,
+     "p": 0.28104151505976915
+    }
+   },
+   "rule3": false,
+   "beats_baselines": true
+  },
+  "pcov": {
+   "status": "scored",
+   "d_auroc": -0.0002,
+   "d_prauc": -0.0161,
+   "rule1": false,
+   "d_mean": 0.0152,
+   "z": 10.28,
+   "rule2": true,
+   "within": {
+    "cube0.5": {
+     "n": 31,
+     "win": 16,
+     "tie": 0,
+     "share": 0.5161,
+     "p": 1.0
+    }
+   },
+   "rule3": false,
+   "beats_baselines": true
+  }
+ },
+ "passing": [],
+ "primary": null,
+ "verdict": "no candidate passes all three rules -> SUB1 stays query-level (prereg kill) [K 400, one pair only: K-dependence read-out, not the prereg verdict]"
+}

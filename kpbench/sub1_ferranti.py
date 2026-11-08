@@ -11,6 +11,8 @@ No-pose queries: n_inl 0 and hull 0 (as kpbench.sub1 NOPOSE).
 docs/sub1_metrics.md: crlb = pooled 99th percentile, depth_iqr = 0; prereg v2 results/sub1/prereg.md adds rep5, cells, ent,
 offplane, no-pose fill 0). --posed keeps only queries with a pose (fail = > 25 cm or
 > 2 deg), so the no-pose fill cannot carry the signal. Output <split>_ferranti[_<m>][_posed].md + .json.
+--K 400 reads the K400 row files (raco_<picker>_K400_lg_m.json.gz, Q210 v4 sanity case: cube0.5 and dpp0.5 on FRESH-1) and
+writes <split>_K400_ferranti[...]: the same leave-one-flight-out fit at the other budget (R25 K-dependence, dispatch 8 Nov).
 """
 import os, json, gzip, glob
 import numpy as np
@@ -22,11 +24,11 @@ MODELS = {'count': ('n_inl',), 'hull': ('hull',), 'count+hull': ('n_inl', 'hull'
 FILL = dict(NOPOSE, depth_iqr=0.0, cells=0.0, ent=0.0, offplane=0.0, rep5=0.0, sel_logdet=-6.0, sel_hull=0.0)   # prereg v2 fills (results/sub1/prereg.md)
 
 
-def load(split, metric='hull', posed=False):
-    """{picker: (flights, X dict, fail)} for every saved metrics file of the split; X['hull'] holds the tested metric"""
-    T = {}
-    for fn in sorted(glob.glob(os.path.join(REPO, 'results', 'eval', split, 'raco_*_K100_lg_m.json.gz'))):
-        p = os.path.basename(fn)[len('raco_'):-len('_K100_lg_m.json.gz')]
+def load(split, metric='hull', posed=False, K=100):
+    """{picker: (flights, X dict, fail)} for every saved metrics file of the split at budget K; X['hull'] holds the tested metric"""
+    T = {}; tail = '_K%d_lg_m.json.gz' % K
+    for fn in sorted(glob.glob(os.path.join(REPO, 'results', 'eval', split, 'raco_*' + tail))):
+        p = os.path.basename(fn)[len('raco_'):-len(tail)]
         d = json.load(gzip.open(fn, 'rt')); c = d['cols']; rows = d['rows']
         if metric not in c:                                      # older rows without the tested column: picker left out
             continue
@@ -80,8 +82,8 @@ def score(fl, X, y):
     return r
 
 
-def analyse(split, metric='hull', posed=False):
-    T = load(split, metric, posed); res = {}
+def analyse(split, metric='hull', posed=False, K=100):
+    T = load(split, metric, posed, K); res = {}
     for p, (fl, X, y) in T.items():
         res[p] = dict(n=len(y), fails=int(y.sum()), **score(fl, X, y))
     fl = np.concatenate([T[p][0] for p in T]); y = np.concatenate([T[p][2] for p in T])
@@ -89,17 +91,18 @@ def analyse(split, metric='hull', posed=False):
     res['pooled'] = dict(n=len(y), fails=int(y.sum()), **score(fl, X, y))
     d = res['pooled'].get('delta', {})
     kill = bool(d) and d['auroc'] < 0.01 and d['prauc'] < 0.01
-    return dict(split=split, metric=metric, posed=posed, pickers=list(T), results=res,
+    return dict(split=split, metric=metric, posed=posed, K=K, pickers=list(T), results=res,
                 verdict=('KILL: %s adds < 0.01 AUROC and PR-AUC over inlier count' % metric if kill else
                          '%s adds over inlier count: dAUROC %+.4f, dPR-AUC %+.4f' % (metric, d.get('auroc', 0), d.get('prauc', 0))))
 
 
 def write(out):
     os.makedirs(OUT, exist_ok=True); m = out.get('metric', 'hull')
-    base = os.path.join(OUT, out['split'] + '_ferranti' + ('' if m == 'hull' else '_' + m) + ('_posed' if out.get('posed') else ''))
+    K = out.get('K', 100)
+    base = os.path.join(OUT, out['split'] + ('' if K == 100 else '_K%d' % K) + '_ferranti' + ('' if m == 'hull' else '_' + m) + ('_posed' if out.get('posed') else ''))
     json.dump(out, open(base + '.json', 'w'), indent=1)
-    L = ['# SUB1 Ferranti baseline on %s (logistic, leave-one-flight-out; fail = positive for PR-AUC)%s' % (
-        out['split'], '' if m == 'hull' else '; metric = %s (column "hull" below)' % m) + (', posed queries only' if out.get('posed') else ''), '',
+    L = ['# SUB1 Ferranti baseline on %s, K %d (logistic, leave-one-flight-out; fail = positive for PR-AUC)%s' % (
+        out['split'], K, '' if m == 'hull' else '; metric = %s (column "hull" below)' % m) + (', posed queries only' if out.get('posed') else ''), '',
          '| picker | queries | fails | AUROC count | AUROC hull | AUROC count+hull | dAUROC | PR-AUC count | PR-AUC hull | PR-AUC count+hull | dPR-AUC |',
          '|---|---|---|---|---|---|---|---|---|---|---|']
     for p, r in out['results'].items():
@@ -116,8 +119,9 @@ def main(argv=None):
     import argparse
     ap = argparse.ArgumentParser(); ap.add_argument('--split', default='dev')
     ap.add_argument('--metric', default='hull', choices=['hull', 'crlb', 'inl_ratio', 'reproj_med', 'depth_iqr', 'rep5', 'cells', 'ent', 'offplane', 'sel_logdet', 'sel_hull', 'pcov'])
-    ap.add_argument('--posed', action='store_true'); a = ap.parse_args(argv)
-    out = analyse(a.split, a.metric, a.posed); print(write(out)); print(out['verdict'])
+    ap.add_argument('--posed', action='store_true'); ap.add_argument('--K', type=int, default=100, help='row budget (file suffix _K<K>_lg_m)')
+    a = ap.parse_args(argv)
+    out = analyse(a.split, a.metric, a.posed, a.K); print(write(out)); print(out['verdict'])
 
 
 if __name__ == '__main__':
