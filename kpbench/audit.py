@@ -579,7 +579,7 @@ def c39_fresh_labels():
         if n != FRESH_N['queries']: short.append('%s %d' % (os.path.basename(d)[:45], n))
     if short: bad.append('FRESH runs without %d rows: %s' % (FRESH_N['queries'], short))
     info.append('%d mirrored FRESH runs%s' % (len(runs), '' if short else ' all %d rows' % FRESH_N['queries']))
-    withp = nop = 0; partial = []
+    withp = nop = 0; partial = []; legacy = []
     for d in sorted(glob.glob(os.path.join(RESULTS, 'runs', 'raco_*'))):
         mf = os.path.join(d, 'meta.json')
         if not os.path.isfile(mf): continue
@@ -589,9 +589,11 @@ def c39_fresh_labels():
             require_picks(rid, fl[:1]); withp += 1
         except GateError as e:
             nop += 1
-            if json.load(open(mf)).get('has_picks'): partial.append(rid)   # meta says picks, a flight file has none: refused, not published
+            m = json.load(open(mf))
+            if m.get('has_picks'): (legacy if m.get('matcher') == 'nn' else partial).append(rid)   # meta says picks, a flight file has none: refused, not published
     info.append('runs with picks %d, without %d (per-pick tables refused on those by gate.require_picks)' % (withp, nop))
     if partial: info.append('WARN meta has_picks but a flight without picks (refused): %s' % partial)
+    if legacy: info.append('legacy nn runs with meta has_picks but a flight without picks (refused by require_picks; nn is not published, LightGlue only since 7 Oct; results/runs is never edited by hand): %s' % legacy)
     report('C39', 'FAIL' if bad else ('WARN' if partial else 'PASS'), 'FRESH-1 labels in the repo', '; '.join(info + bad))
 
 

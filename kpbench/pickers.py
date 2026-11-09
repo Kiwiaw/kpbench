@@ -6,6 +6,8 @@ Names:
   sd           strongest K with depth
   cube<s>      round robin over s-metre cubes in the camera frame (e.g. cube0.5), strongest first per cube
   cubem<c>     cube<s> with s = c x median depth of the frame's candidates with depth (cubem0.1, gap-agent ad_r0p1_a0)
+  cube<s>r     cube<s> with a seeded RANDOM order inside each cube instead of strongest first (R27 control, STDLoc objection):
+               same cubes served in the same order, so the occupied cells are identical to cube<s>; only the member per cell differs
   grid         ceil(sqrt K)^2 image cells over the strongest M = clip(4K, 80, 400) candidates; best per cell, fill by rank
   grid10x8     10 x 8 image cells, round robin
   fps          2D farthest point sampling over the same pool as grid, score-aware: next = argmax dist * (1 - rank/M)
@@ -44,9 +46,10 @@ import numpy as np
 from .data import to3d, DEPTH_MAX, W, H
 
 
-def round_robin(groups, K):
-    """groups: lists of indices, each in score order; take the best of each group in turn (groups ordered by their best)"""
-    order = sorted(groups, key=lambda g: g[0]); sel = []; r = 0
+def round_robin(groups, K, keep_order=False):
+    """groups: lists of indices, each in score order; take the best of each group in turn (groups ordered by their best).
+    keep_order: serve the groups as given (caller already ordered them; cube<s>r shuffles members after ordering)"""
+    order = list(groups) if keep_order else sorted(groups, key=lambda g: g[0]); sel = []; r = 0
     while len(sel) < K and any(len(g) > r for g in order):
         for g in order:
             if len(g) > r:
@@ -74,9 +77,16 @@ def pick_sd(u, v, s, z, K):
     return np.flatnonzero(z < DEPTH_MAX)[:K]
 
 
-def pick_cube(size, rel=False):
+def frame_seed(u, v):
+    """deterministic per-frame seed from the candidate pixel coordinates (pickers see no frame id): same frame -> same draw"""
+    return int(np.abs(np.round(u[:64] * 10)).sum() + 7919 * np.abs(np.round(v[:64] * 10)).sum()) % (2 ** 32)
+
+
+def pick_cube(size, rel=False, rand=False):
     """cube<s>: round robin over s-metre cubes. rel (cubem<c>): cube edge = c x median depth of the frame's candidates with
-    depth (the gap-agent harness picker ad_r<c>_a0, e.g. cubem0.1 = ad_r0p1_a0: the cube size follows the scene)"""
+    depth (the gap-agent harness picker ad_r<c>_a0, e.g. cubem0.1 = ad_r0p1_a0: the cube size follows the scene).
+    rand (cube<s>r, R27 control): cubes are still served in the order of their strongest member, but inside each cube the
+    members are shuffled (seed = frame_seed) instead of strongest first -> identical occupied cells, random pick per cell."""
     def f(u, v, s, z, K):
         ok = np.flatnonzero(z < DEPTH_MAX)
         if not len(ok):
@@ -85,7 +95,11 @@ def pick_cube(size, rel=False):
         key = np.floor(to3d(u[ok], v[ok], z[ok]) / e).astype(int); g = {}
         for jj, j in enumerate(ok):
             g.setdefault(tuple(key[jj]), []).append(int(j))
-        return fill(round_robin(list(g.values()), K), len(u), K)
+        groups = sorted(g.values(), key=lambda gr: gr[0])
+        if rand:
+            rng = np.random.default_rng(frame_seed(u, v))
+            groups = [[int(i) for i in rng.permutation(gr)] for gr in groups]
+        return fill(round_robin(groups, K, keep_order=True), len(u), K)
     return f
 
 
@@ -882,6 +896,9 @@ def parse(name):
     m = re.fullmatch(r'cubem([0-9.]+)', name)
     if m:
         return pick_cube(float(m.group(1)), rel=True)
+    m = re.fullmatch(r'cube([0-9.]+)r', name)
+    if m:
+        return pick_cube(float(m.group(1)), rand=True)
     if name.startswith('cube'):
         return pick_cube(float(name[4:]))
     m = re.fullmatch(r'far(2d|3d)(w?)(?:p(\d+))?', name)

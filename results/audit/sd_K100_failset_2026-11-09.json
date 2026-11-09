@@ -1,0 +1,537 @@
+{
+ "generated": "2026-11-09 13:30",
+ "split": "fresh",
+ "flights": [
+  "oldtown_easy/P002",
+  "oldtown_easy/P005",
+  "oldtown_easy/P001",
+  "oldtown_easy/P000",
+  "oldtown_easy/P007",
+  "oldtown_easy/P004",
+  "hospital_easy/P025",
+  "hospital_easy/P004",
+  "hospital_easy/P006",
+  "hospital_easy/P019",
+  "factory_hard/P011",
+  "factory_hard/P009",
+  "factory_hard/P010",
+  "factory_easy/P005"
+ ],
+ "sd_K100": {
+  "run": "raco_sd_K100_same_lg_g-cube0.5-fresh",
+  "K": 100,
+  "picker": "sd",
+  "date": "2026-11-01T06:42:12",
+  "commit": "",
+  "device": "eu-a2p-526/AMD EPYC 7763 64-Core Processor",
+  "has_picks": false,
+  "rows": 13440,
+  "flat_rows": 2075,
+  "flat_fails": 148,
+  "fail_ids": [
+   "oldtown_easy/P002:736",
+   "oldtown_easy/P002:747",
+   "oldtown_easy/P002:751",
+   "oldtown_easy/P002:752",
+   "oldtown_easy/P002:753",
+   "oldtown_easy/P002:754",
+   "oldtown_easy/P002:755",
+   "oldtown_easy/P002:756",
+   "oldtown_easy/P002:757",
+   "oldtown_easy/P002:758",
+   "oldtown_easy/P002:764",
+   "oldtown_easy/P002:765",
+   "oldtown_easy/P002:766",
+   "oldtown_easy/P002:1269",
+   "oldtown_easy/P002:1271",
+   "oldtown_easy/P002:1272",
+   "oldtown_easy/P002:1273",
+   "oldtown_easy/P002:1274",
+   "oldtown_easy/P002:1275",
+   "oldtown_easy/P002:1276",
+   "oldtown_easy/P002:1277",
+   "oldtown_easy/P002:1278",
+   "oldtown_easy/P002:1282",
+   "oldtown_easy/P002:1283",
+   "oldtown_easy/P002:1284",
+   "oldtown_easy/P002:1285",
+   "oldtown_easy/P002:1286",
+   "oldtown_easy/P002:1287",
+   "oldtown_easy/P002:1288",
+   "oldtown_easy/P002:1292",
+   "oldtown_easy/P002:1293",
+   "oldtown_easy/P002:1294",
+   "oldtown_easy/P002:1295",
+   "oldtown_easy/P002:1296",
+   "oldtown_easy/P002:1312",
+   "oldtown_easy/P002:1318",
+   "oldtown_easy/P002:1435",
+   "oldtown_easy/P002:1436",
+   "oldtown_easy/P002:1437",
+   "oldtown_easy/P002:1443",
+   "oldtown_easy/P002:1444",
+   "oldtown_easy/P002:1445",
+   "oldtown_easy/P002:1446",
+   "oldtown_easy/P002:1447",
+   "oldtown_easy/P002:1452",
+   "oldtown_easy/P002:1454",
+   "oldtown_easy/P002:1455",
+   "oldtown_easy/P001:145",
+   "oldtown_easy/P001:146",
+   "oldtown_easy/P001:588",
+   "oldtown_easy/P001:592",
+   "oldtown_easy/P001:593",
+   "oldtown_easy/P001:594",
+   "oldtown_easy/P001:595",
+   "oldtown_easy/P001:596",
+   "oldtown_easy/P001:597",
+   "oldtown_easy/P001:598",
+   "oldtown_easy/P001:604",
+   "oldtown_easy/P001:605",
+   "oldtown_easy/P001:606",
+   "oldtown_easy/P001:1271",
+   "oldtown_easy/P001:1272",
+   "oldtown_easy/P001:1273",
+   "oldtown_easy/P001:1274",
+   "oldtown_easy/P001:1275",
+   "oldtown_easy/P001:1276",
+   "oldtown_easy/P001:1278",
+   "oldtown_easy/P001:1279",
+   "oldtown_easy/P001:1281",
+   "oldtown_easy/P001:1283",
+   "oldtown_easy/P001:1284",
+   "oldtown_easy/P001:1285",
+   "oldtown_easy/P001:1286",
+   "oldtown_easy/P001:1287",
+   "hospital_easy/P025:205",
+   "hospital_easy/P025:206",
+   "hospital_easy/P004:164",
+   "hospital_easy/P004:165",
+   "hospital_easy/P004:166",
+   "hospital_easy/P004:167",
+   "hospital_easy/P004:173",
+   "hospital_easy/P004:174",
+   "hospital_easy/P004:175",
+   "hospital_easy/P004:176",
+   "hospital_easy/P004:235",
+   "hospital_easy/P004:236",
+   "hospital_easy/P004:237",
+   "hospital_easy/P006:3",
+   "hospital_easy/P006:4",
+   "hospital_easy/P006:83",
+   "hospital_easy/P006:85",
+   "hospital_easy/P006:86",
+   "hospital_easy/P006:113",
+   "hospital_easy/P006:115",
+   "hospital_easy/P006:553",
+   "hospital_easy/P006:554",
+   "hospital_easy/P006:555",
+   "hospital_easy/P006:556",
+   "hospital_easy/P006:557",
+   "hospital_easy/P006:558",
+   "hospital_easy/P006:561",
+   "hospital_easy/P006:562",
+   "hospital_easy/P006:563",
+   "hospital_easy/P006:564",
+   "hospital_easy/P006:565",
+   "hospital_easy/P006:566",
+   "hospital_easy/P006:567",
+   "hospital_easy/P006:574",
+   "hospital_easy/P006:595",
+   "hospital_easy/P019:24",
+   "factory_hard/P011:206",
+   "factory_hard/P011:207",
+   "factory_hard/P011:214",
+   "factory_hard/P011:215",
+   "factory_hard/P011:216",
+   "factory_hard/P011:614",
+   "factory_hard/P011:615",
+   "factory_hard/P011:616",
+   "factory_hard/P011:617",
+   "factory_hard/P011:623",
+   "factory_hard/P011:625",
+   "factory_hard/P011:627",
+   "factory_hard/P009:35",
+   "factory_hard/P009:36",
+   "factory_hard/P009:37",
+   "factory_hard/P009:755",
+   "factory_hard/P009:756",
+   "factory_hard/P009:757",
+   "factory_hard/P009:758",
+   "factory_hard/P009:763",
+   "factory_hard/P009:764",
+   "factory_hard/P009:765",
+   "factory_hard/P009:772",
+   "factory_hard/P009:1174",
+   "factory_hard/P009:1175",
+   "factory_hard/P010:774",
+   "factory_hard/P010:775",
+   "factory_hard/P010:776",
+   "factory_easy/P005:175",
+   "factory_easy/P005:183",
+   "factory_easy/P005:184",
+   "factory_easy/P005:186",
+   "factory_easy/P005:193",
+   "factory_easy/P005:795",
+   "factory_easy/P005:796",
+   "factory_easy/P005:805",
+   "factory_easy/P005:806",
+   "factory_easy/P005:807"
+  ],
+  "n_sel_col": true,
+  "n_sel_flat": {
+   "min": 100.0,
+   "max": 100.0,
+   "mean": 100.0,
+   "le100": 2075,
+   "hist": {
+    "100": 2075
+   }
+  },
+  "files": {
+   "oldtown_easy_P002": {
+    "bytes": 22194,
+    "sha256": "bfbe884a855e5874cd5c88fe9b280cbc4dfa2640254b93cda44e1f13d5729832"
+   },
+   "oldtown_easy_P005": {
+    "bytes": 10717,
+    "sha256": "fa03804b982096f246071c22b45ddf309b1910a24497d7cc3a4bded6a2b78ea4"
+   },
+   "oldtown_easy_P001": {
+    "bytes": 21065,
+    "sha256": "847c7afeb91a3a127d5ddbe2b41db25bafd6e054c39f211cabc858cdf9b01f2e"
+   },
+   "oldtown_easy_P000": {
+    "bytes": 21139,
+    "sha256": "a5cf05066a3a2c08cafd92b7bef175686b3f4baaae8c443f5afb7e1230da12b6"
+   },
+   "oldtown_easy_P007": {
+    "bytes": 24206,
+    "sha256": "f17bc85110a84ec66d5de89671d5c37c1a6f83dc58d1cceee8d5f364e22439c4"
+   },
+   "oldtown_easy_P004": {
+    "bytes": 8569,
+    "sha256": "bc7bf628e06e3a244de1a227b667a1fa79d0d1dfd4f1fbe520b35e03d281259a"
+   },
+   "hospital_easy_P025": {
+    "bytes": 4562,
+    "sha256": "2d2adaad196b147c9e50ecfb267ad7c75464624eb35f6706a79e4ca52d4d7935"
+   },
+   "hospital_easy_P004": {
+    "bytes": 4762,
+    "sha256": "90dffe538f7e2b30aad4c4afe1ef7f71623c190c12abc29826b5fa23b544ef23"
+   },
+   "hospital_easy_P006": {
+    "bytes": 8430,
+    "sha256": "66aa0b9da00bba0aa49b123202fa98c11a28b3dae3a034463f115499db499589"
+   },
+   "hospital_easy_P019": {
+    "bytes": 5144,
+    "sha256": "41e37f23edf897b06459b3002ca798faf929c2f3ad31497197d54c3354e2b070"
+   },
+   "factory_hard_P011": {
+    "bytes": 8531,
+    "sha256": "a283e45dd674f5d2e3db1830ddcaf05e1a21f4bef93d3ac5ad93e64e2fa70c58"
+   },
+   "factory_hard_P009": {
+    "bytes": 26051,
+    "sha256": "8b548b5aa7e5fbff2b47e05df8eb7bce633e3f4d0f5cea0d35641eb0709506ad"
+   },
+   "factory_hard_P010": {
+    "bytes": 14650,
+    "sha256": "b9f97338842f28048f2e6f3717be2e01e726dfe2364368c53543b5c97d553b08"
+   },
+   "factory_easy_P005": {
+    "bytes": 13921,
+    "sha256": "427c83e1dc71fa15419c1444527a479d1ac9c8775dfbd4d8b27482b1a4b427a0"
+   }
+  }
+ },
+ "k400_runs": [
+  {
+   "run": "raco_cube0.5_K400_same_lg_g-cube0.5-fresh-K400",
+   "K": 400,
+   "picker": "cube0.5",
+   "date": "2026-11-01T05:43:57",
+   "commit": "",
+   "device": "eu-a2p-371/AMD EPYC 7763 64-Core Processor",
+   "has_picks": false,
+   "rows": 13440,
+   "flat_rows": 2075,
+   "flat_fails": 57,
+   "fail_ids": [
+    "oldtown_easy/P002:765",
+    "oldtown_easy/P002:766",
+    "oldtown_easy/P002:1274",
+    "oldtown_easy/P002:1275",
+    "oldtown_easy/P002:1276",
+    "oldtown_easy/P002:1277",
+    "oldtown_easy/P002:1283",
+    "oldtown_easy/P002:1284",
+    "oldtown_easy/P002:1285",
+    "oldtown_easy/P002:1286",
+    "oldtown_easy/P002:1287",
+    "oldtown_easy/P002:1293",
+    "oldtown_easy/P002:1294",
+    "oldtown_easy/P002:1295",
+    "oldtown_easy/P002:1296",
+    "oldtown_easy/P002:1305",
+    "hospital_easy/P025:204",
+    "hospital_easy/P004:173",
+    "hospital_easy/P004:174",
+    "hospital_easy/P004:175",
+    "hospital_easy/P004:234",
+    "hospital_easy/P004:235",
+    "hospital_easy/P006:4",
+    "hospital_easy/P006:5",
+    "hospital_easy/P006:6",
+    "hospital_easy/P006:544",
+    "hospital_easy/P006:545",
+    "hospital_easy/P006:546",
+    "hospital_easy/P006:547",
+    "hospital_easy/P006:548",
+    "hospital_easy/P006:553",
+    "hospital_easy/P006:554",
+    "hospital_easy/P006:555",
+    "hospital_easy/P006:556",
+    "hospital_easy/P006:557",
+    "hospital_easy/P006:558",
+    "hospital_easy/P006:563",
+    "hospital_easy/P006:564",
+    "hospital_easy/P006:565",
+    "hospital_easy/P006:566",
+    "hospital_easy/P006:567",
+    "hospital_easy/P006:572",
+    "hospital_easy/P006:573",
+    "hospital_easy/P006:574",
+    "hospital_easy/P006:575",
+    "hospital_easy/P006:577",
+    "hospital_easy/P006:583",
+    "hospital_easy/P006:586",
+    "hospital_easy/P006:594",
+    "hospital_easy/P006:595",
+    "factory_hard/P009:36",
+    "factory_hard/P009:755",
+    "factory_hard/P009:756",
+    "factory_hard/P009:757",
+    "factory_hard/P009:764",
+    "factory_hard/P009:765",
+    "factory_easy/P005:805"
+   ],
+   "n_sel_col": true,
+   "n_sel_flat": {
+    "min": 400.0,
+    "max": 400.0,
+    "mean": 400.0,
+    "le100": 0,
+    "hist": {
+     "400": 2075
+    }
+   },
+   "files": {
+    "oldtown_easy_P002": {
+     "bytes": 24695,
+     "sha256": "6cd715a5d4c458d5c5bcb6a6dcb704010e0b767a0a875ed434b93c80eeaf3d47"
+    },
+    "oldtown_easy_P005": {
+     "bytes": 12037,
+     "sha256": "563e6a5f426f020254da1bd3d924191ec04a00473f639f238c5477cf2a4da6c8"
+    },
+    "oldtown_easy_P001": {
+     "bytes": 23310,
+     "sha256": "b61088b351331d26e6b959dec27d1dc5be9526b667d9dc213ace04c82cd63d3c"
+    },
+    "oldtown_easy_P000": {
+     "bytes": 23764,
+     "sha256": "00d4a44b5e5e129c824bccfba65bf3582808131847a793775f67e04d480d8112"
+    },
+    "oldtown_easy_P007": {
+     "bytes": 27291,
+     "sha256": "98657f464bd7bae92e7fae71bbd0dada448ff714bf134e28254c7d714b8f18f8"
+    },
+    "oldtown_easy_P004": {
+     "bytes": 9609,
+     "sha256": "c536fc659a2d77757f44acad6595c51dc51d57a0f842af2e507a33aa6c97867b"
+    },
+    "hospital_easy_P025": {
+     "bytes": 5081,
+     "sha256": "43a7f0a31df3a769d9cb67ce98030312d7d5e851929b797bd3641b6548380904"
+    },
+    "hospital_easy_P004": {
+     "bytes": 5224,
+     "sha256": "ecc05a0b19068f1e5a9059e51b7faa3cedb34a1ca0432c28d5a4f4c99a45ed4b"
+    },
+    "hospital_easy_P006": {
+     "bytes": 9117,
+     "sha256": "309571526946e6e34b35689c65d88f4cc2960a66e9db85bfaf2cc697e9172aa7"
+    },
+    "hospital_easy_P019": {
+     "bytes": 5634,
+     "sha256": "6204918b7a9b797191daa319f05ef60a4da72341ce474b9a30a6f0b12a4e5f3f"
+    },
+    "factory_hard_P011": {
+     "bytes": 9331,
+     "sha256": "e315f981d1c2d6f155fe43c252b9e834ea65079434b5b22819f39ae718774259"
+    },
+    "factory_hard_P009": {
+     "bytes": 29093,
+     "sha256": "970c7dea53b6e75ac1282b28dc7cdb998f8250597726a3a95dbd3172fb1f5571"
+    },
+    "factory_hard_P010": {
+     "bytes": 16122,
+     "sha256": "e96cb31788d06f1d509e80f31c1a7cdecba50c6f3a081a1b5f58878cbf229c57"
+    },
+    "factory_easy_P005": {
+     "bytes": 15427,
+     "sha256": "21971eb4d0a6d40e00eded8e0debebb095388f3fb229c3dadb94c90d01db8e63"
+    }
+   }
+  },
+  {
+   "run": "raco_dpp0.5_K400_same_lg_g-cube0.5-fresh-K400",
+   "K": 400,
+   "picker": "dpp0.5",
+   "date": "2026-11-01T05:51:18",
+   "commit": "",
+   "device": "eu-a2p-371/AMD EPYC 7763 64-Core Processor",
+   "has_picks": false,
+   "rows": 13440,
+   "flat_rows": 2075,
+   "flat_fails": 64,
+   "fail_ids": [
+    "oldtown_easy/P002:752",
+    "oldtown_easy/P002:755",
+    "oldtown_easy/P002:756",
+    "oldtown_easy/P002:766",
+    "oldtown_easy/P002:1273",
+    "oldtown_easy/P002:1274",
+    "oldtown_easy/P002:1275",
+    "oldtown_easy/P002:1276",
+    "oldtown_easy/P002:1277",
+    "oldtown_easy/P002:1282",
+    "oldtown_easy/P002:1283",
+    "oldtown_easy/P002:1284",
+    "oldtown_easy/P002:1285",
+    "oldtown_easy/P002:1286",
+    "oldtown_easy/P002:1287",
+    "oldtown_easy/P002:1293",
+    "oldtown_easy/P002:1294",
+    "oldtown_easy/P002:1295",
+    "oldtown_easy/P002:1296",
+    "oldtown_easy/P002:1297",
+    "oldtown_easy/P002:1305",
+    "oldtown_easy/P002:1323",
+    "oldtown_easy/P002:1325",
+    "hospital_easy/P025:203",
+    "hospital_easy/P025:204",
+    "hospital_easy/P004:173",
+    "hospital_easy/P004:175",
+    "hospital_easy/P004:176",
+    "hospital_easy/P004:235",
+    "hospital_easy/P006:4",
+    "hospital_easy/P006:5",
+    "hospital_easy/P006:553",
+    "hospital_easy/P006:554",
+    "hospital_easy/P006:555",
+    "hospital_easy/P006:556",
+    "hospital_easy/P006:557",
+    "hospital_easy/P006:558",
+    "hospital_easy/P006:563",
+    "hospital_easy/P006:564",
+    "hospital_easy/P006:565",
+    "hospital_easy/P006:566",
+    "hospital_easy/P006:567",
+    "hospital_easy/P006:573",
+    "hospital_easy/P006:574",
+    "hospital_easy/P006:575",
+    "hospital_easy/P006:576",
+    "hospital_easy/P006:577",
+    "hospital_easy/P006:583",
+    "hospital_easy/P006:584",
+    "hospital_easy/P006:594",
+    "hospital_easy/P006:595",
+    "hospital_easy/P006:603",
+    "hospital_easy/P006:604",
+    "hospital_easy/P006:606",
+    "factory_hard/P011:207",
+    "factory_hard/P009:36",
+    "factory_hard/P009:755",
+    "factory_hard/P009:756",
+    "factory_hard/P009:757",
+    "factory_hard/P009:758",
+    "factory_hard/P009:764",
+    "factory_hard/P009:765",
+    "factory_easy/P005:795",
+    "factory_easy/P005:805"
+   ],
+   "n_sel_col": true,
+   "n_sel_flat": {
+    "min": 400.0,
+    "max": 400.0,
+    "mean": 400.0,
+    "le100": 0,
+    "hist": {
+     "400": 2075
+    }
+   },
+   "files": {
+    "oldtown_easy_P002": {
+     "bytes": 24628,
+     "sha256": "84d30538586633100e3e9183a2642f334c2a9a8c3505ac4582b4e962bbb77a0f"
+    },
+    "oldtown_easy_P005": {
+     "bytes": 12022,
+     "sha256": "17483f7ad08c7c1345758fbdc868c0a3abf32b6cac847c01e608d921b5047ba1"
+    },
+    "oldtown_easy_P001": {
+     "bytes": 23139,
+     "sha256": "bf56640e3cd9d7cd0d50ed85b95b90cb0bac72f45716e8f2dd2be372e5621673"
+    },
+    "oldtown_easy_P000": {
+     "bytes": 23661,
+     "sha256": "0adac92b5b4abb42938d98e4356d145f9f50d977fef2b7bbcc262a34f8325e50"
+    },
+    "oldtown_easy_P007": {
+     "bytes": 27147,
+     "sha256": "19e328188b62371171de503f86f8b1c67543ad659400ed88f0c7e46e611f6a9f"
+    },
+    "oldtown_easy_P004": {
+     "bytes": 9617,
+     "sha256": "e918e3f659b70d2325213a2b2b6e743f1166f59032dfa9bcb6392c5f6b2eae30"
+    },
+    "hospital_easy_P025": {
+     "bytes": 5222,
+     "sha256": "4e4c5117cd0fafd92af36427ed5fbb280ff32e7bc24c2dbfc3bd4f8130c4edfd"
+    },
+    "hospital_easy_P004": {
+     "bytes": 5278,
+     "sha256": "c238a4065b052cc46764f4cc0392f379767189e4a44310293aa1b72d2cf2f968"
+    },
+    "hospital_easy_P006": {
+     "bytes": 9290,
+     "sha256": "3d681268f62c2af445a549971998dd77128724b29ee48ea98c8f7392547d4a86"
+    },
+    "hospital_easy_P019": {
+     "bytes": 5677,
+     "sha256": "374c07e3efa696315625c56ec4a2304d99e9855aa304725cb46f31314b440a0c"
+    },
+    "factory_hard_P011": {
+     "bytes": 9380,
+     "sha256": "336cf69b1ef9ec72f5070b0eeb1e714565d88f98fddd29cfa1039d7476f02425"
+    },
+    "factory_hard_P009": {
+     "bytes": 29112,
+     "sha256": "8dba5e65698a6f343150787fb7a48ecce23d2989ff4ac8d02d2ff746d28437b0"
+    },
+    "factory_hard_P010": {
+     "bytes": 16171,
+     "sha256": "a648d7104868acf6f8be9449a8b66b3c4d1080e3e7f0f77969c42b5828cd3fcc"
+    },
+    "factory_easy_P005": {
+     "bytes": 15451,
+     "sha256": "1be14cb82f7019eccf29325fbbd97b331f995aefc3845b100fe4548acc67d786"
+    }
+   }
+  }
+ ]
+}

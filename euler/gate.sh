@@ -10,14 +10,17 @@
 # Held-out is refused by kpbench.gate unless the candidate passed DEV and has no earlier held-out verdict.
 # fresh: flights from splits_fresh.json / euler/flights_fresh.txt (kpbench.fresh), run tag g-<CAND>-fresh.
 # SBATCH_BEGIN=<time> in the environment books both jobs for later (sbatch reads it).
+# SAVE_PICKS=1 in the environment (queue item field "save_picks": true, T33) adds --save-picks to both kpbench.run calls, so the rows
+# carry per-pick u,v + on-plane labels and pass kpbench.gate.require_picks; default 0 = rows as before.
 set -euo pipefail
-CAND=$1; INC=$2; SPLIT=${3:-dev}; K=${4:-100}; SOLVER=${5:-ap3p}; SOLVER_INC=${6:-$SOLVER}
+CAND=$1; INC=$2; SPLIT=${3:-dev}; K=${4:-100}; SOLVER=${5:-ap3p}; SOLVER_INC=${6:-$SOLVER}; SAVE_PICKS=${SAVE_PICKS:-0}
+case $SAVE_PICKS in 0|1) ;; *) echo "SAVE_PICKS $SAVE_PICKS not in 0|1"; exit 2 ;; esac
 for s in $SOLVER $SOLVER_INC; do case $s in ap3p|ippe) ;; *) echo "solver $s not in ap3p|ippe"; exit 2 ;; esac; done
 if [ "$CAND" = "$INC" ] && [ "$SOLVER" = "$SOLVER_INC" ]; then echo "refused: $CAND vs itself with solver $SOLVER on both arms = one run id"; exit 2; fi
 if [ -z "${SLURM_CLUSTER_NAME:-}" ] && ! hostname | grep -q '^eu-'; then
   ssh -o ConnectTimeout=5 -o BatchMode=yes euler true || { echo "VPN off: gate $CAND vs $INC ($SPLIT) not submitted"; exit 2; }
   cd "$(dirname "$0")/.." && bash euler/push.sh >/dev/null
-  exec ssh euler "cd ~/kpbench && bash euler/gate.sh $CAND $INC $SPLIT $K $SOLVER $SOLVER_INC"
+  exec ssh euler "cd ~/kpbench && SAVE_PICKS=$SAVE_PICKS bash euler/gate.sh $CAND $INC $SPLIT $K $SOLVER $SOLVER_INC"
 fi
 source ~/kpbench/euler/env.sh >/dev/null 2>&1; cd ~/kpbench
 FL=euler/flights.txt; SPL=splits.json; TAG=g-$CAND
@@ -32,9 +35,9 @@ PY
 if [ "$SPLIT" = held_out ]; then
   python -c "import json,sys; from kpbench.gate import held_out_allowed; w=held_out_allowed('$CAND'); sys.exit(('refused: '+w) if w else 0)"
 fi
-J=$(sbatch --parsable --array=$IDX --export=ALL,CAND=$CAND,INC=$INC,FL=$FL,TAG=$TAG,K=$K,SOLVER=$SOLVER,SOLVER_INC=$SOLVER_INC euler/gate.sbatch)
+J=$(sbatch --parsable --array=$IDX --export=ALL,CAND=$CAND,INC=$INC,FL=$FL,TAG=$TAG,K=$K,SOLVER=$SOLVER,SOLVER_INC=$SOLVER_INC,SAVE_PICKS=$SAVE_PICKS euler/gate.sbatch)
 R="raco_%s_K${K}_same_lg_$TAG"; RC=$R; RI=$R; [ "$SOLVER" = ap3p ] || RC=$R-$SOLVER; [ "$SOLVER_INC" = ap3p ] || RI=$R-$SOLVER_INC
 S=$(sbatch --parsable --dependency=afterok:$J --account=ls_polle --time=00:20:00 --mem-per-cpu=4G --job-name=kpb_gsum \
   --output=$HOME/kpbench/logs/gsum_%j.log \
   --wrap="bash -c 'source ~/kpbench/euler/env.sh && python -m kpbench.gate --cand $(printf $RC $CAND) --inc $(printf $RI $INC) --split $SPLIT --log'")
-echo "gate $CAND vs $INC on $SPLIT (K $K, solver $SOLVER / $SOLVER_INC): array $J ($IDX), summary $S"
+echo "gate $CAND vs $INC on $SPLIT (K $K, solver $SOLVER / $SOLVER_INC, save_picks $SAVE_PICKS): array $J ($IDX), summary $S"
