@@ -13,7 +13,8 @@ ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..')
 R28 = [('raco_cube0.5_K400_same_lg_g-cube0.5-fresh-K400', 57, 'K400 cube0.5'), ('raco_dpp0.5_K400_same_lg_g-cube0.5-fresh-K400', 64, 'K400 dpp0.5'),
        ('raco_dpp0.5_K100_same_lg_g-dppr0.317a1.6b2.01t0.9-fresh', 62, 'K100 dpp0.5'), ('raco_dppr0.317a1.6b2.01t0.9_K100_same_lg_g-dppr0.317a1.6b2.01t0.9-fresh', 67, 'K100 dppr0.317'),
        ('raco_cube0.5_K100_same_lg_g-cube0.5-fresh', 95, 'E1 cube0.5'), ('raco_sd_K100_same_lg_g-cube0.5-fresh', 148, 'E1 sd'),
-       ('raco_dpp0.5_K100_same_lg_g-dpp2d120a1-fresh', 62, 'dpp2d gate inc dpp0.5'), ('raco_dpp2d120a1_K100_same_lg_g-dpp2d120a1-fresh', None, 'dpp2d120a1 (5.73 %)')]
+       ('raco_dpp0.5_K100_same_lg_g-dpp2d120a1-fresh', 62, 'dpp2d gate inc dpp0.5'), ('raco_dpp2d120a1_K100_same_lg_g-dpp2d120a1-fresh', None, 'dpp2d120a1 (5.73 %)'),
+       ('raco_sd_K400_same_lg_g-cube0.5-fresh-K400', 148, 'K400 sd (gate 8 Nov, mirrored 11 Nov)')]
 
 
 def main():
