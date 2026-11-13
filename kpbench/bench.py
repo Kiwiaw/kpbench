@@ -244,7 +244,7 @@ def run_flight(fid, det, picker, K, mapmode, workers=None, save_picks=False, fli
         plane[str(q)], pl = onplane(u, v, z, i)        # R20: on-plane share of the picks, per query (rows untouched)
         if save_picks:
             picks[str(q)] = [[round(float(a), 1), round(float(b), 1)] for a, b in zip(u[i], v[i])]
-            plane[str(q)] = plane[str(q)] + [pl]      # 4th entry: per-pick labels in pick order
+            plane[str(q)] = plane[str(q)] + [pl, [round(float(x), 2) if x < DEPTH_MAX else None for x in z[i]]]   # 4th: per-pick labels, 5th: per-pick depth [m] (T33), pick order
     if verbose:
         print(fid, det, picker, K, mapmode, matcher, 'matching done, %d queries, %.0fs' % (len(jobs), time.time() - t0), flush=True)
     nw = workers or int(os.environ.get('SLURM_CPUS_PER_TASK', 0)) or max(1, (os.cpu_count() or 2) - 1)

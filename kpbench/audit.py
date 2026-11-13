@@ -42,6 +42,10 @@ WARN = correct but fragile or misleading. Checks:
                    gate has n_flat 2075 and every mirrored FRESH run 13440 rows; runs whose meta says has_picks carry picks
                    (gate.require_picks; a run with a pick-less flight file = WARN, refused) and runs without picks are counted,
                    so no per-pick table starts on them (T31, 8 Nov)
+  C40 j2b          incumbent vs grid / cube0.5 / sd on the 31 published runs (results/runs, not the Q229/Q230 mirrors the analyst
+                   used): flat / very flat / all fail counts, paired flat and very flat diff, flights better/worse, exact two-sided
+                   sign-flip p over per-flight count differences = FAIL if off; flight-cluster bootstrap CI (10000 x seed 0) off by > 0.15 pt
+                   = WARN only (Monte Carlo resampler differs from the analyst's; first run 2000 x gave one end 0.19 off) = results/main/j2b_dpp_vs_grid.md in the agent repo (SUB2 ticket T37, 13 Nov)
 """
 import os, re, json, gzip, glob, subprocess, tempfile, datetime
 import numpy as np
@@ -361,6 +365,56 @@ def c15_incumbent(lab):
     report('C15', 'PASS' if ok else 'FAIL', 'incumbent dpp0.5 numbers', 'run %s; leaderboard %s; %s' % (got, lbv, gs))
 
 
+J2B = dict(counts=dict(flat={'dpp0.5': 192, 'cube0.5': 227, 'grid': 247, 'sd': 295}, vflat={'dpp0.5': 170, 'cube0.5': 194, 'grid': 213, 'sd': 255},
+                       all={'dpp0.5': 257, 'cube0.5': 317, 'grid': 331, 'sd': 441}), n=dict(flat=1813, vflat=1058, all=18571),
+           pairs={('flat', 'grid'): (-3.03, -4.85, -1.32, 11, 3, 0.0061), ('flat', 'cube0.5'): (-1.93, -3.64, -0.33, 10, 2, 0.039),
+                  ('flat', 'sd'): (-5.68, -8.31, -2.81, 11, 3, 0.0038), ('vflat', 'grid'): (-4.06, -6.92, -1.68, 9, 2, 0.0117),
+                  ('vflat', 'cube0.5'): (-2.27, -5.08, 0.10, 9, 2, 0.104), ('vflat', 'sd'): (-8.03, -12.19, -4.08, 10, 2, 0.0044)})
+
+
+def signflip_p(d):
+    """exact two-sided sign-flip p of sum(d) over the non-zero per-flight differences"""
+    d = np.array([x for x in d if x != 0], float); n = len(d); obs = abs(d.sum()); hit = 0
+    for m in range(2 ** n):
+        sg = np.array([1 if (m >> i) & 1 else -1 for i in range(n)]); hit += abs((sg * d).sum()) >= obs - 1e-9
+    return hit / 2 ** n
+
+
+def c40_j2b(lab):
+    pk = ('dpp0.5', 'cube0.5', 'grid', 'sd'); F, PF = {}, None
+    for p in pk:
+        rows = run_rows('raco_%s_K100_same_lg' % p); key = [(r[0], r[1]) for r in rows]
+        if PF is None:
+            PF = np.array([lab[r[0]][str(r[1])].get('plane_frac') or -1 for r in rows]); KEY = key; FL = np.array([r[0] for r in rows])
+        assert key == KEY, p
+        F[p] = fail_flags(rows).astype(int)
+    msk = dict(flat=PF >= 0.85, vflat=PF >= 0.95, all=np.ones(len(PF), bool)); bad, warn, out = [], [], []
+    for b, m in msk.items():
+        if int(m.sum()) != J2B['n'][b]:
+            bad.append('n %s %d' % (b, m.sum()))
+        for p in pk:
+            if int(F[p][m].sum()) != J2B['counts'][b][p]:
+                bad.append('%s %s %d' % (b, p, F[p][m].sum()))
+    out.append('counts ' + '; '.join('%s %s of %d' % (b, '/'.join(str(int(F[p][m].sum())) for p in pk), m.sum()) for b, m in msk.items()))
+    fl = sorted(set(FL)); rng = np.random.default_rng(0)
+    for (b, ref), (d0, lo0, hi0, nb0, nw0, p0) in J2B['pairs'].items():
+        m = msk[b]; dif = F['dpp0.5'] - F[ref]
+        d = 100 * dif[m].mean(); per = [int(dif[m & (FL == f)].sum()) for f in fl]
+        nb, nw = sum(x < 0 for x in per), sum(x > 0 for x in per); p2 = signflip_p(per)
+        num = np.array([dif[m & (FL == f)].sum() for f in fl], float); den = np.array([(m & (FL == f)).sum() for f in fl], float)
+        bs = []
+        for _ in range(10000):
+            i = rng.integers(0, len(fl), len(fl)); bs.append(100 * num[i].sum() / max(den[i].sum(), 1))
+        lo, hi = np.percentile(bs, [2.5, 97.5])
+        if not (abs(d - d0) < 0.006 and (nb, nw) == (nb0, nw0) and abs(p2 - p0) < max(0.0006, 0.02 * p0)):
+            bad.append('%s dpp-%s' % (b, ref))
+        elif not (abs(lo - lo0) < 0.15 and abs(hi - hi0) < 0.15):
+            warn.append('%s dpp-%s CI' % (b, ref))
+        out.append('%s dpp0.5-%s %+.2f [%+.2f,%+.2f] %d/%d p2 %.4g (quoted %+.2f [%+.2f,%+.2f] %d/%d %.4g)' % (b, ref, d, lo, hi, nb, nw, p2, d0, lo0, hi0, nb0, nw0, p0))
+    report('C40', 'FAIL' if bad else 'WARN' if warn else 'PASS', 'J2b incumbent vs grid / cube0.5 / sd (31 runs)',
+           '; '.join(out) + ('; MISMATCH ' + ', '.join(bad) if bad else '') + ('; CI end > 0.15 pt off (resampler) ' + ', '.join(warn) if warn else ''))
+
+
 PROV = 'PROVISIONAL-936'
 BASELINE_ARMS = ('dpp2d', 'ssc')
 
@@ -614,7 +668,7 @@ def main(argv=None):
     lab = labels(); R = {rid: run_rows(rid) for rid in RUNS31}
     C = dict(C1=lambda: c1_counts(lab, R), C2=lambda: c2_k(R), C3=lambda: c3_keyframes(lab), C6=lambda: c6_fail_rule(R),
              C7=lambda: c7_page(R), C8=lambda: c8_bootstrap(R, lab), C9=lambda: c9_paired_test(R, lab),
-             C10=lambda: c10_block_length(R, lab), C11=lambda: c11_headline(R, lab), C14=c14_texts, C15=lambda: c15_incumbent(lab), C23=c23_fresh, C24=c24_provisional, C25=c25_gates, C36=c36_nms_identity, C37=c37_rep5, C38=c38_fresh_gates, C39=c39_fresh_labels,
+             C10=lambda: c10_block_length(R, lab), C11=lambda: c11_headline(R, lab), C14=c14_texts, C15=lambda: c15_incumbent(lab), C23=c23_fresh, C24=c24_provisional, C25=c25_gates, C36=c36_nms_identity, C37=c37_rep5, C38=c38_fresh_gates, C39=c39_fresh_labels, C40=lambda: c40_j2b(lab),
              C4=c4_reproduce, C5=c5_ground_truth, C12=lambda: c12_planarity(lab), C13=c13_canaries)
     only = [c.strip() for c in a.only.split(',') if c.strip()]
     for cid in only or [c for c in C if not (a.quick and c in ('C4', 'C5', 'C12', 'C13'))]:
