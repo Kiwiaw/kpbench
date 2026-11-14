@@ -415,6 +415,29 @@ def c40_j2b(lab):
            '; '.join(out) + ('; MISMATCH ' + ', '.join(bad) if bad else '') + ('; CI end > 0.15 pt off (resampler) ' + ', '.join(warn) if warn else ''))
 
 
+HOLM = (('flat', 'grid'), ('flat', 'cube0.5'), ('flat', 'sd'), ('vflat', 'cube0.5'))  # family fixed 14 Nov before computing
+
+
+def holm(p):
+    """Holm step-down adjusted p-values, same order as p"""
+    o = np.argsort(p); m = len(p); adj = np.empty(m); run = 0.0
+    for k, i in enumerate(o):
+        run = max(run, min(1.0, (m - k) * p[i])); adj[i] = run
+    return adj
+
+
+def c41_holm(lab):
+    """flight-level sign-flip p of dpp0.5 vs each baseline in the HOLM family, recomputed from rows, Holm-adjusted"""
+    rows = {p: run_rows('raco_%s_K100_same_lg' % p) for p in ('dpp0.5', 'cube0.5', 'grid', 'sd')}
+    r0 = rows['dpp0.5']; PF = np.array([lab[r[0]][str(r[1])].get('plane_frac') or -1 for r in r0]); FL = np.array([r[0] for r in r0])
+    F = {p: fail_flags(r).astype(int) for p, r in rows.items()}; fl = sorted(set(FL)); msk = dict(flat=PF >= 0.85, vflat=PF >= 0.95)
+    ps = np.array([signflip_p([int((F['dpp0.5'] - F[ref])[msk[b] & (FL == f)].sum()) for f in fl]) for b, ref in HOLM])
+    adj = holm(ps); bad = [b + ' ' + ref for (b, ref), p in zip(HOLM, ps) if abs(p - J2B['pairs'][(b, ref)][5]) > max(0.0006, 0.02 * J2B['pairs'][(b, ref)][5])]
+    txt = '; '.join('%s dpp0.5-%s p2 %.4g Holm %.4g %s' % (b, ref, p, a, 'sig' if a < 0.05 else 'NOT sig') for (b, ref), p, a in zip(HOLM, ps, adj))
+    report('C41', 'FAIL' if bad else 'WARN' if (adj >= 0.05).any() else 'PASS', 'Holm over flight sign-flip tests of the incumbent (31 runs)',
+           txt + ('; MISMATCH ' + ', '.join(bad) if bad else '') + ('; a Holm-adjusted p >= 0.05 may not be worded as significant at flight level' if (adj >= 0.05).any() else ''))
+
+
 PROV = 'PROVISIONAL-936'
 BASELINE_ARMS = ('dpp2d', 'ssc')
 
@@ -668,7 +691,7 @@ def main(argv=None):
     lab = labels(); R = {rid: run_rows(rid) for rid in RUNS31}
     C = dict(C1=lambda: c1_counts(lab, R), C2=lambda: c2_k(R), C3=lambda: c3_keyframes(lab), C6=lambda: c6_fail_rule(R),
              C7=lambda: c7_page(R), C8=lambda: c8_bootstrap(R, lab), C9=lambda: c9_paired_test(R, lab),
-             C10=lambda: c10_block_length(R, lab), C11=lambda: c11_headline(R, lab), C14=c14_texts, C15=lambda: c15_incumbent(lab), C23=c23_fresh, C24=c24_provisional, C25=c25_gates, C36=c36_nms_identity, C37=c37_rep5, C38=c38_fresh_gates, C39=c39_fresh_labels, C40=lambda: c40_j2b(lab),
+             C10=lambda: c10_block_length(R, lab), C11=lambda: c11_headline(R, lab), C14=c14_texts, C15=lambda: c15_incumbent(lab), C23=c23_fresh, C24=c24_provisional, C25=c25_gates, C36=c36_nms_identity, C37=c37_rep5, C38=c38_fresh_gates, C39=c39_fresh_labels, C40=lambda: c40_j2b(lab), C41=lambda: c41_holm(lab),
              C4=c4_reproduce, C5=c5_ground_truth, C12=lambda: c12_planarity(lab), C13=c13_canaries)
     only = [c.strip() for c in a.only.split(',') if c.strip()]
     for cid in only or [c for c in C if not (a.quick and c in ('C4', 'C5', 'C12', 'C13'))]:
