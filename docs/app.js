@@ -408,6 +408,8 @@ function swatch(id) { return `<span class="sw" style="background:${S.runColor.ge
 function runLabel(id, opts = {}) {
   let h = `${swatch(id)}<span class="rid">${esc(id)}</span>`;
   if (id === S.base) h += ' <span class="tag base">BASELINE</span>';
+  const sub = S.runInfo.get(id)?.subset;   // run on a query subset only: say so wherever the run is named
+  if (sub) h += ` <span class="tag warn" title="${esc(S.runInfo.get(id).notes || sub)}">${esc(sub)}</span>`;
   if (opts.badge) h += ` <span class="tag warn" title="${esc(opts.badgeTitle || '')}">${esc(opts.badge)}</span>`;
   return h;
 }

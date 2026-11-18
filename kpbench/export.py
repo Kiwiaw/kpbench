@@ -124,9 +124,12 @@ def export_set(results=RESULTS, site=SITE, flights=None, kf=KF, dataset=None, ex
         json.dump(dict(id=rid, config=cfg, cols=meta['cols'], rows=rows), open(os.path.join(site, 'runs', rid + '.json'), 'w'), separators=(',', ':'))
         runs.append(dict(id=rid, det=meta['det'], picker=meta['picker'], K=meta['K'], map=meta['map'], matcher=meta.get('matcher', 'nn'),
                          date=meta.get('date', ''), commit=meta.get('commit', ''), flights=[f for f in flights if f in parts],
-                         n_queries=len(rows), fail25=round(100 * fail25, 2), has_picks=has_picks, notes=meta.get('notes', '')))
-    # order: RaCo before SuperPoint, same map before dense, K=100 first, the strongest-with-depth baseline first within a group
-    runs.sort(key=lambda r: (r['det'] != 'raco', r['map'] != 'same', r['K'] != 100, r['K'], r['picker'] != 'sd', r['picker']))
+                         n_queries=len(rows), fail25=round(100 * fail25, 2), has_picks=has_picks, notes=meta.get('notes', ''),
+                         **({'subset': meta['subset']} if meta.get('subset') else {})))
+    # order: RaCo before SuperPoint, same map before dense, K=100 first, runs on a query subset (meta 'subset') last within a
+    # group (so they never enter the default selection), the strongest-with-depth baseline first within a group
+    runs.sort(key=lambda r: (r['det'] != 'raco', r['map'] != 'same', r['K'] != 100, r['K'], bool(r.get('subset')),
+                             r['picker'] != 'sd', r['picker']))
     index = dict(generated=datetime.datetime.now().isoformat(timespec='seconds'),
                  dataset=dataset or 'TartanAir (Hard), PnP relocalisation against a local map of ground-truth 3D points',
                  flights=finfo, bins=BINS, thresholds_cm=THR, rot_fail=ROT_FAIL, rot_fail_deg=2, **(extra or {}), runs=runs)
