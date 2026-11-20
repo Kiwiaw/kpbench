@@ -1,6 +1,6 @@
 # Power of the FRESH-2 single endpoint, dpp0.5 vs cube0.5 K100 flat (MAIN, engineer 2026-11-19, dispatch 2026-11-19T13:15)
 
-Script: `python tools/power_fresh2.py --reps 10000 --seed 0` (and `--seed 1 --targets 2774,4849`). Status: [P] until the analyst's second-method check.
+Script: `python tools/power_fresh2.py --reps 10000 --seed 0` (and `--seed 1 --targets 2774,4849`). Status: [T] since 2026-11-20 (second method tools/power_fresh2_check.py, 24/24 cells within 1.0 pt; results/audit/2026-11-18.md addendum).
 
 ## Answer
 - Kill rule "power < 50 % at 4849 flat" is **not met**: 93-99 % if the true gap equals the gap seen so far, 75-80 % if it is only half of it.
