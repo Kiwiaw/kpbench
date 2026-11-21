@@ -24,7 +24,7 @@ def write_arm(root, rid, base, planted, seed, picks=True, flights=FLIGHTS, nq=10
         off = np.clip(base + g.normal(0, 0.06, nq), 0.0, 1.0) if planted else g.uniform(0.1, 0.4, nq)
         logit = 0.5 + 1.2 * h - 25 * (off - 0.2) if planted else -1 + 1.2 * h
         bad = g.random(nq) < 1 / (1 + np.exp(-logit)); ninl = np.clip(80 - 15 * h + g.normal(0, 10, nq), 0, None)
-        rows = [[i, q, 300.0 if bad[q] else 5.0, 0.5, 100, 90, int(ninl[q])] for q in range(nq)]
+        rows = [[i, q, 300.0 if bad[q] else 5.0, 0.5, 100, int(100 * (1 - off[q])), int(ninl[q])] for q in range(nq)]   # n_match carries off: reading r[5] as n_inl kills rule 1
         op = {str(q): [None if q < drop_off else 1 - float(off[q]), 10, 0.9, [1] * 10, [10.0] * 10] for q in range(nq)}
         j = dict(rows=rows, picks={str(q): list(range(10)) for q in range(nq)} if picks else {}, onplane=op)
         with gzip.open(os.path.join(d, sepscore.slug(f) + '.json.gz'), 'wt') as fh:
@@ -56,7 +56,7 @@ def test_planted_effect_passes(root):
 
 def test_null_fails(root):
     r, _ = run(root, False)
-    assert not r['passed'] and not r['rule1'] and not r['rule2'] and not r['rule3'], r
+    assert not r['passed'] and not r['rule1'] and not r['rule2'] and not r['rule3'] and not r['rule4'], r
     assert abs(r['d_mean']) < 0.02 and 'FAIL' in r['verdict']
 
 
@@ -67,6 +67,8 @@ def test_sign_counts():
     t = mk([-0.1] * 9 + [0.1] * 3); c = sepscore.flight_check(t, sorted(t))
     assert (c['neg'], c['pos'], c['zero'], c['ok']) == (9, 3, 0, False)
     t = mk([-0.1] * 10 + [0.1] * 2); assert sepscore.flight_check(t, sorted(t))['ok']
+    t.update({(k[0], q + 100): (int(q < 5), 0.2 + (0.5 if q < 5 else 0.0), 50.0, False) for k in list(t) for q in range(10)})   # non-flat rows with the opposite sign are ignored
+    assert sepscore.flight_check(t, sorted(t))['neg'] == 10
     t = mk([-0.1] * 5 + [0.0] * 7); c = sepscore.flight_check(t, sorted(t))            # zeros dropped: 5 of 5
     assert (c['neg'], c['zero'], c['ok']) == (5, 7, True)
     t = mk([-0.1] * 4 + [0.0] * 8); assert not sepscore.flight_check(t, sorted(t))['ok']   # 4 flights left: not evaluable
@@ -87,3 +89,18 @@ def test_dump_defects_stop_before_any_value(root):
     with pytest.raises(SystemExit):
         sepscore.main(['--arms', 'uni,strong,nopicks', '--flights', ','.join(FLIGHTS), '--check'])
     assert sepscore.main(['--arms', ','.join(ARMS), '--flights', ','.join(FLIGHTS), '--check']) is None
+
+
+def test_read_guards(root, monkeypatch):
+    names = ['raco_dpp0.5_K100_same_lg_picks', 'raco_sd_K100_same_lg_picks', 'raco_cube0.5_K100_same_lg_picks']
+    for k, (a, base) in enumerate(zip(names, (0.30, 0.10, 0.20))):
+        write_arm(root, a, base, True, seed=k + 1)
+    monkeypatch.setattr(sepscore, 'split_info', lambda split: (FLIGHTS, 960, None))
+    T, keys, _ = sepscore.validate(names, FLIGHTS)
+    sepscore.check_read(names, 'dev', None, T, FLIGHTS)                                 # the registered call passes
+    for arms, split in ((names[::-1], 'dev'), ([names[1], names[0], names[2]], 'dev'), (names, 'fresh')):
+        with pytest.raises(gate.GateError):
+            sepscore.check_read(arms, split, None, T, FLIGHTS)
+    monkeypatch.setattr(sepscore, 'split_info', lambda split: (FLIGHTS, 961, None))    # a label went missing
+    with pytest.raises(gate.GateError):
+        sepscore.check_read(names, 'dev', None, T, FLIGHTS)

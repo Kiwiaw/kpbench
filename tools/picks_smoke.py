@@ -9,6 +9,8 @@ meaningless and nothing is stored in the repo: KPBENCH_DATA and KPBENCH_RESULTS 
 meta.has_picks, one row and one onplane entry per query, 5-field entries with K per-pick labels and depths,
 gate.require_picks accepts the run, pickarms.arm_table / paired_field / to_md run on the flat queries. Only flags and
 counts are printed; no off / offn / dspan / sep value is shown or kept (the SUB1 sep rule is not committed yet).
+--sep (dispatch 2026-11-21T13:15 SUB3): the three SUB1 arms (dpp0.5, sd, cube0.5) instead, then kpbench.sepscore --check
+reads the dump (format only: validates arms, picks, query sets, off column; computes and prints no value).
 """
 import argparse, gzip, json, os, subprocess, sys, tempfile, shutil
 import numpy as np
@@ -19,7 +21,8 @@ ARMS = ['dpp0.5', 'dppr0.317a1.6b2.01t0.9', 'cube0.5', 'grid', 'cube0.359']   # 
 
 def main():
     ap = argparse.ArgumentParser(); ap.add_argument('--flight', default='hospital/P041'); ap.add_argument('--matcher', default='lg'); ap.add_argument('--K', type=int, default=100)
-    a = ap.parse_args(); tmp = tempfile.mkdtemp(prefix='kpb_picks_smoke_'); sl = a.flight.replace('/', '_')
+    ap.add_argument('--sep', action='store_true', help='SUB1 arms + kpbench.sepscore --check')
+    a = ap.parse_args(); ARMS = ['dpp0.5', 'sd', 'cube0.5'] if a.sep else globals()['ARMS']; tmp = tempfile.mkdtemp(prefix='kpb_picks_smoke_'); sl = a.flight.replace('/', '_')
     N = len(np.load(os.path.join(REPO, 'cache', sl + '_raco.npz'))['n'])
     sys.path.insert(0, REPO)
     os.environ.update(KPBENCH_DATA=os.path.join(tmp, 'data'), KPBENCH_RESULTS=os.path.join(tmp, 'results'))
@@ -65,6 +68,12 @@ def main():
             print('paired read-out vs %s: paired n per field %s, md table rows %d -> %s' % (ARMS[0], n, len(ARMS), 'OK' if good else 'BAD'))
         else:
             ok = False
+        if a.sep and ok:
+            from kpbench import sepscore
+            try:
+                sepscore.main(['--arms', ','.join(run_id('raco', p, a.K, 'same', 'picks', a.matcher) for p in ARMS), '--flights', a.flight, '--check'])
+            except SystemExit as e:
+                print('sepscore --check:', e); ok = False
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
     print('picks smoke (%s, %d frames, placeholder poses, K%d, %s):' % (a.flight, N, a.K, a.matcher), 'PASS' if ok else 'FAIL')

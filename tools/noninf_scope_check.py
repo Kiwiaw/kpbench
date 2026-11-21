@@ -69,12 +69,12 @@ def draw_until(n, target, rng):
 
 def method_a(n, d, target, outer, inner, rng):
     """nested flight resampling -> (pass chance %, median upper, mean flights per set)"""
-    up = np.empty(outer); m = 0
+    up = np.empty(outer); m = 0; tot = 0.0
     for k in range(outer):
-        idx = draw_until(n, target, rng); m += len(idx)
+        idx = draw_until(n, target, rng); m += len(idx); tot += n[idx].sum()
         w = rng.multinomial(len(idx), np.full(len(idx), 1.0 / len(idx)), inner).astype(float)
         up[k] = np.percentile(100 * (w @ d[idx]) / (w @ n[idx]), 97.5)
-    return 100 * float((up < MARGIN).mean()), float(np.median(up)), m / outer
+    return 100 * float((up < MARGIN).mean()), float(np.median(up)), m / outer, tot / outer
 
 
 def method_b(bn, bd, target, outer, rng):
@@ -104,18 +104,19 @@ def main(argv=None):
     e = d - (d.sum() / N) * n; se13 = 100 * math.sqrt(len(n) / (len(n) - 1) * (e ** 2).sum()) / N
     L += ['FRESH-1 flight-cluster CI (20000 weight draws, seed %d): [%+.2f, %+.2f] vs T48 [%+.2f, %+.2f] -> %s. Linearised flight SE %.3f pt.'
           % (a.seed, lo, hi, *PUB_CI, 'agree' if ok_ci else 'DISAGREE', se13), '',
-          '| flat | A pass chance | T48 | diff | A median upper | T48 | diff | B upper (blocks) | T48 scaled | diff | C normal approx (not in rule) | flights per set |',
-          '|---|---|---|---|---|---|---|---|---|---|---|---|']
+          '| flat | A pass chance | T48 | diff | A median upper | T48 | diff | B upper (blocks) | T48 scaled | diff | C normal approx (not in rule) | flights per set | realised flat |',
+          '|---|---|---|---|---|---|---|---|---|---|---|---|---|']
     ok = ok_in and ok_ci; worst = [0.0, 0.0, 0.0]
     for t, (pc, pu) in PUB.items():
-        ch, med, m = method_a(n, d, t, a.outer, a.inner, rng); ub = method_b(bn, bd, t, a.outer * 5, rng)
+        ch, med, m, real = method_a(n, d, t, a.outer, a.inner, rng); ub = method_b(bn, bd, t, a.outer * 5, rng)
         c = 100 * phi((MARGIN - diff) / (se13 * math.sqrt(N / t)) - 1.96)
         x = (abs(ch - pc), abs(med - pu), abs(ub - PUB_SCALED[t])); worst = [max(u, v) for u, v in zip(worst, x)]
         ok = ok and x[0] <= 5 and x[1] <= 0.1 and x[2] <= 0.1
-        L.append('| %d | %.1f %% | %d %% | %+.1f | %+.2f | %+.2f | %+.2f | %+.2f | %+.2f | %+.2f | %.1f %% | %.1f |'
-                 % (t, ch, pc, ch - pc, med, pu, med - pu, ub, PUB_SCALED[t], ub - PUB_SCALED[t], c, m))
+        L.append('| %d | %.1f %% | %d %% | %+.1f | %+.2f | %+.2f | %+.2f | %+.2f | %+.2f | %+.2f | %.1f %% | %.1f | %.0f |'
+                 % (t, ch, pc, ch - pc, med, pu, med - pu, ub, PUB_SCALED[t], ub - PUB_SCALED[t], c, m, real))
     L += ['', 'Agreement rule: pass chance within 5 points, bounds within 0.1 pt. Worst gaps: chance %.1f points, median upper %.2f pt, block upper %.2f pt.' % tuple(worst),
-          '**%s** (outer %d, inner %d, seed %d)' % ('PASS -> T48 numbers [T]' if ok else 'FAIL -> T48 numbers stay [P]', a.outer, a.inner, a.seed)]
+          '**%s** (outer %d, inner %d, seed %d)' % ('PASS -> T48 numbers [T] as REPLICATED' if ok else 'FAIL -> T48 numbers stay [P]', a.outer, a.inner, a.seed), '',
+          'What this PASS is (review 2026-11-21): A re-codes the published nested flight resampling with other code and seed, so it rules out a coding or seed error, not a flaw of the method. Only C is a different method; it sits 2-3 points above A. A and T48 both keep the last flight whole, so the sets are larger than the target (column realised flat): the pass chances are slightly optimistic for the nominal sizes. B is a different way to the scaled bound (resampling, no sqrt rule).']
     txt = '\n'.join(L) + '\n'; print(txt)
     if a.out:
         open(os.path.join(ROOT, a.out), 'w', encoding='utf-8').write(txt)
