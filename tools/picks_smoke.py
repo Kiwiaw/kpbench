@@ -19,10 +19,35 @@ REPO = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..')
 ARMS = ['dpp0.5', 'dppr0.317a1.6b2.01t0.9', 'cube0.5', 'grid', 'cube0.359']   # results/sub3/t33_prereg.md amendment 18 Nov, first = reference
 
 
+def dump_checks(p, j, T, a, fn):
+    """dump contract beyond the plumbing (dispatch 2026-11-23T13:15 SUB3 + SUB1): every query has n_sel picks = K (or all candidates),
+    the dumped pixels equal a direct picker call on the cached candidates (pickers without frame context only; dppr reads past
+    frames, so it is only counted), off / offn / dspan of every flat query are finite, per-pick depth list as long as the picks.
+    Prints counts and the file size per query, never a field value."""
+    from kpbench.pickers import parse
+    from kpbench.data import slug
+    C = np.load(os.path.join(REPO, 'cache', '%s_raco.npz' % slug(a.flight))); n = C['n']; pk = parse(p)
+    direct = not (getattr(pk, 'needs_ctx', False) or getattr(pk, 'needs_past', False) or getattr(pk, 'needs_desc', False))
+    nk = same = 0; rows = {r[1]: r for r in j['rows']}
+    for q, uv in j['picks'].items():
+        f = int(q); m = int(n[f]); nk += len(uv) == min(a.K, m) == rows[f][4] and len(j['onplane'][q][4]) == len(uv)
+        if direct:
+            u, v, s, z = (C[k][f, :m].astype(np.float64) for k in 'uvsz'); i = np.asarray(pk(u, v, s, z, a.K))
+            same += [[round(float(x), 1), round(float(y), 1)] for x, y in zip(C['u'][f, :m][i], C['v'][f, :m][i])] == uv
+    fin = sum(all(x is not None and np.isfinite(x) for x in v[1:]) for v in T.values()); nq = len(j['picks']); size = os.path.getsize(fn)
+    good = nk == nq and fin == len(T) and (not direct or same == nq)
+    print('%s dump: %d of %d queries with K picks = n_sel = depth entries, direct picker call reproduces the dumped pixels on %s, off/offn/dspan finite on '
+          '%d of %d flat queries, file %.1f kB = %.2f kB per query -> %s'
+          % (p, nk, nq, '%d of %d' % (same, nq) if direct else 'not checked (picker reads past frames)', fin, len(T), size / 1e3, size / 1e3 / max(nq, 1),
+             'OK' if good else 'BAD'))
+    return good
+
+
 def main():
     ap = argparse.ArgumentParser(); ap.add_argument('--flight', default='hospital/P041'); ap.add_argument('--matcher', default='lg'); ap.add_argument('--K', type=int, default=100)
     ap.add_argument('--sep', action='store_true', help='SUB1 arms + kpbench.sepscore --check')
-    a = ap.parse_args(); ARMS = ['dpp0.5', 'sd', 'cube0.5'] if a.sep else globals()['ARMS']; tmp = tempfile.mkdtemp(prefix='kpb_picks_smoke_'); sl = a.flight.replace('/', '_')
+    ap.add_argument('--arms', default=None, help='comma list instead of the 5 registered arms (first = reference)')
+    a = ap.parse_args(); ARMS = a.arms.split(',') if a.arms else ['dpp0.5', 'sd', 'cube0.5'] if a.sep else globals()['ARMS']; tmp = tempfile.mkdtemp(prefix='kpb_picks_smoke_'); sl = a.flight.replace('/', '_')
     N = len(np.load(os.path.join(REPO, 'cache', sl + '_raco.npz'))['n'])
     sys.path.insert(0, REPO)
     os.environ.update(KPBENCH_DATA=os.path.join(tmp, 'data'), KPBENCH_RESULTS=os.path.join(tmp, 'results'))
@@ -54,7 +79,7 @@ def main():
             T[p] = pickarms.arm_table(rid, [a.flight]); nflat = sum((lab.get(str(x), {}).get('plane_frac') or -1) >= 0.85 for x in q)
             filled = [sum(v[i] is not None for v in T[p].values()) for i in (1, 2, 3)]
             good = bool(meta.get('has_picks')) and len(op) == len(q) == N - len(range(0, N, data.KF)) and len(full) == len(q) and bool(j.get('picks')) and len(T[p]) == nflat and min(filled) > 0
-            ok = ok and good
+            ok = ok and good and dump_checks(p, j, T[p], a, os.path.join(d, sl + '.json.gz'))
             print('%s: has_picks %s, rows %d, onplane entries %d (5-field %d, picks per entry %s..%s), flat read by pickarms %d of %d, off/offn/dspan filled %s -> %s'
                   % (rid, meta.get('has_picks'), len(q), len(op), len(full), kpick[0] if kpick else '-', kpick[-1] if kpick else '-', len(T[p]), nflat, filled, 'OK' if good else 'BAD'))
         if len(T) == len(ARMS):
