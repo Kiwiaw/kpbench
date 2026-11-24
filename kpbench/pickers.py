@@ -622,6 +622,43 @@ def pick_dpp(sigma, alpha, space='3d'):
     return f
 
 
+def dpp_greedy_lazy(P, q, K, sigma, m0=128):
+    """dpp_greedy (fixed kernel, no slices) on a lazily grown candidate prefix; same ordered picks (T55, results/main/n3_retime.md).
+    Needs q non-increasing: the gain of candidate i never exceeds q_i^2, so while the best gain in the first m candidates
+    is >= q_m^2 no later candidate can be the argmax; m doubles when the bound is crossed and the new columns get the
+    same Cholesky recurrence. Toy: best gain 0.02, q_256^2 = exp(-2 * 256 / 100) = 0.006 -> candidates 256.. skipped."""
+    n = len(P); K = min(K, n); q2 = q ** 2; d2 = q2.copy(); C = np.zeros((K, n)); sel = []; dj = []; m = min(n, m0)
+    for k in range(K):
+        while True:
+            j = int(np.argmax(d2[:m]))
+            if m == n or d2[j] >= q2[m]:                     # ties: argmax keeps the lower index, as the full run does
+                break
+            m2 = min(n, 2 * m); B = slice(m, m2)             # bring candidates m..m2 up to date with the k picks so far
+            for t, jt in enumerate(sel):
+                Lt = q[jt] * q[B] * np.exp(-np.sum((P[B] - P[jt]) ** 2, 1) / (2 * sigma ** 2))
+                e = (Lt - (C[:t, jt] @ C[:t, B] if t else 0.0)) / dj[t]; C[t, B] = e; d2[B] = d2[B] - e ** 2
+            m = m2
+        if d2[j] <= 1e-12:
+            break
+        d = np.sqrt(d2[j]); Lj = q[j] * q[:m] * np.exp(-np.sum((P[:m] - P[j]) ** 2, 1) / (2 * sigma ** 2))
+        e = (Lj - (C[:k, j] @ C[:k, :m] if k else 0.0)) / d; C[k, :m] = e; d2[:m] = d2[:m] - e ** 2; d2[j] = -np.inf
+        sel.append(j); dj.append(d)
+    return np.array(sel, int)
+
+
+def pick_dpp_lazy(sigma, alpha):
+    """dpplazy<sigma>[a<alpha>]: opt-in fast path of dpp<sigma>[a<alpha>] (3D), same picks, ~10x less time at K100 on the
+    laptop (T55). The benchmark picker pick_dpp is unchanged; alpha >= 0 keeps q non-increasing, as the lazy bound needs."""
+    assert alpha >= 0, 'lazy prefix needs non-increasing quality'
+    def f(u, v, s, z, K):
+        ok = np.flatnonzero(z < DEPTH_MAX)
+        if not len(ok):
+            return np.arange(min(K, len(u)))
+        P = to3d(u[ok], v[ok], z[ok]); q = np.exp(-alpha * np.arange(len(ok)) / 100.0)
+        return fill(ok[dpp_greedy_lazy(P, q, K, sigma)], len(u), K, ok)
+    return f
+
+
 def pick_dpp_depth(c, alpha, mode):
     """Depth-adaptive dpp, same quality q_i = exp(-alpha * rank_i / 100) and candidates (with depth) as dpp<sigma>a<alpha>.
     mode 'm' (dppm<c>[a<alpha>]): one scale per frame, sigma = c * median depth of the frame's candidates with depth
@@ -863,6 +900,9 @@ def parse(name):
     m = re.fullmatch(r'dpp2d([0-9.]+)(?:a([0-9.]+))?', name)
     if m:
         return pick_dpp(float(m.group(1)), float(m.group(2) or 1.0), '2d')
+    m = re.fullmatch(r'dpplazy([0-9.]+)(?:a([0-9.]+))?', name)
+    if m:
+        return pick_dpp_lazy(float(m.group(1)), float(m.group(2) or 1.0))
     m = re.fullmatch(r'dpp([0-9.]+)(?:a([0-9.]+))?', name)
     if m:
         return pick_dpp(float(m.group(1)), float(m.group(2) or 1.0))
