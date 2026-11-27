@@ -167,8 +167,13 @@ def retrieval(C, F, mapmode):
 
 
 def _worker(job):
-    q, obj, img, Rq, tq, solver = job
-    return q, pnp(obj, img, Rq, tq, solver=solver)
+    """job = (q, obj, img, Rq, tq, solver) -> (q, pnp row); a 7th entry mq (pick index of each match, T59) also returns the
+    PnP inliers as pick indices: (q, (row, sorted inlier pick indices or None when no pose))"""
+    q, obj, img, Rq, tq, solver = job[:6]
+    if len(job) == 6:
+        return q, pnp(obj, img, Rq, tq, solver=solver)
+    *row, sol = pnp(obj, img, Rq, tq, full=True, solver=solver)
+    return q, (tuple(row), None if sol is None else sorted(int(x) for x in np.asarray(job[6])[sol[2]]))
 
 
 def onplane(u, v, z, idx, tol=0.3, n_fit=300):
@@ -212,7 +217,11 @@ def repeat(F, C, q, idx, trees):
     return out
 
 
-def run_flight(fid, det, picker, K, mapmode, workers=None, save_picks=False, flight_index=0, verbose=True, matcher='nn', solver='ap3p'):
+def run_flight(fid, det, picker, K, mapmode, workers=None, save_picks=False, flight_index=0, verbose=True, matcher='nn', solver='ap3p', save_inliers=False):
+    """save_inliers (needs save_picks, T59): the onplane entry of each query gets a 6th field, the PnP inliers as indices into
+    the stored picks (None = no pose); off = rows and every other field unchanged"""
+    if save_inliers and not save_picks:
+        raise ValueError('save_inliers needs save_picks (indices point into the stored picks)')
     F = Flight(fid); C = Cands(F.slug, det); pk = parse_picker(picker); t0 = time.time()
     if C.N != F.N:
         raise RuntimeError('cache has %d frames, flight has %d' % (C.N, F.N))
@@ -239,7 +248,7 @@ def run_flight(fid, det, picker, K, mapmode, workers=None, save_picks=False, fli
             obj = np.array([MAP[near[ki]][0][pi] for ki, pi in pairs]).reshape(-1, 3)
         else:
             mq, mm = match_mutual(de[i], DM); obj = P3[mm]
-        jobs.append((q, obj, np.stack([u[i][mq], v[i][mq]], 1), Rq, tq, solver))
+        jobs.append((q, obj, np.stack([u[i][mq], v[i][mq]], 1), Rq, tq, solver) + ((np.asarray(mq, int),) if save_inliers else ()))
         meta[q] = dict(n_sel=int(len(i)), n_match=int(len(mq)))
         plane[str(q)], pl = onplane(u, v, z, i)        # R20: on-plane share of the picks, per query (rows untouched)
         if save_picks:
@@ -256,6 +265,8 @@ def run_flight(fid, det, picker, K, mapmode, workers=None, save_picks=False, fli
         res = dict(map(_worker, jobs))
     trees = {}; rows = []
     for q in F.queries:
+        if save_inliers:
+            res[q], inl = res[q]; plane[str(q)] = plane[str(q)] + [inl]      # 6th: PnP inliers as pick indices (T59)
         err, rot, ninl = res[q]; rep = repeat(F, C, q, sel[q], trees)
         for f in [f for f in trees if f < q]:
             del trees[f]

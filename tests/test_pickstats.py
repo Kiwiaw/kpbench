@@ -39,3 +39,15 @@ def test_paired_counts():
     p = pickstats.paired(A, B, sorted(A))
     assert p['off'] == dict(n=2, median=0.1, mean=0.1, up=1, down=0)
     assert p['dstd']['n'] == 1 and p['dspan']['up'] == 1
+
+
+def test_worker_inlier_pick_indices():
+    """T59: with a 7th job entry (pick index of each match) _worker returns the same pnp row plus the inliers as pick indices"""
+    from kpbench.data import FX, FY, CX, CY
+    rng = np.random.default_rng(1); P = np.c_[rng.uniform(-5, 5, (60, 2)), rng.uniform(8, 20, 60)]     # camera = world frame
+    img = np.c_[FX * P[:, 0] / P[:, 2] + CX, FY * P[:, 1] / P[:, 2] + CY]; img[:10] += 50                 # 10 outliers
+    mq = np.arange(60) * 2 + 1                                                                          # match m <-> pick 2m+1
+    job = (7, P, img, np.eye(3), np.zeros(3), 'ap3p')
+    q, row = bench._worker(job); q2, (row2, idx) = bench._worker(job + (mq,))
+    assert q == q2 == 7 and tuple(row) == row2 and row[2] == len(idx) == 50
+    assert idx == sorted(2 * m + 1 for m in range(10, 60))

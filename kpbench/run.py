@@ -50,7 +50,7 @@ def main(argv=None):
     ap = argparse.ArgumentParser()
     ap.add_argument('--det', required=True); ap.add_argument('--picker', required=True); ap.add_argument('--K', type=int, required=True)
     ap.add_argument('--map', default='same', help='same | dense | ret<k> (database = all keyframes, top-k by VLAD retrieval)'); ap.add_argument('--flights', default='all')
-    ap.add_argument('--tag', default=''); ap.add_argument('--save-picks', action='store_true'); ap.add_argument('--force', action='store_true')
+    ap.add_argument('--tag', default=''); ap.add_argument('--save-picks', action='store_true'); ap.add_argument('--save-inliers', action='store_true', help='with --save-picks: PnP inliers as pick indices (T59)'); ap.add_argument('--force', action='store_true')
     ap.add_argument('--workers', type=int, default=0); ap.add_argument('--notes', default='')
     ap.add_argument('--matcher', default='nn', choices=['nn', 'lg'], help='nn = mutual nearest neighbour, lg = LightGlue')
     ap.add_argument('--solver', default='ap3p', choices=['ap3p', 'ippe'], help='ippe = AP3P + planar hypothesis (R19)')
@@ -65,7 +65,7 @@ def main(argv=None):
                 protocol='C23: keyframes every %d, %s, %s, PnP AP3P-RANSAC%s 3 px 2000 it >= 6 inliers + LM refinement, camera-centre error' % (
                     KF, 'map = top-%s keyframes by VLAD retrieval over the whole flight' % a.map[3:] if a.map.startswith('ret') else 'map = keyframes within +-%d frames' % WIN,
                     'LightGlue per keyframe' if a.matcher == 'lg' else 'mutual NN', ' + IPPE planar hypothesis' if a.solver == 'ippe' else ''),
-                has_picks=bool(a.save_picks) or meta.get('has_picks', False), device=device_name(a.matcher))
+                has_picks=bool(a.save_picks) or meta.get('has_picks', False), has_inliers=bool(a.save_inliers) or meta.get('has_inliers', False), device=device_name(a.matcher))
     dev = meta['device']
     if a.notes:
         meta['notes'] = a.notes
@@ -74,7 +74,7 @@ def main(argv=None):
         if os.path.isfile(fn) and not a.force:
             print('exists', fn); continue
         try:
-            rows, picks, plane = run_flight(fid, a.det, a.picker, a.K, a.map, workers=a.workers or None, save_picks=a.save_picks, matcher=a.matcher, solver=a.solver)
+            rows, picks, plane = run_flight(fid, a.det, a.picker, a.K, a.map, workers=a.workers or None, save_picks=a.save_picks, matcher=a.matcher, solver=a.solver, save_inliers=a.save_inliers)
         except FileNotFoundError as e:
             print('skip', fid, e); continue
         json.dump(dict(flight=fid, rows=rows, picks=picks, device=dev, onplane=plane), gzip.open(fn, 'wt'))
